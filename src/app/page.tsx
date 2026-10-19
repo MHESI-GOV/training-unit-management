@@ -30,9 +30,14 @@ export default async function Home() {
       )}
 
       {profile?.role === "web_master" && (
-        <p>
-          <Link href="/admin/users">User Management</Link>
-        </p>
+        <>
+          <p>
+            <Link href="/admin/users">User Management</Link>
+          </p>
+          <p>
+            <Link href="/admin/audit-log">Audit Log</Link>
+          </p>
+        </>
       )}
 
       {profile?.role === "unit_coordinator" && profile.unit_scope && (
