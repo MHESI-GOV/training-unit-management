@@ -1,12 +1,7 @@
+import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth/get-profile";
+import { ROLE_LABEL } from "@/lib/labels";
 import { signOut } from "./login/actions";
-
-const ROLE_LABEL: Record<string, string> = {
-  web_master: "Web Master",
-  central_staff: "Central Staff",
-  unit_coordinator: "Unit Coordinator",
-  executive: "Executive",
-};
 
 export default async function Home() {
   const { email, profile } = await getCurrentProfile();
@@ -29,8 +24,14 @@ export default async function Home() {
 
       {pendingUnitSetup && (
         <p>
-          บัญชีนี้ยังไม่ได้ผูกกับหน่วยฝึกอบรมใด — ต้องกรอกข้อมูลหน่วยฝึกอบรมก่อนจึงจะใช้งานส่วนอื่นได้
-          (หน้านี้ยังไม่ได้สร้าง — M4)
+          บัญชีนี้ยังไม่ได้ผูกกับหน่วยฝึกอบรมใด —{" "}
+          <Link href="/unit-setup">กรอกข้อมูลหน่วยฝึกอบรม</Link> ก่อนจึงจะใช้งานส่วนอื่นได้
+        </p>
+      )}
+
+      {profile?.role === "web_master" && (
+        <p>
+          <Link href="/admin/users">User Management</Link>
         </p>
       )}
 
