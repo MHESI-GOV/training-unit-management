@@ -1,0 +1,94 @@
+import { redirect } from "next/navigation";
+import { requireProfile } from "@/lib/auth/require-profile";
+import { createClient } from "@/lib/supabase/server";
+import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
+import { LearnerForm } from "./learner-form";
+import { EnrollForm } from "./enroll-form";
+import { markEnrollmentOutcome } from "./actions";
+
+const STATUS_LABEL: Record<string, string> = {
+  applied: "สมัคร",
+  attending: "เข้าร่วม",
+  completed: "สำเร็จ",
+  failed: "ไม่สำเร็จ",
+};
+
+export default async function UnitLearnersPage() {
+  const profile = await requireProfile();
+  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
+    redirect("/");
+  }
+
+  const supabase = await createClient();
+
+  const [{ data: learners }, { data: classes }] = await Promise.all([
+    supabase
+      .from("learners")
+      .select(
+        "learner_id, first_name, last_name, national_id_encrypted, phone, email, enrollments(enrollment_id, status, classes(start_date, courses(name)))",
+      )
+      .eq("unit_id", profile.unit_scope)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("classes")
+      .select("class_id, start_date, courses(name)")
+      .eq("unit_id", profile.unit_scope)
+      .order("start_date", { ascending: false }),
+  ]);
+
+  const classOptions = (classes ?? []).map((c) => ({
+    class_id: c.class_id,
+    label: `${c.courses?.name} (${c.start_date})`,
+  }));
+
+  return (
+    <main style={{ maxWidth: 720, margin: "3rem auto", fontFamily: "system-ui" }}>
+      <h1>ผู้เรียนของหน่วย</h1>
+
+      <h2>เพิ่มผู้เรียนใหม่</h2>
+      <LearnerForm />
+
+      <h2 style={{ marginTop: 32 }}>รายชื่อผู้เรียน</h2>
+      {(learners ?? []).length === 0 && <p>ยังไม่มีผู้เรียน</p>}
+      {(learners ?? []).map((l) => {
+        const nationalId = decryptNationalId(byteaHexToBuffer(l.national_id_encrypted as unknown as string));
+        return (
+          <div key={l.learner_id} style={{ border: "1px solid #ccc", padding: 12, marginBottom: 16 }}>
+            <p>
+              <strong>
+                {l.first_name} {l.last_name}
+              </strong>{" "}
+              — เลขบัตร {maskNationalId(nationalId)} — {l.phone} {l.email}
+            </p>
+            <ul>
+              {l.enrollments.map((e) => (
+                <li key={e.enrollment_id}>
+                  {e.classes?.courses?.name} ({e.classes?.start_date}) — สถานะ:{" "}
+                  {STATUS_LABEL[e.status] ?? e.status}
+                  {(e.status === "applied" || e.status === "attending") && (
+                    <>
+                      {" "}
+                      <form
+                        action={markEnrollmentOutcome.bind(null, e.enrollment_id, "completed")}
+                        style={{ display: "inline" }}
+                      >
+                        <button type="submit">สำเร็จ</button>
+                      </form>{" "}
+                      <form
+                        action={markEnrollmentOutcome.bind(null, e.enrollment_id, "failed")}
+                        style={{ display: "inline" }}
+                      >
+                        <button type="submit">ไม่สำเร็จ</button>
+                      </form>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <EnrollForm learnerId={l.learner_id} classes={classOptions} />
+          </div>
+        );
+      })}
+    </main>
+  );
+}

@@ -1,0 +1,155 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireProfile } from "@/lib/auth/require-profile";
+import { createClient } from "@/lib/supabase/server";
+import {
+  encryptNationalId,
+  hashNationalId,
+  bufferToByteaHex,
+} from "@/lib/crypto/national-id";
+
+async function requireOwnUnitId(): Promise<string> {
+  const profile = await requireProfile();
+  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
+    throw new Error("บัญชีนี้ไม่มีหน่วยฝึกอบรมที่จัดการได้");
+  }
+  return profile.unit_scope;
+}
+
+export type LearnerFormState = { error?: string };
+
+const NATIONAL_ID_RE = /^\d{13}$/;
+
+export async function createLearner(
+  _prev: LearnerFormState,
+  formData: FormData,
+): Promise<LearnerFormState> {
+  const unitId = await requireOwnUnitId();
+  const profile = await requireProfile();
+
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const nationalId = String(formData.get("national_id") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim() || null;
+  const address = String(formData.get("address") ?? "").trim() || null;
+
+  if (!firstName || !lastName) return { error: "กรุณากรอกชื่อ-นามสกุล" };
+  if (!NATIONAL_ID_RE.test(nationalId)) {
+    return { error: "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("learners").insert({
+    first_name: firstName,
+    last_name: lastName,
+    national_id_encrypted: bufferToByteaHex(encryptNationalId(nationalId)),
+    national_id_hash: hashNationalId(nationalId),
+    phone,
+    email,
+    address,
+    source: "unit_self_entry",
+    created_by: profile.id,
+    unit_id: unitId,
+  });
+
+  if (error) {
+    const duplicate = error.message.includes("learners_national_id_hash_key");
+    return {
+      error: duplicate
+        ? "เลขบัตรประชาชนนี้มีอยู่ในระบบแล้ว (อาจลงทะเบียนไว้ที่หน่วยอื่น)"
+        : `บันทึกไม่สำเร็จ: ${error.message}`,
+    };
+  }
+
+  revalidatePath("/unit/learners");
+  return {};
+}
+
+export type EnrollFormState = { error?: string; eligibility?: string };
+
+const ELIGIBILITY_LABEL: Record<string, string> = {
+  eligible: "มีสิทธิ์เข้าร่วม",
+  blocked_already_completed: "ไม่มีสิทธิ์ — เคยสำเร็จหลักสูตรนี้แล้วที่หน่วยใดหน่วยหนึ่ง",
+  blocked_disqualified: "ไม่มีสิทธิ์ — เคยลงทะเบียนหลักสูตรนี้แล้วไม่สำเร็จที่หน่วยใดหน่วยหนึ่ง",
+};
+
+export async function enrollLearner(
+  _prev: EnrollFormState,
+  formData: FormData,
+): Promise<EnrollFormState> {
+  const unitId = await requireOwnUnitId();
+
+  const learnerId = String(formData.get("learner_id") ?? "");
+  const classId = String(formData.get("class_id") ?? "");
+  if (!learnerId || !classId) return { error: "กรุณาเลือกผู้เรียนและรุ่นฝึกอบรม" };
+
+  const supabase = await createClient();
+
+  const { data: cls } = await supabase
+    .from("classes")
+    .select("course_id")
+    .eq("class_id", classId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!cls) return { error: "ไม่พบรุ่นฝึกอบรมนี้ในหน่วยของคุณ" };
+
+  const { data: learner } = await supabase
+    .from("learners")
+    .select("national_id_hash")
+    .eq("learner_id", learnerId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!learner) return { error: "ไม่พบผู้เรียนนี้ในหน่วยของคุณ" };
+
+  // Proactive check for a readable message — enforce_enrollment_eligibility() on the
+  // enrollments table is the actual hard backstop (§09 enforcement, can't be bypassed by
+  // calling the insert directly), this call just avoids surfacing a raw Postgres exception.
+  const { data: eligibility, error: eligErr } = await supabase.rpc("check_learner_eligibility", {
+    p_national_id_hash: learner.national_id_hash,
+    p_course_id: cls.course_id,
+  });
+  if (eligErr) return { error: `ตรวจสอบสิทธิ์ไม่สำเร็จ: ${eligErr.message}` };
+  if (eligibility !== "eligible") {
+    return { eligibility: ELIGIBILITY_LABEL[eligibility ?? ""] ?? eligibility ?? undefined };
+  }
+
+  const { error: insertErr } = await supabase.from("enrollments").insert({
+    learner_id: learnerId,
+    class_id: classId,
+  });
+
+  if (insertErr) return { error: `ลงทะเบียนไม่สำเร็จ: ${insertErr.message}` };
+
+  revalidatePath("/unit/learners");
+  return { eligibility: ELIGIBILITY_LABEL.eligible };
+}
+
+export async function markEnrollmentOutcome(enrollmentId: string, outcome: "completed" | "failed") {
+  const unitId = await requireOwnUnitId();
+  const supabase = await createClient();
+
+  const { data: enrollment } = await supabase
+    .from("enrollments")
+    .select("enrollment_id, learners!inner(unit_id)")
+    .eq("enrollment_id", enrollmentId)
+    .eq("learners.unit_id", unitId)
+    .maybeSingle();
+  if (!enrollment) throw new Error("ไม่พบการลงทะเบียนนี้ในหน่วยของคุณ");
+
+  const { error: updateErr } = await supabase
+    .from("enrollments")
+    .update({ status: outcome })
+    .eq("enrollment_id", enrollmentId);
+  if (updateErr) throw new Error(updateErr.message);
+
+  if (outcome === "completed") {
+    const { error: certErr } = await supabase
+      .from("certification_records")
+      .insert({ enrollment_id: enrollmentId, certified_at: new Date().toISOString() });
+    if (certErr) throw new Error(certErr.message);
+  }
+
+  revalidatePath("/unit/learners");
+}

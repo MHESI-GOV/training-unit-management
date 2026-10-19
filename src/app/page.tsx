@@ -43,6 +43,9 @@ export default async function Home() {
           <p>
             <Link href="/unit/classes">รุ่นฝึกอบรมและวิทยากร</Link>
           </p>
+          <p>
+            <Link href="/unit/learners">ผู้เรียน</Link>
+          </p>
         </>
       )}
 
