@@ -849,6 +849,22 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       current_user_unit_scope: { Args: never; Returns: string }
+      get_dashboard_kpis: {
+        Args: { p_unit_id?: string }
+        Returns: {
+          anamai_passed: number
+          anamai_tested: number
+          applicants: number
+          attended: number
+          completed: number
+          dsd_centers: number
+          dsd_passed: number
+          dsd_tested: number
+          pq_centers: number
+          total_units: number
+          units_with_data: number
+        }[]
+      }
       submit_training_unit: {
         Args: {
           p_external_ref?: string

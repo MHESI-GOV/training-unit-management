@@ -58,6 +58,12 @@ export default async function Home() {
         </p>
       )}
 
+      {profile && !pendingUnitSetup && (
+        <p>
+          <Link href="/dashboard">แดชบอร์ด</Link>
+        </p>
+      )}
+
       <form action={signOut}>
         <button type="submit">ออกจากระบบ</button>
       </form>
