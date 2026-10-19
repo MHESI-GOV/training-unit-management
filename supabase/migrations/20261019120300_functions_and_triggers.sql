@@ -68,7 +68,7 @@ begin
     v_result := 'blocked_already_completed';
   elsif exists (
     select 1 from public.enrollments e
-    where e.learner_id = v_learner_id and e.status = 'ไม่สำเร็จ'
+    where e.learner_id = v_learner_id and e.status = 'failed'
   ) then
     v_result := 'blocked_disqualified';
   else

@@ -6,13 +6,15 @@
 create extension if not exists pgcrypto;
 
 create type user_role as enum ('web_master', 'central_staff', 'unit_coordinator', 'executive');
-create type unit_type as enum ('มหาวิทยาลัย', 'สถาบันอาชีวะ', 'อื่นๆ');
-create type region_type as enum ('ภาคเหนือ', 'ภาคตะวันออก', 'ภาคตะวันออกเฉียงเหนือ', 'ภาคกลาง', 'ภาคใต้');
+-- Enum values are stable ascii codes, not display text (Postgres enum labels cap at
+-- 63 bytes and Thai text blows past that fast) — map to Thai display text in the app layer
+create type unit_type as enum ('university', 'vocational', 'other');
+create type region_type as enum ('north', 'east', 'northeast', 'central', 'south');
 create type unit_status as enum ('active', 'inactive');
-create type enrollment_status as enum ('สมัคร', 'เข้าร่วม', 'สำเร็จ', 'ไม่สำเร็จ');
-create type assessment_standard as enum ('DSD-L1', 'กรมอนามัย-ผู้ประกอบอาหาร', 'กรมอนามัย-ผู้สัมผัสอาหาร', 'คุณวุฒิวิชาชีพ', 'อื่นๆ');
-create type assessment_result_enum as enum ('ได้', 'ไม่ได้', 'รอผล');
-create type testing_center_status_enum as enum ('ยังไม่ขึ้นทะเบียน', 'อยู่ระหว่างขอ', 'ได้รับแล้ว');
+create type enrollment_status as enum ('applied', 'attending', 'completed', 'failed');
+create type assessment_standard as enum ('dsd_l1', 'anamai_food_handler', 'anamai_food_contact', 'professional_qualification', 'other');
+create type assessment_result_enum as enum ('passed', 'failed', 'pending');
+create type testing_center_status_enum as enum ('not_registered', 'in_progress', 'registered');
 create type import_job_status as enum ('pending', 'processing', 'completed', 'failed');
 create type learner_source as enum ('unit_self_entry', 'unit_import_file');
 
@@ -153,7 +155,7 @@ create table public.enrollments (
   enrollment_id uuid primary key default gen_random_uuid(),
   learner_id uuid not null references public.learners(learner_id),
   class_id uuid not null references public.classes(class_id),
-  status enrollment_status not null default 'สมัคร',
+  status enrollment_status not null default 'applied',
   applied_at timestamptz not null default now(),
   unique (learner_id, class_id)
 );
