@@ -46,6 +46,9 @@ export default async function Home() {
           <p>
             <Link href="/unit/learners">ผู้เรียน</Link>
           </p>
+          <p>
+            <Link href="/unit/testing-center">สถานะศูนย์ทดสอบมาตรฐาน</Link>
+          </p>
         </>
       )}
 

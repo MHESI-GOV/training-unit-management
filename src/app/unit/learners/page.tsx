@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
 import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
+import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
 import { LearnerForm } from "./learner-form";
 import { EnrollForm } from "./enroll-form";
+import { AssessmentForm } from "./assessment-form";
+import { RevealIdButton } from "./reveal-id-button";
 import { markEnrollmentOutcome } from "./actions";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -25,7 +28,7 @@ export default async function UnitLearnersPage() {
     supabase
       .from("learners")
       .select(
-        "learner_id, first_name, last_name, national_id_encrypted, phone, email, enrollments(enrollment_id, status, classes(start_date, courses(name)))",
+        "learner_id, first_name, last_name, national_id_encrypted, phone, email, enrollments(enrollment_id, status, classes(start_date, courses(name))), assessment_results(result_id, standard_type, result, tested_at)",
       )
       .eq("unit_id", profile.unit_scope)
       .order("created_at", { ascending: false }),
@@ -60,6 +63,9 @@ export default async function UnitLearnersPage() {
               </strong>{" "}
               — เลขบัตร {maskNationalId(nationalId)} — {l.phone} {l.email}
             </p>
+            <p>
+              <RevealIdButton learnerId={l.learner_id} />
+            </p>
             <ul>
               {l.enrollments.map((e) => (
                 <li key={e.enrollment_id}>
@@ -86,6 +92,19 @@ export default async function UnitLearnersPage() {
               ))}
             </ul>
             <EnrollForm learnerId={l.learner_id} classes={classOptions} />
+
+            <p style={{ marginTop: 12, marginBottom: 4 }}>ผลทดสอบ/คุณวุฒิมาตรฐาน:</p>
+            <ul>
+              {l.assessment_results.map((a) => (
+                <li key={a.result_id}>
+                  {ASSESSMENT_STANDARD_LABEL[a.standard_type] ?? a.standard_type} —{" "}
+                  {ASSESSMENT_RESULT_LABEL[a.result] ?? a.result}
+                  {a.tested_at && ` (${a.tested_at})`}
+                </li>
+              ))}
+              {l.assessment_results.length === 0 && <li>ยังไม่มีข้อมูล</li>}
+            </ul>
+            <AssessmentForm learnerId={l.learner_id} />
           </div>
         );
       })}

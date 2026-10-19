@@ -7,7 +7,13 @@ import {
   encryptNationalId,
   hashNationalId,
   bufferToByteaHex,
+  byteaHexToBuffer,
+  decryptNationalId,
 } from "@/lib/crypto/national-id";
+import type { Database } from "@/lib/supabase/database.types";
+
+type AssessmentStandard = Database["public"]["Enums"]["assessment_standard"];
+type AssessmentResultValue = Database["public"]["Enums"]["assessment_result_enum"];
 
 async function requireOwnUnitId(): Promise<string> {
   const profile = await requireProfile();
@@ -152,4 +158,65 @@ export async function markEnrollmentOutcome(enrollmentId: string, outcome: "comp
   }
 
   revalidatePath("/unit/learners");
+}
+
+export type AssessmentFormState = { error?: string };
+
+export async function recordAssessmentResult(
+  _prev: AssessmentFormState,
+  formData: FormData,
+): Promise<AssessmentFormState> {
+  const unitId = await requireOwnUnitId();
+  const profile = await requireProfile();
+
+  const learnerId = String(formData.get("learner_id") ?? "");
+  const standardType = String(formData.get("standard_type") ?? "") as AssessmentStandard;
+  const result = String(formData.get("result") ?? "") as AssessmentResultValue;
+  const testedAt = String(formData.get("tested_at") ?? "") || null;
+  const evidenceRef = String(formData.get("evidence_ref") ?? "").trim() || null;
+
+  if (!learnerId || !standardType || !result) {
+    return { error: "กรุณากรอกข้อมูลให้ครบถ้วน" };
+  }
+
+  const supabase = await createClient();
+
+  // §09 §2 — confirmed_by is normally the Unit Coordinator of the learner's own unit; this
+  // also doubles as an ownership check (matches the learner's unit before accepting the insert).
+  const { data: learner } = await supabase
+    .from("learners")
+    .select("learner_id")
+    .eq("learner_id", learnerId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!learner) return { error: "ไม่พบผู้เรียนนี้ในหน่วยของคุณ" };
+
+  const { error } = await supabase.from("assessment_results").insert({
+    learner_id: learnerId,
+    standard_type: standardType,
+    result,
+    tested_at: testedAt,
+    evidence_ref: evidenceRef,
+    confirmed_by: profile.id,
+  });
+
+  if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
+
+  revalidatePath("/unit/learners");
+  return {};
+}
+
+export async function revealNationalId(learnerId: string): Promise<string> {
+  const unitId = await requireOwnUnitId();
+  const supabase = await createClient();
+
+  const { data: learner } = await supabase
+    .from("learners")
+    .select("national_id_encrypted")
+    .eq("learner_id", learnerId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!learner) throw new Error("ไม่พบผู้เรียนนี้ในหน่วยของคุณ");
+
+  return decryptNationalId(byteaHexToBuffer(learner.national_id_encrypted as unknown as string));
 }
