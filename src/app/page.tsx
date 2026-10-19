@@ -35,6 +35,12 @@ export default async function Home() {
         </p>
       )}
 
+      {profile?.role === "unit_coordinator" && profile.unit_scope && (
+        <p>
+          <Link href="/unit/profile">โปรไฟล์หน่วยและภาพถ่าย</Link>
+        </p>
+      )}
+
       <form action={signOut}>
         <button type="submit">ออกจากระบบ</button>
       </form>

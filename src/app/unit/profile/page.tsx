@@ -1,0 +1,52 @@
+import { redirect } from "next/navigation";
+import { requireProfile } from "@/lib/auth/require-profile";
+import { createClient } from "@/lib/supabase/server";
+import { ProfileForm } from "./profile-form";
+import { ImageUploader } from "./image-uploader";
+
+export default async function UnitProfilePage() {
+  const profile = await requireProfile();
+
+  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
+    redirect("/");
+  }
+
+  const supabase = await createClient();
+
+  const [{ data: unitProfile }, { data: unit }, { data: images }] = await Promise.all([
+    supabase
+      .from("training_unit_profiles")
+      .select("address, phone, email, coordinator_name, description")
+      .eq("unit_id", profile.unit_scope)
+      .maybeSingle(),
+    supabase.from("training_units").select("name").eq("unit_id", profile.unit_scope).single(),
+    supabase
+      .from("training_unit_images")
+      .select("image_id, storage_key, original_filename")
+      .eq("unit_id", profile.unit_scope)
+      .eq("status", "active")
+      .order("display_order"),
+  ]);
+
+  const imagesWithUrls = await Promise.all(
+    (images ?? []).map(async (img) => {
+      const { data } = await supabase.storage
+        .from("unit-photos")
+        .createSignedUrl(img.storage_key, 3600);
+      return {
+        image_id: img.image_id,
+        original_filename: img.original_filename,
+        signedUrl: data?.signedUrl ?? null,
+      };
+    }),
+  );
+
+  return (
+    <main style={{ maxWidth: 560, margin: "3rem auto", fontFamily: "system-ui" }}>
+      <h1>โปรไฟล์หน่วย: {unit?.name}</h1>
+      <ProfileForm initial={unitProfile ?? null} />
+      <h2 style={{ marginTop: 32 }}>ภาพถ่ายหน่วย</h2>
+      <ImageUploader images={imagesWithUrls} count={imagesWithUrls.length} />
+    </main>
+  );
+}
