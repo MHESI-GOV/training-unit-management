@@ -36,8 +36,19 @@ export default async function Home() {
       )}
 
       {profile?.role === "unit_coordinator" && profile.unit_scope && (
+        <>
+          <p>
+            <Link href="/unit/profile">โปรไฟล์หน่วยและภาพถ่าย</Link>
+          </p>
+          <p>
+            <Link href="/unit/classes">รุ่นฝึกอบรมและวิทยากร</Link>
+          </p>
+        </>
+      )}
+
+      {profile && profile.role !== "executive" && (!pendingUnitSetup) && (
         <p>
-          <Link href="/unit/profile">โปรไฟล์หน่วยและภาพถ่าย</Link>
+          <Link href="/courses">หลักสูตร</Link>
         </p>
       )}
 

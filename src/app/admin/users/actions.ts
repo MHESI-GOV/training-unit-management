@@ -35,6 +35,7 @@ export async function generateUser(
   if (!VALID_ROLES.includes(role as (typeof VALID_ROLES)[number])) {
     return { error: "บทบาทไม่ถูกต้อง" };
   }
+  const validatedRole = role as (typeof VALID_ROLES)[number];
 
   const admin = createAdminClient();
   const temporaryPassword = randomBytes(18).toString("base64url");
@@ -51,7 +52,7 @@ export async function generateUser(
 
   const { error: profileErr } = await admin.from("profiles").insert({
     id: userRes.user.id,
-    role,
+    role: validatedRole,
     unit_scope: null, // role=unit_coordinator starts unscoped until they submit "กรอกข้อมูลหน่วยฝึกอบรม"
     display_name: displayName,
     must_change_password: true,

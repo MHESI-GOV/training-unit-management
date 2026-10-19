@@ -3,10 +3,15 @@
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
+import { UNIT_TYPE_LABEL, REGION_LABEL } from "@/lib/labels";
+import type { Database } from "@/lib/supabase/database.types";
 
 export type SubmitUnitState = {
   error?: string;
 };
+
+type UnitType = Database["public"]["Enums"]["unit_type"];
+type RegionType = Database["public"]["Enums"]["region_type"];
 
 export async function submitTrainingUnit(
   _prevState: SubmitUnitState,
@@ -25,16 +30,16 @@ export async function submitTrainingUnit(
   const region = String(formData.get("region") ?? "");
   const externalRef = String(formData.get("external_ref") ?? "").trim() || null;
 
-  if (!name || !type || !region) {
+  if (!name || !(type in UNIT_TYPE_LABEL) || !(region in REGION_LABEL)) {
     return { error: "กรุณากรอกข้อมูลให้ครบถ้วน" };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("submit_training_unit", {
     p_name: name,
-    p_type: type,
-    p_region: region,
-    p_external_ref: externalRef,
+    p_type: type as UnitType,
+    p_region: region as RegionType,
+    p_external_ref: externalRef ?? undefined,
   });
 
   if (error) {
