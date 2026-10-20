@@ -10,15 +10,15 @@ export function VerifyForm({ factorId }: { factorId: string }) {
   const [state, formAction, pending] = useActionState(boundAction, initialState);
 
   return (
-    <form action={formAction} style={{ display: "grid", gap: 8, maxWidth: 240 }}>
+    <form action={formAction} style={{ display: "grid", gap: 10 }}>
       <label>
-        รหัส 6 หลักจากแอป Authenticator
-        <input name="code" inputMode="numeric" pattern="\d{6}" required style={{ width: "100%" }} />
+        <span className="field-label">รหัส 6 หลักจากแอป Authenticator</span>
+        <input name="code" inputMode="numeric" pattern="\d{6}" required className="field" />
       </label>
-      <button type="submit" disabled={pending}>
+      <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังยืนยัน..." : "ยืนยัน"}
       </button>
-      {state.error && <p style={{ color: "crimson" }}>{state.error}</p>}
+      {state.error && <p className="notice error">{state.error}</p>}
     </form>
   );
 }

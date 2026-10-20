@@ -10,14 +10,14 @@ export function UnitSetupForm() {
   const [state, formAction, pending] = useActionState(submitTrainingUnit, initialState);
 
   return (
-    <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 400 }}>
+    <form action={formAction} style={{ display: "grid", gap: 14 }}>
       <label>
-        ชื่อหน่วยฝึกอบรม
-        <input name="name" required style={{ width: "100%" }} />
+        <span className="field-label">ชื่อหน่วยฝึกอบรม</span>
+        <input name="name" required className="field" />
       </label>
       <label>
-        ประเภทหน่วย
-        <select name="type" required style={{ width: "100%" }}>
+        <span className="field-label">ประเภทหน่วย</span>
+        <select name="type" required className="field">
           {Object.entries(UNIT_TYPE_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -26,8 +26,8 @@ export function UnitSetupForm() {
         </select>
       </label>
       <label>
-        ภูมิภาค
-        <select name="region" required style={{ width: "100%" }}>
+        <span className="field-label">ภูมิภาค</span>
+        <select name="region" required className="field">
           {Object.entries(REGION_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -36,13 +36,13 @@ export function UnitSetupForm() {
         </select>
       </label>
       <label>
-        รหัสอ้างอิงเดิม (ถ้ามี)
-        <input name="external_ref" style={{ width: "100%" }} />
+        <span className="field-label">รหัสอ้างอิงเดิม (ถ้ามี)</span>
+        <input name="external_ref" className="field" />
       </label>
-      <button type="submit" disabled={pending}>
+      <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : "บันทึกและเริ่มใช้งาน"}
       </button>
-      {state.error && <p style={{ color: "crimson" }}>{state.error}</p>}
+      {state.error && <p className="notice error">{state.error}</p>}
     </form>
   );
 }

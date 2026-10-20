@@ -15,6 +15,7 @@ export function EnrollClient() {
       <div>
         <button
           type="button"
+          className="btn primary"
           disabled={starting}
           onClick={async () => {
             setStarting(true);
@@ -30,7 +31,7 @@ export function EnrollClient() {
         >
           {starting ? "กำลังเริ่มตั้งค่า..." : "เริ่มตั้งค่า MFA"}
         </button>
-        {startError && <p style={{ color: "crimson" }}>{startError}</p>}
+        {startError && <p className="notice error" style={{ marginTop: 12 }}>{startError}</p>}
       </div>
     );
   }
@@ -43,22 +44,22 @@ function ConfirmStep({ enrollment }: { enrollment: EnrollmentData }) {
   const [state, formAction, pending] = useActionState(boundAction, initialState);
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <p>สแกน QR ด้วยแอป Authenticator (เช่น Google Authenticator, Authy)</p>
+    <div style={{ display: "grid", gap: 14 }}>
+      <p style={{ fontSize: 14 }}>สแกน QR ด้วยแอป Authenticator (เช่น Google Authenticator, Authy)</p>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={enrollment.qrCode} alt="MFA QR code" width={200} height={200} />
-      <p style={{ fontSize: 13, color: "#666" }}>
+      <img src={enrollment.qrCode} alt="MFA QR code" width={200} height={200} style={{ borderRadius: 10 }} />
+      <p className="footnote">
         หรือกรอกรหัสด้วยตนเอง: <code>{enrollment.secret}</code>
       </p>
-      <form action={formAction} style={{ display: "grid", gap: 8, maxWidth: 240 }}>
+      <form action={formAction} style={{ display: "grid", gap: 10 }}>
         <label>
-          รหัส 6 หลักจากแอป
-          <input name="code" inputMode="numeric" pattern="\d{6}" required style={{ width: "100%" }} />
+          <span className="field-label">รหัส 6 หลักจากแอป</span>
+          <input name="code" inputMode="numeric" pattern="\d{6}" required className="field" />
         </label>
-        <button type="submit" disabled={pending}>
+        <button type="submit" className="btn primary" disabled={pending}>
           {pending ? "กำลังยืนยัน..." : "ยืนยัน"}
         </button>
-        {state.error && <p style={{ color: "crimson" }}>{state.error}</p>}
+        {state.error && <p className="notice error">{state.error}</p>}
       </form>
     </div>
   );

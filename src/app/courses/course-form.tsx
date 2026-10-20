@@ -9,31 +9,31 @@ export function CourseForm() {
   const [state, formAction, pending] = useActionState(createCourse, initialState);
 
   return (
-    <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 400 }}>
+    <form action={formAction} style={{ display: "grid", gap: 12 }}>
       <label>
-        ชื่อหลักสูตร
-        <input name="name" required style={{ width: "100%" }} />
+        <span className="field-label">ชื่อหลักสูตร</span>
+        <input name="name" required className="field" />
       </label>
       <label>
-        จำนวนชั่วโมงรวม
-        <input name="total_hours" type="number" min={1} required style={{ width: "100%" }} />
+        <span className="field-label">จำนวนชั่วโมงรวม</span>
+        <input name="total_hours" type="number" min={1} required className="field" />
       </label>
       <label>
-        ชั่วโมงทฤษฎี
-        <input name="theory_hours" type="number" min={0} style={{ width: "100%" }} />
+        <span className="field-label">ชั่วโมงทฤษฎี</span>
+        <input name="theory_hours" type="number" min={0} className="field" />
       </label>
       <label>
-        ชั่วโมงปฏิบัติ
-        <input name="practical_hours" type="number" min={0} style={{ width: "100%" }} />
+        <span className="field-label">ชั่วโมงปฏิบัติ</span>
+        <input name="practical_hours" type="number" min={0} className="field" />
       </label>
       <label>
-        คำอธิบาย
-        <textarea name="description" style={{ width: "100%" }} />
+        <span className="field-label">คำอธิบาย</span>
+        <textarea name="description" className="field" rows={3} />
       </label>
-      <button type="submit" disabled={pending}>
+      <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : "เพิ่มหลักสูตร"}
       </button>
-      {state.error && <p style={{ color: "crimson" }}>{state.error}</p>}
+      {state.error && <p className="notice error">{state.error}</p>}
     </form>
   );
 }

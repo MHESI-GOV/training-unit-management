@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { previewImport, commitImport, type PreviewState, type CommitState } from "./actions";
+import { StepIndicator } from "@/components/ui/StepIndicator";
 
 const previewInitial: PreviewState = {};
 const commitInitial: CommitState = {};
@@ -13,74 +14,89 @@ export function ImportClient({ unitId, classes }: { unitId: string; classes: Cla
   const [commitState, commitAction, commitPending] = useActionState(commitImport, commitInitial);
   const [confirmArmed, setConfirmArmed] = useState(false);
 
+  const step = commitState.created !== undefined ? 2 : previewState.rows ? 1 : 0;
+
   if (commitState.created !== undefined) {
     return (
-      <div>
-        <p>
+      <div className="card" style={{ maxWidth: 480 }}>
+        <StepIndicator steps={["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"]} current={step} />
+        <p className="notice success">
           นำเข้าสำเร็จ: เพิ่มผู้เรียน {commitState.created} คน
           {commitState.enrolled ? ` ลงทะเบียนเรียนสำเร็จ ${commitState.enrolled} คน` : ""}
           {commitState.blocked ? ` ถูกบล็อกโดยการตรวจสอบสิทธิ์ ${commitState.blocked} คน` : ""}
         </p>
-        <a href="/unit/import">นำเข้าไฟล์อื่น</a>
+        <a href="/unit/import" className="btn secondary">
+          นำเข้าไฟล์อื่น
+        </a>
       </div>
     );
   }
 
   if (!previewState.rows) {
     return (
-      <form action={previewAction} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
-        <input type="hidden" name="unit_id" value={unitId} />
-        <p>
-          <a href="/api/import-template/learners">ดาวน์โหลดเทมเพลต CSV</a>
-        </p>
-        <input name="file" type="file" accept=".csv" required />
-        <button type="submit" disabled={previewPending}>
-          {previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}
-        </button>
-        {previewState.error && <p style={{ color: "crimson" }}>{previewState.error}</p>}
-      </form>
+      <div className="card" style={{ maxWidth: 420 }}>
+        <StepIndicator steps={["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"]} current={step} />
+        <form action={previewAction} style={{ display: "grid", gap: 12 }}>
+          <input type="hidden" name="unit_id" value={unitId} />
+          <a href="/api/import-template/learners" className="footnote">
+            ดาวน์โหลดเทมเพลต CSV
+          </a>
+          <input name="file" type="file" accept=".csv" required className="field" />
+          <button type="submit" className="btn primary" disabled={previewPending}>
+            {previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}
+          </button>
+          {previewState.error && <p className="notice error">{previewState.error}</p>}
+        </form>
+      </div>
     );
   }
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <p>
-        ไฟล์ {previewState.fileName}: ผ่าน {previewState.passCount} แถว / ไม่ผ่าน{" "}
-        {previewState.failCount} แถว
+    <div className="card">
+      <StepIndicator steps={["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"]} current={step} />
+      <p style={{ marginBottom: 14 }}>
+        ไฟล์ {previewState.fileName}: ผ่าน <strong>{previewState.passCount}</strong> แถว / ไม่ผ่าน{" "}
+        <strong>{previewState.failCount}</strong> แถว
       </p>
-      <table style={{ fontSize: 13, borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>แถว</th>
-            <th>ชื่อ-นามสกุล</th>
-            <th>เลขบัตร</th>
-            <th>สถานะ</th>
-            <th>สาเหตุ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {previewState.rows.map((r) => (
-            <tr key={r.rowNumber} style={{ color: r.status === "fail" ? "crimson" : undefined }}>
-              <td>{r.rowNumber}</td>
-              <td>
-                {r.first_name} {r.last_name}
-              </td>
-              <td>{r.national_id}</td>
-              <td>{r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}</td>
-              <td>{r.reason ?? "—"}</td>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>แถว</th>
+              <th>ชื่อ-นามสกุล</th>
+              <th>เลขบัตร</th>
+              <th>สถานะ</th>
+              <th>สาเหตุ</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {previewState.rows.map((r) => (
+              <tr key={r.rowNumber}>
+                <td>{r.rowNumber}</td>
+                <td>
+                  {r.first_name} {r.last_name}
+                </td>
+                <td>{r.national_id}</td>
+                <td>
+                  <span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>
+                    {r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}
+                  </span>
+                </td>
+                <td>{r.reason ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {previewState.passCount! > 0 && (
-        <form action={commitAction} style={{ display: "grid", gap: 8, maxWidth: 320 }}>
+        <form action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 360, marginTop: 20 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <input type="hidden" name="file_name" value={previewState.fileName} />
           <input type="hidden" name="rows" value={JSON.stringify(previewState.rows)} />
           <label>
-            ลงทะเบียนเรียนรุ่น (ไม่บังคับ)
-            <select name="class_id" style={{ width: "100%" }}>
+            <span className="field-label">ลงทะเบียนเรียนรุ่น (ไม่บังคับ)</span>
+            <select name="class_id" className="field">
               <option value="">-- ไม่ลงทะเบียน (เพิ่มผู้เรียนอย่างเดียว) --</option>
               {classes.map((c) => (
                 <option key={c.class_id} value={c.class_id}>
@@ -90,22 +106,22 @@ export function ImportClient({ unitId, classes }: { unitId: string; classes: Cla
             </select>
           </label>
           {!confirmArmed ? (
-            <button type="button" onClick={() => setConfirmArmed(true)}>
+            <button type="button" className="btn primary" onClick={() => setConfirmArmed(true)}>
               นำเข้า {previewState.passCount} รายการ
             </button>
           ) : (
             <>
-              <p style={{ color: "darkorange" }}>
+              <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6" }}>
                 ยืนยันอีกครั้ง — การนำเข้าจะสร้างผู้เรียน {previewState.passCount} คนในระบบทันที
               </p>
-              <button type="submit" disabled={commitPending}>
+              <button type="submit" className="btn primary" disabled={commitPending}>
                 {commitPending ? "กำลังนำเข้า..." : "ยืนยันนำเข้า"}
               </button>
             </>
           )}
         </form>
       )}
-      {commitState.error && <p style={{ color: "crimson" }}>{commitState.error}</p>}
+      {commitState.error && <p className="notice error">{commitState.error}</p>}
     </div>
   );
 }

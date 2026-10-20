@@ -8,12 +8,14 @@ export function RevealIdButton({ unitId, learnerId }: { unitId: string; learnerI
   const [pending, setPending] = useState(false);
 
   if (revealed) {
-    return <span>เลขบัตร: {revealed}</span>;
+    return <span className="pill study">เลขบัตร: {revealed}</span>;
   }
 
   return (
     <button
       type="button"
+      className="btn secondary"
+      style={{ padding: "4px 10px", fontSize: 13 }}
       disabled={pending}
       onClick={async () => {
         setPending(true);

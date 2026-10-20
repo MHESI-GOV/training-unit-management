@@ -1,5 +1,6 @@
 import { requireProfile } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/AppShell";
 import { CourseForm } from "./course-form";
 
 const CAN_EDIT = ["web_master", "central_staff", "unit_coordinator"];
@@ -14,26 +15,47 @@ export default async function CoursesPage() {
     .order("name");
 
   return (
-    <main style={{ maxWidth: 600, margin: "3rem auto", fontFamily: "system-ui" }}>
-      <h1>หลักสูตร</h1>
-      <ul>
-        {(courses ?? []).map((c) => (
-          <li key={c.course_id}>
-            {c.name} — {c.total_hours} ชม.
-            {c.theory_hours != null && c.practical_hours != null && (
-              <> (ทฤษฎี {c.theory_hours} / ปฏิบัติ {c.practical_hours})</>
+    <AppShell profile={profile} active="courses" eyebrow="หลักสูตรที่ใช้ร่วมกันทุกหน่วย" title="หลักสูตร">
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ชื่อหลักสูตร</th>
+              <th>ชั่วโมงรวม</th>
+              <th>ทฤษฎี / ปฏิบัติ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(courses ?? []).map((c) => (
+              <tr key={c.course_id}>
+                <td>{c.name}</td>
+                <td>{c.total_hours} ชม.</td>
+                <td>
+                  {c.theory_hours != null && c.practical_hours != null
+                    ? `${c.theory_hours} / ${c.practical_hours}`
+                    : "—"}
+                </td>
+              </tr>
+            ))}
+            {(courses ?? []).length === 0 && (
+              <tr>
+                <td colSpan={3} style={{ textAlign: "center", color: "var(--muted)" }}>
+                  ยังไม่มีหลักสูตร
+                </td>
+              </tr>
             )}
-          </li>
-        ))}
-        {(courses ?? []).length === 0 && <li>ยังไม่มีหลักสูตร</li>}
-      </ul>
+          </tbody>
+        </table>
+      </div>
 
       {CAN_EDIT.includes(profile.role) && (
-        <>
-          <h2 style={{ marginTop: 24 }}>เพิ่มหลักสูตรใหม่</h2>
-          <CourseForm />
-        </>
+        <section className="card" style={{ marginTop: 20, maxWidth: 440 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700 }}>เพิ่มหลักสูตรใหม่</h2>
+          <div style={{ marginTop: 14 }}>
+            <CourseForm />
+          </div>
+        </section>
       )}
-    </main>
+    </AppShell>
   );
 }

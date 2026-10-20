@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/AppShell";
 import { ImportClient } from "./import-client";
 
 export default async function UnitImportPage({
@@ -9,7 +10,7 @@ export default async function UnitImportPage({
   searchParams: Promise<{ unit_id?: string }>;
 }) {
   const { unit_id } = await searchParams;
-  const { unitId, isStaff } = await resolvePageUnit(unit_id);
+  const { unitId, isStaff, profile } = await resolvePageUnit(unit_id);
 
   const supabase = await createClient();
   const { data: classes } = await supabase
@@ -24,14 +25,13 @@ export default async function UnitImportPage({
   }));
 
   return (
-    <main style={{ maxWidth: 720, margin: "3rem auto", fontFamily: "system-ui" }}>
+    <AppShell profile={profile} active="import" eyebrow="นำเข้าข้อมูล" title="นำเข้าผู้เรียนจากไฟล์ CSV">
       {isStaff && (
-        <p>
-          <Link href="/admin/units">กลับไปหน้าเลือกหน่วย</Link>
+        <p style={{ marginBottom: 14 }}>
+          <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
         </p>
       )}
-      <h1>นำเข้าผู้เรียนจากไฟล์ CSV</h1>
       <ImportClient unitId={unitId} classes={classOptions} />
-    </main>
+    </AppShell>
   );
 }

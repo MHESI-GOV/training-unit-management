@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth/require-profile";
+import { AppShell } from "@/components/layout/AppShell";
 import { UnitSetupForm } from "./unit-setup-form";
 
 export default async function UnitSetupPage() {
@@ -10,12 +11,16 @@ export default async function UnitSetupPage() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: "3rem auto", fontFamily: "system-ui" }}>
-      <h1>กรอกข้อมูลหน่วยฝึกอบรม</h1>
-      <p style={{ color: "#666", fontSize: 14 }}>
-        บันทึกครั้งนี้จะสร้างหน่วยฝึกอบรมจริงและผูกกับบัญชีนี้ทันที ทำได้เพียงครั้งเดียว
-      </p>
-      <UnitSetupForm />
-    </main>
+    <AppShell profile={profile} active="unit-setup" eyebrow="ขั้นตอนเริ่มต้น" title="กรอกข้อมูลหน่วยฝึกอบรม">
+      <section className="card" style={{ maxWidth: 440 }}>
+        <span className="step on">บันทึกครั้งเดียว</span>
+        <p className="footnote" style={{ marginTop: 10 }}>
+          บันทึกครั้งนี้จะสร้างหน่วยฝึกอบรมจริงและผูกกับบัญชีนี้ทันที ทำได้เพียงครั้งเดียว
+        </p>
+        <div style={{ marginTop: 16 }}>
+          <UnitSetupForm />
+        </div>
+      </section>
+    </AppShell>
   );
 }

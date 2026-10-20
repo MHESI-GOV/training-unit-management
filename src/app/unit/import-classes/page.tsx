@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
+import { AppShell } from "@/components/layout/AppShell";
 import { ImportClient } from "./import-client";
 
 export default async function ImportClassesPage({
@@ -8,21 +9,19 @@ export default async function ImportClassesPage({
   searchParams: Promise<{ unit_id?: string }>;
 }) {
   const { unit_id } = await searchParams;
-  const { unitId, isStaff } = await resolvePageUnit(unit_id);
+  const { unitId, isStaff, profile } = await resolvePageUnit(unit_id);
 
   return (
-    <main style={{ maxWidth: 720, margin: "3rem auto", fontFamily: "system-ui" }}>
+    <AppShell profile={profile} active="import-classes" eyebrow="นำเข้าข้อมูล" title="นำเข้ารุ่นฝึกอบรมจากไฟล์ CSV">
       {isStaff && (
-        <p>
-          <Link href="/admin/units">กลับไปหน้าเลือกหน่วย</Link>
+        <p style={{ marginBottom: 14 }}>
+          <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
         </p>
       )}
-      <h1>นำเข้ารุ่นฝึกอบรมจากไฟล์ CSV</h1>
-      <p style={{ color: "#666", fontSize: 13 }}>
-        จับคู่ด้วยชื่อหลักสูตร — หลักสูตรต้องมีอยู่แล้วที่{" "}
-        <Link href="/courses">หน้าหลักสูตร</Link> ก่อน
+      <p className="footnote" style={{ marginBottom: 20 }}>
+        จับคู่ด้วยชื่อหลักสูตร — หลักสูตรต้องมีอยู่แล้วที่ <Link href="/courses">หน้าหลักสูตร</Link> ก่อน
       </p>
       <ImportClient unitId={unitId} />
-    </main>
+    </AppShell>
   );
 }

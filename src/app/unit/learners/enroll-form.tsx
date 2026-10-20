@@ -22,7 +22,7 @@ export function EnrollForm({
     <form action={formAction} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
       <input type="hidden" name="unit_id" value={unitId} />
       <input type="hidden" name="learner_id" value={learnerId} />
-      <select name="class_id" required>
+      <select name="class_id" required className="field" style={{ width: "auto", maxWidth: 260 }}>
         <option value="">-- เลือกรุ่นฝึกอบรม --</option>
         {classes.map((c) => (
           <option key={c.class_id} value={c.class_id}>
@@ -30,12 +30,12 @@ export function EnrollForm({
           </option>
         ))}
       </select>
-      <button type="submit" disabled={pending}>
+      <button type="submit" className="btn secondary" disabled={pending}>
         {pending ? "กำลังตรวจสอบ..." : "ลงทะเบียนเรียน"}
       </button>
-      {state.error && <span style={{ color: "crimson" }}>{state.error}</span>}
+      {state.error && <span style={{ color: "var(--danger)", fontSize: 13 }}>{state.error}</span>}
       {state.eligibility && (
-        <span style={{ color: state.eligibility.startsWith("ไม่มีสิทธิ์") ? "crimson" : "green" }}>
+        <span className={`pill ${state.eligibility.startsWith("ไม่มีสิทธิ์") ? "fail" : "done"}`}>
           {state.eligibility}
         </span>
       )}

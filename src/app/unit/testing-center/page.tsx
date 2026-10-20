@@ -2,7 +2,14 @@ import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { ASSESSMENT_STANDARD_LABEL, TESTING_CENTER_STATUS_LABEL } from "@/lib/labels";
+import { AppShell } from "@/components/layout/AppShell";
 import { StatusForm } from "./status-form";
+
+const STATUS_PILL: Record<string, string> = {
+  not_registered: "muted",
+  in_progress: "pending",
+  registered: "done",
+};
 
 export default async function TestingCenterPage({
   searchParams,
@@ -10,7 +17,7 @@ export default async function TestingCenterPage({
   searchParams: Promise<{ unit_id?: string }>;
 }) {
   const { unit_id } = await searchParams;
-  const { unitId, isStaff } = await resolvePageUnit(unit_id);
+  const { unitId, isStaff, profile } = await resolvePageUnit(unit_id);
 
   const supabase = await createClient();
   const { data: statuses } = await supabase
@@ -19,24 +26,29 @@ export default async function TestingCenterPage({
     .eq("unit_id", unitId);
 
   return (
-    <main style={{ maxWidth: 480, margin: "3rem auto", fontFamily: "system-ui" }}>
+    <AppShell profile={profile} active="testing-center" eyebrow="ศูนย์ทดสอบมาตรฐาน" title="สถานะศูนย์ทดสอบมาตรฐาน">
       {isStaff && (
-        <p>
-          <Link href="/admin/units">กลับไปหน้าเลือกหน่วย</Link>
+        <p style={{ marginBottom: 14 }}>
+          <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
         </p>
       )}
-      <h1>สถานะศูนย์ทดสอบมาตรฐาน</h1>
-      <ul>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
         {(statuses ?? []).map((s) => (
-          <li key={s.standard_type}>
+          <span key={s.standard_type} className={`pill ${STATUS_PILL[s.status] ?? "muted"}`}>
             {ASSESSMENT_STANDARD_LABEL[s.standard_type] ?? s.standard_type} —{" "}
             {TESTING_CENTER_STATUS_LABEL[s.status] ?? s.status}
-          </li>
+          </span>
         ))}
-        {(statuses ?? []).length === 0 && <li>ยังไม่มีข้อมูล</li>}
-      </ul>
-      <h2>อัปเดตสถานะ</h2>
-      <StatusForm unitId={unitId} />
-    </main>
+        {(statuses ?? []).length === 0 && <span className="pill muted">ยังไม่มีข้อมูล</span>}
+      </div>
+
+      <section className="card" style={{ maxWidth: 400 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>อัปเดตสถานะ</h2>
+        <div style={{ marginTop: 14 }}>
+          <StatusForm unitId={unitId} />
+        </div>
+      </section>
+    </AppShell>
   );
 }

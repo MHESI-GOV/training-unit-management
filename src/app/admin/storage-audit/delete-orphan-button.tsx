@@ -14,11 +14,11 @@ export function DeleteOrphanButton({
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
 
-  if (done) return <span style={{ color: "green" }}>ลบแล้ว</span>;
+  if (done) return <span className="pill done">ลบแล้ว</span>;
 
   if (!armed) {
     return (
-      <button type="button" onClick={() => setArmed(true)}>
+      <button type="button" className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setArmed(true)}>
         ลบไฟล์นี้
       </button>
     );
@@ -26,9 +26,11 @@ export function DeleteOrphanButton({
 
   return (
     <>
-      <span style={{ color: "darkorange" }}>ยืนยันลบไฟล์นี้ถาวร?</span>
+      <span className="pill pending">ยืนยันลบไฟล์นี้ถาวร?</span>
       <button
         type="button"
+        className="btn danger"
+        style={{ padding: "4px 10px", fontSize: 13 }}
         disabled={pending}
         onClick={async () => {
           setPending(true);
@@ -42,7 +44,7 @@ export function DeleteOrphanButton({
       >
         {pending ? "กำลังลบ..." : "ยืนยันลบ"}
       </button>
-      <button type="button" onClick={() => setArmed(false)}>
+      <button type="button" className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setArmed(false)}>
         ยกเลิก
       </button>
     </>

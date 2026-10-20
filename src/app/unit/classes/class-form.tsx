@@ -15,11 +15,11 @@ export function ClassForm({
   const [state, formAction, pending] = useActionState(createClass, initialState);
 
   return (
-    <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 400 }}>
+    <form action={formAction} style={{ display: "grid", gap: 12 }}>
       <input type="hidden" name="unit_id" value={unitId} />
       <label>
-        หลักสูตร
-        <select name="course_id" required style={{ width: "100%" }}>
+        <span className="field-label">หลักสูตร</span>
+        <select name="course_id" required className="field">
           <option value="">-- เลือกหลักสูตร --</option>
           {courses.map((c) => (
             <option key={c.course_id} value={c.course_id}>
@@ -29,25 +29,25 @@ export function ClassForm({
         </select>
       </label>
       <label>
-        วันเริ่มต้น
-        <input name="start_date" type="date" required style={{ width: "100%" }} />
+        <span className="field-label">วันเริ่มต้น</span>
+        <input name="start_date" type="date" required className="field" />
       </label>
       <label>
-        วันสิ้นสุด
-        <input name="end_date" type="date" required style={{ width: "100%" }} />
+        <span className="field-label">วันสิ้นสุด</span>
+        <input name="end_date" type="date" required className="field" />
       </label>
       <label>
-        จำนวนที่นั่ง
-        <input name="seat_count" type="number" min={1} required style={{ width: "100%" }} />
+        <span className="field-label">จำนวนที่นั่ง</span>
+        <input name="seat_count" type="number" min={1} required className="field" />
       </label>
       <label>
-        รหัสอ้างอิงเดิม (ถ้ามี)
-        <input name="external_ref" style={{ width: "100%" }} />
+        <span className="field-label">รหัสอ้างอิงเดิม (ถ้ามี)</span>
+        <input name="external_ref" className="field" />
       </label>
-      <button type="submit" disabled={pending}>
+      <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : "สร้างรุ่นฝึกอบรม"}
       </button>
-      {state.error && <p style={{ color: "crimson" }}>{state.error}</p>}
+      {state.error && <p className="notice error">{state.error}</p>}
     </form>
   );
 }

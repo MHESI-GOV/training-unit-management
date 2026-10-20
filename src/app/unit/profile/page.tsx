@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/AppShell";
 import { ProfileForm } from "./profile-form";
 import { ImageUploader } from "./image-uploader";
 
@@ -10,7 +11,7 @@ export default async function UnitProfilePage({
   searchParams: Promise<{ unit_id?: string }>;
 }) {
   const { unit_id } = await searchParams;
-  const { unitId, isStaff } = await resolvePageUnit(unit_id);
+  const { unitId, isStaff, profile } = await resolvePageUnit(unit_id);
 
   const supabase = await createClient();
 
@@ -43,16 +44,22 @@ export default async function UnitProfilePage({
   );
 
   return (
-    <main style={{ maxWidth: 560, margin: "3rem auto", fontFamily: "system-ui" }}>
+    <AppShell profile={profile} active="profile" eyebrow="ข้อมูลหน่วย" title={unit?.name ?? "โปรไฟล์หน่วย"}>
       {isStaff && (
-        <p>
-          <Link href="/admin/units">กลับไปหน้าเลือกหน่วย</Link>
+        <p style={{ marginBottom: 14 }}>
+          <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
         </p>
       )}
-      <h1>โปรไฟล์หน่วย: {unit?.name}</h1>
-      <ProfileForm unitId={unitId} initial={unitProfile ?? null} />
-      <h2 style={{ marginTop: 32 }}>ภาพถ่ายหน่วย</h2>
+
+      <section className="card" style={{ maxWidth: 480 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>ข้อมูลหน่วย</h2>
+        <div style={{ marginTop: 14 }}>
+          <ProfileForm unitId={unitId} initial={unitProfile ?? null} />
+        </div>
+      </section>
+
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: "24px 0 14px" }}>ภาพถ่ายหน่วย</h2>
       <ImageUploader unitId={unitId} images={imagesWithUrls} count={imagesWithUrls.length} />
-    </main>
+    </AppShell>
   );
 }

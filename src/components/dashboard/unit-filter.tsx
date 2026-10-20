@@ -13,10 +13,12 @@ export function UnitFilter({
 
   return (
     <select
+      className="field"
+      style={{ maxWidth: 320 }}
       value={selected}
       onChange={(e) => {
         const value = e.target.value;
-        router.push(value ? `/dashboard?unit_id=${value}` : "/dashboard");
+        router.push(value ? `/?unit_id=${value}` : "/");
       }}
     >
       <option value="">ทุกหน่วย (ภาพรวมโครงการ)</option>

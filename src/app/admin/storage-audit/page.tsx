@@ -1,10 +1,11 @@
 import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/AppShell";
 import { CheckNowButton } from "./check-now-button";
 import { DeleteOrphanButton } from "./delete-orphan-button";
 
 export default async function StorageAuditPage() {
-  await requireWebMaster();
+  const profile = await requireWebMaster();
 
   const supabase = await createClient();
   const { data: report } = await supabase
@@ -15,9 +16,8 @@ export default async function StorageAuditPage() {
     .maybeSingle();
 
   return (
-    <main style={{ maxWidth: 700, margin: "3rem auto", fontFamily: "system-ui" }}>
-      <h1>ไฟล์ภาพกำพร้า (Unit Photos)</h1>
-      <p style={{ color: "#666", fontSize: 13 }}>
+    <AppShell profile={profile} active="storage-audit" eyebrow="ผู้ดูแลระบบสูงสุด" title="ไฟล์ภาพกำพร้า (Unit Photos)">
+      <p className="footnote" style={{ marginBottom: 16 }}>
         ตรวจสอบ storage object ใน bucket unit-photos ที่ไม่มี record อ้างอิงใน training_unit_images
         — ไม่มีการลบอัตโนมัติ ต้องกดลบทีละไฟล์หลังตรวจสอบเองเท่านั้น (ตามแผนใน
         docs/planning/10-image-storage-options.md §3) ระบบจะตรวจอัตโนมัติทุกสัปดาห์ด้วย
@@ -25,21 +25,21 @@ export default async function StorageAuditPage() {
 
       <CheckNowButton />
 
-      {!report && <p style={{ marginTop: 16 }}>ยังไม่มีการตรวจสอบ</p>}
+      {!report && <p className="footnote" style={{ marginTop: 16 }}>ยังไม่มีการตรวจสอบ</p>}
 
       {report && (
-        <div style={{ marginTop: 16 }}>
+        <div className="card" style={{ marginTop: 16 }}>
           <p>
             ตรวจสอบล่าสุด: {new Date(report.checked_at).toLocaleString("th-TH")} — พบไฟล์กำพร้า{" "}
-            {report.orphan_count} ไฟล์
+            <strong>{report.orphan_count}</strong> ไฟล์
           </p>
 
-          {report.orphan_keys.length === 0 && <p style={{ color: "green" }}>ไม่พบไฟล์กำพร้า</p>}
+          {report.orphan_keys.length === 0 && <p className="pill done" style={{ marginTop: 10 }}>ไม่พบไฟล์กำพร้า</p>}
 
           {report.orphan_keys.length > 0 && (
-            <ul>
+            <ul style={{ marginTop: 14, display: "grid", gap: 10, listStyle: "none" }}>
               {report.orphan_keys.map((key) => (
-                <li key={key} style={{ marginBottom: 8, display: "flex", gap: 12, alignItems: "center" }}>
+                <li key={key} style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                   <span style={{ fontFamily: "monospace", fontSize: 13 }}>{key}</span>
                   <DeleteOrphanButton reportId={report.report_id} storageKey={key} />
                 </li>
@@ -48,6 +48,6 @@ export default async function StorageAuditPage() {
           )}
         </div>
       )}
-    </main>
+    </AppShell>
   );
 }

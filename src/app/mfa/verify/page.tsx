@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VerifyForm } from "./verify-form";
+import { AuthShell } from "@/components/layout/AuthShell";
 
 export default async function MfaVerifyPage() {
   const supabase = await createClient();
@@ -12,10 +13,8 @@ export default async function MfaVerifyPage() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "3rem auto", fontFamily: "system-ui" }}>
-      <h1>ยืนยันตัวตนสองชั้น</h1>
-      <p style={{ color: "#666", fontSize: 14 }}>กรอกรหัสจากแอป Authenticator เพื่อเข้าสู่ระบบ</p>
+    <AuthShell title="ยืนยันตัวตนสองชั้น" subtitle="กรอกรหัสจากแอป Authenticator เพื่อเข้าสู่ระบบ">
       <VerifyForm factorId={factor.id} />
-    </main>
+    </AuthShell>
   );
 }

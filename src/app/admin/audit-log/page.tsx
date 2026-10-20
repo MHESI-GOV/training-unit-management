@@ -1,8 +1,9 @@
 import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/AppShell";
 
 export default async function AuditLogPage() {
-  await requireWebMaster();
+  const profile = await requireWebMaster();
 
   const supabase = await createClient();
   const { data: logs, error } = await supabase
@@ -12,43 +13,46 @@ export default async function AuditLogPage() {
     .limit(200);
 
   return (
-    <main style={{ maxWidth: 900, margin: "3rem auto", fontFamily: "system-ui" }}>
-      <h1>Audit Log</h1>
-      <p style={{ color: "#666", fontSize: 13 }}>
+    <AppShell profile={profile} active="audit" eyebrow="ผู้ดูแลระบบสูงสุด" title="Audit Log">
+      <p className="footnote" style={{ marginBottom: 20 }}>
         เฉพาะ Web Master เท่านั้นที่เข้าถึงหน้านี้ได้ — ไม่เก็บค่า PII เดิม/ใหม่แบบเต็ม
       </p>
 
-      {error && <p style={{ color: "crimson" }}>โหลดไม่สำเร็จ: {error.message}</p>}
+      {error && <p className="notice error">โหลดไม่สำเร็จ: {error.message}</p>}
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #ccc" }}>
-            <th>เวลา</th>
-            <th>ผู้กระทำ</th>
-            <th>การกระทำ</th>
-            <th>ประเภท</th>
-            <th>รหัสอ้างอิง</th>
-            <th>ฟิลด์ที่เปลี่ยน</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(logs ?? []).map((log) => (
-            <tr key={log.log_id} style={{ borderBottom: "1px solid #eee" }}>
-              <td>{new Date(log.occurred_at).toLocaleString("th-TH")}</td>
-              <td>{log.profiles?.display_name ?? "—"}</td>
-              <td>{log.action}</td>
-              <td>{log.entity_type}</td>
-              <td style={{ fontFamily: "monospace", fontSize: 12 }}>{log.record_id}</td>
-              <td>{log.changed_fields?.join(", ") ?? "—"}</td>
-            </tr>
-          ))}
-          {(logs ?? []).length === 0 && (
+      <div className="table-wrap">
+        <table>
+          <thead>
             <tr>
-              <td colSpan={6}>ยังไม่มีรายการ</td>
+              <th>เวลา</th>
+              <th>ผู้กระทำ</th>
+              <th>การกระทำ</th>
+              <th>ประเภท</th>
+              <th>รหัสอ้างอิง</th>
+              <th>ฟิลด์ที่เปลี่ยน</th>
             </tr>
-          )}
-        </tbody>
-      </table>
-    </main>
+          </thead>
+          <tbody>
+            {(logs ?? []).map((log) => (
+              <tr key={log.log_id}>
+                <td>{new Date(log.occurred_at).toLocaleString("th-TH")}</td>
+                <td>{log.profiles?.display_name ?? "—"}</td>
+                <td>{log.action}</td>
+                <td>{log.entity_type}</td>
+                <td style={{ fontFamily: "monospace", fontSize: 12 }}>{log.record_id}</td>
+                <td>{log.changed_fields?.join(", ") ?? "—"}</td>
+              </tr>
+            ))}
+            {(logs ?? []).length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", color: "var(--muted)" }}>
+                  ยังไม่มีรายการ
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </AppShell>
   );
 }

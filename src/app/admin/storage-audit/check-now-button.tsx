@@ -9,6 +9,7 @@ export function CheckNowButton() {
   return (
     <button
       type="button"
+      className="btn primary"
       disabled={pending}
       onClick={async () => {
         setPending(true);

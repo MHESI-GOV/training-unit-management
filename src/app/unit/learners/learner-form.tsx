@@ -9,36 +9,36 @@ export function LearnerForm({ unitId }: { unitId: string }) {
   const [state, formAction, pending] = useActionState(createLearner, initialState);
 
   return (
-    <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
+    <form action={formAction} style={{ display: "grid", gap: 12 }}>
       <input type="hidden" name="unit_id" value={unitId} />
       <label>
-        ชื่อ
-        <input name="first_name" required style={{ width: "100%" }} />
+        <span className="field-label">ชื่อ</span>
+        <input name="first_name" required className="field" />
       </label>
       <label>
-        นามสกุล
-        <input name="last_name" required style={{ width: "100%" }} />
+        <span className="field-label">นามสกุล</span>
+        <input name="last_name" required className="field" />
       </label>
       <label>
-        เลขบัตรประชาชน (13 หลัก)
-        <input name="national_id" inputMode="numeric" pattern="\d{13}" required style={{ width: "100%" }} />
+        <span className="field-label">เลขบัตรประชาชน (13 หลัก)</span>
+        <input name="national_id" inputMode="numeric" pattern="\d{13}" required className="field" />
       </label>
       <label>
-        เบอร์โทร
-        <input name="phone" style={{ width: "100%" }} />
+        <span className="field-label">เบอร์โทร</span>
+        <input name="phone" className="field" />
       </label>
       <label>
-        อีเมล
-        <input name="email" type="email" style={{ width: "100%" }} />
+        <span className="field-label">อีเมล</span>
+        <input name="email" type="email" className="field" />
       </label>
       <label>
-        ที่อยู่
-        <textarea name="address" style={{ width: "100%" }} />
+        <span className="field-label">ที่อยู่</span>
+        <textarea name="address" className="field" rows={2} />
       </label>
-      <button type="submit" disabled={pending}>
+      <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : "เพิ่มผู้เรียน"}
       </button>
-      {state.error && <p style={{ color: "crimson" }}>{state.error}</p>}
+      {state.error && <p className="notice error">{state.error}</p>}
     </form>
   );
 }
