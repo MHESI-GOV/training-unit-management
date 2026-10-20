@@ -1,5 +1,6 @@
 import { LoginForm } from "@/app/login/login-form";
 import { Modal } from "@/components/layout/Modal";
+import { AuthCard } from "@/components/layout/AuthCard";
 import { CancelBackButton } from "@/components/layout/CancelBackButton";
 
 // Intercepts client-side navigation to /login (e.g. clicking "เข้าสู่ระบบ" from the public
@@ -17,18 +18,9 @@ export default async function LoginModal({
 
   return (
     <Modal>
-      <div className="card" style={{ width: "100%", maxWidth: 400 }}>
-        <p className="pill study">หนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย</p>
-        <h1 className="page-title" style={{ marginTop: 12 }}>
-          เข้าสู่ระบบ
-        </h1>
-        <p className="footnote" style={{ marginTop: 6 }}>
-          ระบบจัดการหน่วยฝึกอบรม
-        </p>
-        <div style={{ marginTop: 20 }}>
-          <LoginForm error={error} cancelSlot={<CancelBackButton />} />
-        </div>
-      </div>
+      <AuthCard title="เข้าสู่ระบบ" subtitle="ระบบจัดการหน่วยฝึกอบรม">
+        <LoginForm error={error} cancelSlot={<CancelBackButton />} />
+      </AuthCard>
     </Modal>
   );
 }
