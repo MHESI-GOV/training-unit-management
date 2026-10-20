@@ -46,7 +46,7 @@ export default async function UnitProfilePage({
   );
 
   return (
-    <AppShell profile={profile} active="profile" eyebrow="โปรไฟล์หน่วยฝึก" title={unit?.name ?? "โปรไฟล์หน่วยฝึก"}>
+    <AppShell profile={profile} active="profile" eyebrow="" title="โปรไฟล์หน่วยฝึก">
       {isStaff && (
         <p style={{ marginBottom: 14 }}>
           <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>

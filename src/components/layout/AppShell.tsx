@@ -117,7 +117,7 @@ export function AppShell({
         <header className="topbar">
           <div className="topbar-row">
             <div>
-              <p className="topbar-label">{eyebrow}</p>
+              {eyebrow ? <p className="topbar-label">{eyebrow}</p> : null}
               <strong className="topbar-title">{title}</strong>
             </div>
           </div>
