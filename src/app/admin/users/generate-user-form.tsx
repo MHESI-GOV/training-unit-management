@@ -50,7 +50,7 @@ export function GenerateUserForm() {
           ) : (
             <>
               <p style={{ color: "darkorange" }}>
-                ยังไม่ได้ตั้งค่าบริการส่งอีเมล (RESEND_API_KEY) — กรุณาส่งข้อมูลนี้ให้ผู้ใช้เองด้วยช่องทางอื่น:
+                ยังไม่ได้ตั้งค่าบริการส่งอีเมล (GMAIL_USER/GMAIL_APP_PASSWORD) — กรุณาส่งข้อมูลนี้ให้ผู้ใช้เองด้วยช่องทางอื่น:
               </p>
               <p>Username: {state.result.username}</p>
               <p>รหัสผ่านชั่วคราว: {state.result.temporaryPassword}</p>
