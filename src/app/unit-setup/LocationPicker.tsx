@@ -53,9 +53,11 @@ function toThaiAddress(a: Record<string, string>): GeoAddress {
 export function LocationPicker({
   initial,
   onGeocode,
+  readOnly = false,
 }: {
   initial?: { lat: number; lng: number } | null;
   onGeocode?: (addr: GeoAddress) => void;
+  readOnly?: boolean;
 }) {
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(initial ?? null);
   const [center, setCenter] = useState<[number, number] | null>(null);
@@ -101,35 +103,41 @@ export function LocationPicker({
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <span className="field-label">ตำแหน่งที่ตั้งบนแผนที่ (ปักหมุดเพื่อเก็บพิกัด)</span>
-      <div style={{ display: "flex", gap: 8 }}>
-        <div style={{ position: "relative", flex: 1 }}>
-          <Search size={15} style={{ position: "absolute", left: 10, top: 11, color: "var(--muted)" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                search();
-              }
-            }}
-            placeholder="ค้นหาสถานที่ เช่น มหาวิทยาลัยเชียงใหม่"
-            className="field"
-            style={{ width: "100%", paddingLeft: 30 }}
-          />
+      <span className="field-label">
+        {readOnly ? "ตำแหน่งที่ตั้งบนแผนที่" : "ตำแหน่งที่ตั้งบนแผนที่ (ปักหมุดเพื่อเก็บพิกัด)"}
+      </span>
+      {!readOnly && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ position: "relative", flex: 1 }}>
+            <Search size={15} style={{ position: "absolute", left: 10, top: 11, color: "var(--muted)" }} />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  search();
+                }
+              }}
+              placeholder="ค้นหาสถานที่ เช่น มหาวิทยาลัยเชียงใหม่"
+              className="field"
+              style={{ width: "100%", paddingLeft: 30 }}
+            />
+          </div>
+          <button type="button" className="btn secondary" onClick={search} disabled={searching}>
+            {searching ? "กำลังค้นหา…" : "ค้นหา"}
+          </button>
         </div>
-        <button type="button" className="btn secondary" onClick={search} disabled={searching}>
-          {searching ? "กำลังค้นหา…" : "ค้นหา"}
-        </button>
-      </div>
+      )}
 
-      <Inner position={pos} center={center} onPick={pickPosition} />
+      <Inner position={pos} center={center} onPick={pickPosition} readOnly={readOnly} />
 
       <p className="footnote">
         {pos
           ? `พิกัดที่เลือก: ${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`
-          : "ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด (ไม่บังคับ เพิ่มภายหลังได้)"}
+          : readOnly
+            ? "ยังไม่ได้ปักหมุดตำแหน่ง"
+            : "ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด (ไม่บังคับ เพิ่มภายหลังได้)"}
       </p>
       {err && <p className="notice error">{err}</p>}
 

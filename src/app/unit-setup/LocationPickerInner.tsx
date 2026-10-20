@@ -27,23 +27,25 @@ export default function LocationPickerInner({
   position,
   center,
   onPick,
+  readOnly = false,
 }: {
   position: { lat: number; lng: number } | null;
   center: [number, number] | null;
   onPick: (lat: number, lng: number) => void;
+  readOnly?: boolean;
 }) {
   return (
     <MapContainer
       center={position ? [position.lat, position.lng] : [13.2, 100.9]}
       zoom={position ? 14 : 5}
       scrollWheelZoom={false}
-      style={{ height: 360, width: "100%", borderRadius: 12, cursor: "crosshair" }}
+      style={{ height: 360, width: "100%", borderRadius: 12, cursor: readOnly ? "grab" : "crosshair" }}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
-      <ClickCapture onPick={onPick} />
+      {!readOnly && <ClickCapture onPick={onPick} />}
       <Recenter center={center} />
       {position && (
         <CircleMarker
