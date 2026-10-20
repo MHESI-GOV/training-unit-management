@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth/get-profile";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
+import { PublicHome } from "@/components/home/PublicHome";
 import { UnitFilter } from "@/components/dashboard/unit-filter";
 import { ExportLearners } from "@/components/dashboard/export-learners";
 import { ExportClasses } from "@/components/dashboard/export-classes";
@@ -85,29 +86,27 @@ export default async function Home({
   ]);
   const kpi = kpiRows?.[0];
 
+  // Logged-out visitors get the standalone marketing/landing layout (top nav + hero + stat
+  // cards), not the sidebar app shell -- the sidebar only makes sense once there's a role-
+  // specific menu to show.
+  if (!profile) {
+    return kpi ? (
+      <PublicHome kpi={kpi} />
+    ) : (
+      <main style={{ maxWidth: 480, margin: "4rem auto", textAlign: "center" }}>
+        <p style={{ color: "var(--danger)" }}>โหลดข้อมูลไม่สำเร็จ{error ? `: ${error.message}` : ""}</p>
+        <Link href="/login" className="btn primary" style={{ marginTop: 14 }}>
+          เข้าสู่ระบบ
+        </Link>
+      </main>
+    );
+  }
+
   return (
     <AppShell profile={profile} active="home" eyebrow="ภาพรวมโครงการ" title="หนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย">
-      {!profile && (
-        <section className="card" style={{ marginBottom: 20 }}>
-          <p className="pill study">ข้อมูลสาธารณะ</p>
-          <h1 className="page-title" style={{ marginTop: 10 }}>
-            ภาพรวมโครงการหนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย
-          </h1>
-          <p style={{ color: "var(--muted)", marginTop: 8, maxWidth: 640 }}>
-            สรุปสถิติการดำเนินงานในภาพรวมของโครงการ — สำหรับผู้ประสานงานหน่วยฝึกอบรม เจ้าหน้าที่
-            ส่วนกลาง หรือผู้ดูแลระบบ กรุณาเข้าสู่ระบบเพื่อใช้งานฟังก์ชันอื่นเพิ่มเติม
-          </p>
-          <Link href="/login" className="btn primary" style={{ marginTop: 14 }}>
-            เข้าสู่ระบบ
-          </Link>
-        </section>
-      )}
-
-      {profile && (
-        <p className="footnote" style={{ marginBottom: 16 }}>
-          เข้าสู่ระบบในนาม <strong>{email}</strong>
-        </p>
-      )}
+      <p className="footnote" style={{ marginBottom: 16 }}>
+        เข้าสู่ระบบในนาม <strong>{email}</strong>
+      </p>
 
       {pendingUnitSetup && (
         <section className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6" }}>
