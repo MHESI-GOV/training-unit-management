@@ -18,7 +18,9 @@ export default async function UnitProfilePage({
   const [{ data: unitProfile }, { data: unit }, { data: images }] = await Promise.all([
     supabase
       .from("training_unit_profiles")
-      .select("address, phone, email, coordinator_name, description")
+      .select(
+        "house_no, road, province_name, district_name, subdistrict_name, address, phone, email, coordinator_first_name, coordinator_last_name, description, is_food_testing_center, latitude, longitude",
+      )
       .eq("unit_id", unitId)
       .maybeSingle(),
     supabase.from("training_units").select("name").eq("unit_id", unitId).single(),
@@ -44,15 +46,15 @@ export default async function UnitProfilePage({
   );
 
   return (
-    <AppShell profile={profile} active="profile" eyebrow="ข้อมูลหน่วย" title={unit?.name ?? "โปรไฟล์หน่วย"}>
+    <AppShell profile={profile} active="profile" eyebrow="โปรไฟล์หน่วยฝึก" title={unit?.name ?? "โปรไฟล์หน่วยฝึก"}>
       {isStaff && (
         <p style={{ marginBottom: 14 }}>
           <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
         </p>
       )}
 
-      <section className="card" style={{ maxWidth: 480 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700 }}>ข้อมูลหน่วย</h2>
+      <section className="card" style={{ maxWidth: 680 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>ข้อมูลหน่วยฝึก</h2>
         <div style={{ marginTop: 14 }}>
           <ProfileForm unitId={unitId} initial={unitProfile ?? null} />
         </div>

@@ -750,44 +750,65 @@ export type Database = {
       training_unit_profiles: {
         Row: {
           address: string | null
+          coordinator_first_name: string | null
+          coordinator_last_name: string | null
           coordinator_name: string | null
           description: string | null
           district_id: string | null
+          district_name: string | null
           email: string | null
+          house_no: string | null
+          is_food_testing_center: boolean | null
           latitude: number | null
           longitude: number | null
           phone: string | null
           province_id: string | null
           province_name: string | null
+          road: string | null
           subdistrict_id: string | null
+          subdistrict_name: string | null
           unit_id: string
         }
         Insert: {
           address?: string | null
+          coordinator_first_name?: string | null
+          coordinator_last_name?: string | null
           coordinator_name?: string | null
           description?: string | null
           district_id?: string | null
+          district_name?: string | null
           email?: string | null
+          house_no?: string | null
+          is_food_testing_center?: boolean | null
           latitude?: number | null
           longitude?: number | null
           phone?: string | null
           province_id?: string | null
           province_name?: string | null
+          road?: string | null
           subdistrict_id?: string | null
+          subdistrict_name?: string | null
           unit_id: string
         }
         Update: {
           address?: string | null
+          coordinator_first_name?: string | null
+          coordinator_last_name?: string | null
           coordinator_name?: string | null
           description?: string | null
           district_id?: string | null
+          district_name?: string | null
           email?: string | null
+          house_no?: string | null
+          is_food_testing_center?: boolean | null
           latitude?: number | null
           longitude?: number | null
           phone?: string | null
           province_id?: string | null
           province_name?: string | null
+          road?: string | null
           subdistrict_id?: string | null
+          subdistrict_name?: string | null
           unit_id?: string
         }
         Relationships: [

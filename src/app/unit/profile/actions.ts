@@ -22,6 +22,10 @@ const SIGNATURES: { mime: string; ext: string; check: (b: Buffer) => boolean }[]
 
 export type ProfileFormState = { error?: string; success?: boolean };
 
+function clean(formData: FormData, key: string): string | null {
+  return String(formData.get(key) ?? "").trim() || null;
+}
+
 export async function upsertUnitProfile(
   _prev: ProfileFormState,
   formData: FormData,
@@ -29,13 +33,34 @@ export async function upsertUnitProfile(
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const supabase = await createClient();
 
+  const first = clean(formData, "coordinator_first_name");
+  const last = clean(formData, "coordinator_last_name");
+  const combined = [first, last].filter(Boolean).join(" ") || null;
+  const tc = String(formData.get("is_food_testing_center") ?? "");
+  const latRaw = String(formData.get("latitude") ?? "").trim();
+  const lngRaw = String(formData.get("longitude") ?? "").trim();
+  const lat = latRaw ? Number(latRaw) : NaN;
+  const lng = lngRaw ? Number(lngRaw) : NaN;
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+
+  // `address` (the legacy free-text column) is deliberately omitted so existing values are left
+  // intact — it was superseded by the structured house_no/road/… fields.
   const { error } = await supabase.from("training_unit_profiles").upsert({
     unit_id: unitId,
-    address: String(formData.get("address") ?? "").trim() || null,
-    phone: String(formData.get("phone") ?? "").trim() || null,
-    email: String(formData.get("email") ?? "").trim() || null,
-    coordinator_name: String(formData.get("coordinator_name") ?? "").trim() || null,
-    description: String(formData.get("description") ?? "").trim() || null,
+    house_no: clean(formData, "house_no"),
+    road: clean(formData, "road"),
+    province_name: clean(formData, "province_name"),
+    district_name: clean(formData, "district_name"),
+    subdistrict_name: clean(formData, "subdistrict_name"),
+    coordinator_first_name: first,
+    coordinator_last_name: last,
+    coordinator_name: combined,
+    phone: clean(formData, "phone"),
+    email: clean(formData, "email"),
+    description: clean(formData, "description"),
+    is_food_testing_center: tc === "true" ? true : tc === "false" ? false : null,
+    latitude: hasCoords ? lat : null,
+    longitude: hasCoords ? lng : null,
   });
 
   if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };

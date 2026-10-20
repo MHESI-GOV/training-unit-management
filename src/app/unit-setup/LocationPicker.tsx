@@ -24,28 +24,54 @@ const Inner = dynamic(() => import("./LocationPickerInner"), {
   ),
 });
 
-// Search + pin-drop location picker for unit creation. Search uses the free Nominatim/OpenStreetMap
-// geocoder (no API key); a map click drops/moves the pin. The chosen lat/lng are written to hidden
-// inputs so they travel with the form's FormData to submit_training_unit().
-export function LocationPicker() {
-  const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [province, setProvince] = useState("");
+export type GeoAddress = {
+  province: string;
+  district: string;
+  subdistrict: string;
+  road: string;
+  houseNo: string;
+};
+
+// Best-effort map of a Nominatim reverse-geocode address object to Thai address parts. Keys vary
+// by place, so each slot falls back through the plausible alternatives; everything is editable
+// afterwards, so an imperfect guess just saves typing.
+function toThaiAddress(a: Record<string, string>): GeoAddress {
+  return {
+    province: a.province || a.state || a.city || a.county || "",
+    district: a.city_district || a.district || a.county || a.municipality || a.town || "",
+    subdistrict: a.suburb || a.subdistrict || a.quarter || a.neighbourhood || a.village || a.hamlet || "",
+    road: a.road || "",
+    houseNo: a.house_number || "",
+  };
+}
+
+// Search + pin-drop location picker for unit creation/editing. Search uses the free
+// Nominatim/OpenStreetMap geocoder (no API key); a map click drops/moves the pin. The chosen
+// lat/lng are written to hidden inputs so they travel with the form's FormData. When a pin is set
+// its reverse-geocoded address parts are handed up via onGeocode so the parent can pre-fill its
+// editable จังหวัด/อำเภอ/ตำบล/ถนน/เลขที่ fields.
+export function LocationPicker({
+  initial,
+  onGeocode,
+}: {
+  initial?: { lat: number; lng: number } | null;
+  onGeocode?: (addr: GeoAddress) => void;
+}) {
+  const [pos, setPos] = useState<{ lat: number; lng: number } | null>(initial ?? null);
   const [center, setCenter] = useState<[number, number] | null>(null);
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Set the pin and reverse-geocode its province (for the dashboard map's จังหวัด filter).
   async function pickPosition(lat: number, lng: number) {
     setPos({ lat, lng });
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&accept-language=th&lat=${lat}&lon=${lng}`;
       const res = await fetch(url, { headers: { Accept: "application/json" } });
       const d = (await res.json()) as { address?: Record<string, string> };
-      const a = d.address ?? {};
-      setProvince(a.province || a.state || a.city || a.county || "");
+      if (onGeocode) onGeocode(toThaiAddress(d.address ?? {}));
     } catch {
-      /* keep whatever province we had; coords are what matter */
+      /* keep whatever the fields had; coords are what matter */
     }
   }
 
@@ -75,7 +101,7 @@ export function LocationPicker() {
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <span className="field-label">ตำแหน่งที่ตั้งหน่วยฝึกอบรม</span>
+      <span className="field-label">ตำแหน่งที่ตั้งบนแผนที่ (ปักหมุดเพื่อเก็บพิกัด)</span>
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ position: "relative", flex: 1 }}>
           <Search size={15} style={{ position: "absolute", left: 10, top: 11, color: "var(--muted)" }} />
@@ -102,14 +128,13 @@ export function LocationPicker() {
 
       <p className="footnote">
         {pos
-          ? `พิกัดที่เลือก: ${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}${province ? ` · ${province}` : ""}`
-          : "ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุดตำแหน่งหน่วยฝึกอบรม"}
+          ? `พิกัดที่เลือก: ${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`
+          : "ค้นหาสถานที่ หรือคลิกบนแผนที่เพื่อปักหมุด (ไม่บังคับ เพิ่มภายหลังได้)"}
       </p>
       {err && <p className="notice error">{err}</p>}
 
       <input type="hidden" name="latitude" value={pos?.lat ?? ""} />
       <input type="hidden" name="longitude" value={pos?.lng ?? ""} />
-      <input type="hidden" name="province_name" value={province} />
     </div>
   );
 }

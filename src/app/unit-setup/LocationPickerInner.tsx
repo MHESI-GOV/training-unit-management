@@ -36,6 +36,7 @@ export default function LocationPickerInner({
     <MapContainer
       center={position ? [position.lat, position.lng] : [13.2, 100.9]}
       zoom={position ? 14 : 5}
+      scrollWheelZoom={false}
       style={{ height: 360, width: "100%", borderRadius: 12, cursor: "crosshair" }}
     >
       <TileLayer

@@ -13,6 +13,10 @@ export type SubmitUnitState = {
 type UnitType = Database["public"]["Enums"]["unit_type"];
 type RegionType = Database["public"]["Enums"]["region_type"];
 
+function clean(formData: FormData, key: string): string | null {
+  return String(formData.get(key) ?? "").trim() || null;
+}
+
 export async function submitTrainingUnit(
   _prevState: SubmitUnitState,
   formData: FormData,
@@ -28,39 +32,58 @@ export async function submitTrainingUnit(
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "");
   const region = String(formData.get("region") ?? "");
-  const externalRef = String(formData.get("external_ref") ?? "").trim() || null;
   const latRaw = String(formData.get("latitude") ?? "").trim();
   const lngRaw = String(formData.get("longitude") ?? "").trim();
-  const provinceName = String(formData.get("province_name") ?? "").trim() || null;
 
+  // Only ชื่อสถาบัน (+ the structural type/region the schema needs) is required; everything else,
+  // including the map pin, can be filled in later from the unit-profile menu.
   if (!name || !(type in UNIT_TYPE_LABEL) || !(region in REGION_LABEL)) {
-    return { error: "กรุณากรอกข้อมูลให้ครบถ้วน" };
+    return { error: "กรุณากรอกชื่อสถาบัน ประเภทหน่วย และภูมิภาค" };
   }
 
   const latitude = latRaw ? Number(latRaw) : NaN;
   const longitude = lngRaw ? Number(lngRaw) : NaN;
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return { error: "กรุณาปักหมุดตำแหน่งที่ตั้งหน่วยฝึกอบรมบนแผนที่" };
-  }
+  const hasCoords = Number.isFinite(latitude) && Number.isFinite(longitude);
 
   const supabase = await createClient();
   const { data: unitId, error } = await supabase.rpc("submit_training_unit", {
     p_name: name,
     p_type: type as UnitType,
     p_region: region as RegionType,
-    p_external_ref: externalRef ?? undefined,
-    p_latitude: latitude,
-    p_longitude: longitude,
+    p_latitude: hasCoords ? latitude : undefined,
+    p_longitude: hasCoords ? longitude : undefined,
   });
 
   if (error) {
     return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
   }
 
-  // Store the reverse-geocoded province name on the profile row the RPC just created. Best-effort:
-  // the unit is already created and usable; the province only feeds the dashboard map's filter.
-  if (unitId && provinceName) {
-    await supabase.from("training_unit_profiles").update({ province_name: provinceName }).eq("unit_id", unitId);
+  // Persist the rest of the onboarding profile onto the row the RPC just created (or create it, if
+  // no pin was dropped so the RPC made none). Best-effort: the unit already exists and is usable;
+  // any field here can be re-entered from /unit/profile, so a failure here shouldn't strand the
+  // coordinator on a form they can no longer resubmit.
+  if (unitId) {
+    const first = clean(formData, "coordinator_first_name");
+    const last = clean(formData, "coordinator_last_name");
+    const combined = [first, last].filter(Boolean).join(" ") || null;
+    const tc = String(formData.get("is_food_testing_center") ?? "");
+
+    await supabase.from("training_unit_profiles").upsert({
+      unit_id: unitId,
+      house_no: clean(formData, "house_no"),
+      road: clean(formData, "road"),
+      province_name: clean(formData, "province_name"),
+      district_name: clean(formData, "district_name"),
+      subdistrict_name: clean(formData, "subdistrict_name"),
+      coordinator_first_name: first,
+      coordinator_last_name: last,
+      coordinator_name: combined,
+      phone: clean(formData, "phone"),
+      email: clean(formData, "email"),
+      is_food_testing_center: tc === "true" ? true : tc === "false" ? false : null,
+      latitude: hasCoords ? latitude : null,
+      longitude: hasCoords ? longitude : null,
+    });
   }
 
   redirect("/");
