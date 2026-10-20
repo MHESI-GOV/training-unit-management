@@ -6,10 +6,25 @@ export const UNIT_TYPE_LABEL: Record<string, string> = {
 
 export const REGION_LABEL: Record<string, string> = {
   north: "ภาคเหนือ",
-  east: "ภาคตะวันออก",
   northeast: "ภาคตะวันออกเฉียงเหนือ",
   central: "ภาคกลาง",
   south: "ภาคใต้",
+  east: "ภาคตะวันออก",
+  bangkok: "กรุงเทพมหานคร",
+};
+
+// Fixed display order for region breakdowns on the dashboard (เหนือ อีสาน กลาง ใต้ ตะวันออก กทม.).
+export const REGION_ORDER = ["north", "northeast", "central", "south", "east", "bangkok"] as const;
+
+// Decorative dot colors for the per-region breakdown lists (always paired with a text label, so
+// never color-alone). Drawn from the data-viz reference palette's light steps.
+export const REGION_COLOR: Record<string, string> = {
+  north: "#2a78d6",
+  northeast: "#eb6834",
+  central: "#eda100",
+  south: "#4a3aa7",
+  east: "#1baf7a",
+  bangkok: "#e87ba4",
 };
 
 export const ROLE_LABEL: Record<string, string> = {

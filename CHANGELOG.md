@@ -1,0 +1,248 @@
+# Changelog — ระบบจัดการหน่วยฝึกอบรม (Training Unit Management)
+
+บันทึกการเปลี่ยนแปลงของแอป โดยเวอร์ชันล่าสุดอยู่บนสุด
+รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) และใช้เลขเวอร์ชันแบบ [SemVer](https://semver.org/)
+หมวดที่ใช้: **เพิ่ม** (ของใหม่) · **เปลี่ยน** (ปรับพฤติกรรมเดิม) · **แก้บั๊ก** · **ภายใน** (โครงสร้าง/เอกสาร ไม่กระทบผู้ใช้)
+
+---
+
+## [0.4.2] — 2026-10-21
+
+ปรับ navigation ของหน้า Home สาธารณะให้ responsive บนมือถือ (hamburger menu)
+
+### เปลี่ยน
+- **nav หน้า Home บนจอ ≤860px ยุบเป็น hamburger menu** แทนการ wrap ลงเป็น 3 แถว — แยก nav ออกเป็น
+  client component `src/components/home/PublicNav.tsx` (ปุ่ม ☰ เปิด/ปิด dropdown panel ที่รวมลิงก์
+  3 ตัว + ปุ่มเข้าสู่ระบบ) บน desktop แสดงผลเหมือนเดิมทุกประการ (ลิงก์ inline + ปุ่ม login ขวามือ)
+  - `.public-nav` เป็น positioning context, เพิ่ม `.public-nav-toggle`/`.public-nav-collapse` +
+    media query ≤860px ใน `globals.css`
+  - ลิงก์ที่ active อัปเดตตามการคลิก (เดิม hardcode "เกี่ยวกับโครงการ" เป็น active ตายตัว) และคลิก
+    ลิงก์/ปุ่มใน panel จะปิดเมนูให้อัตโนมัติ
+
+### ภายใน
+- typecheck + production build ผ่าน; ยืนยัน DOM/interaction ผ่าน JS (hamburger ซ่อนบน desktop
+  `display:none`, คลิกสลับ open/close ได้, media query มีจริงใน stylesheet)
+- **ยังไม่ได้ถ่ายภาพจริงบน viewport มือถือ** — `resize_window` ของ session นี้ไม่เปลี่ยน viewport
+  จริง (ค้างที่ความกว้างเดิม ตรงกับ gotcha ที่บันทึกไว้) จึงตรวจผ่าน DOM + computed style แทน
+
+---
+
+## [0.4.1] — 2026-10-21
+
+ตัวกรองแผนที่เพิ่มเติม + แสดงจำนวนผล และปรับ layout การ์ดแถวบน (ทั้ง dashboard และ Home)
+
+### เพิ่ม
+- **ตัวกรองแผนที่: จังหวัด + ประเภทสถาบัน** (เพิ่มจากเดิมที่มีภูมิภาค + ค้นหาชื่อ) และ **ป้ายจำนวนผล
+  "พบ N หน่วย"** ที่อัปเดตตามตัวกรอง — `src/components/dashboard/MapSection.tsx`
+  - ตัวเลือกจังหวัดสร้างจากจังหวัดที่มีจริงในข้อมูลหมุด (เรียงไทย)
+- **เก็บชื่อจังหวัดต่อหน่วย** (`training_unit_profiles.province_name`, migration
+  `20261021110000_unit_province_name.sql`) — reverse-geocode จากพิกัดด้วย Nominatim ตอนปักหมุดใน
+  `/unit-setup` (เก็บผ่าน `unit-setup` action หลังสร้างหน่วย) และส่งออกใน pins ของ
+  `get_dashboard_overview()` (field `province`) + แสดงในป๊อปอัปหมุด
+  - เป็น text field แยกจาก `province_id` FK (ที่ชี้ตาราง provinces ว่างอยู่) จึงไม่ต้อง seed ชุดจังหวัด
+
+### เปลี่ยน
+- **จัดแถวการ์ดใหม่ตามที่ผู้ใช้ระบุ** (`src/components/dashboard/OverviewCards.tsx`): แถวบนสุดเหลือ
+  2 การ์ด (จำนวนหน่วยฝึกอบรม + จำนวนผู้เรียน) และย้าย 3 การ์ดมาตรฐานลงมาเป็นแถวของตัวเอง — ทั้งสองแถว
+  responsive แนวนอน (การ์ดเรียงข้างกันบนจอกว้าง ซ้อนลงบนจอแคบ)
+
+### ภายใน
+- backfill province_name ให้ข้อมูล DEMO ทั้ง 14 หน่วย (reverse geocode, 1 req/วินาที) → ได้ 12 จังหวัด
+  ให้ตัวกรองมีข้อมูลจริง
+- ชื่อจังหวัดจาก Nominatim มี prefix "จังหวัด" อยู่แล้ว (ยกเว้น "กรุงเทพมหานคร") จึงไม่เติมซ้ำใน UI
+- regenerate types, typecheck + production build ผ่าน, หน้า Home render ตัวกรอง+ผลนับครบ (ยังรอผู้ใช้
+  ตรวจการวาดแผนที่/ปักหมุดจริงบนเบราว์เซอร์ เช่นเดิม)
+
+---
+
+## [0.4.0] — 2026-10-21
+
+สเตจ 2: แผนที่การกระจายตัวของหน่วยฝึกอบรม + ค้นหา/ปักหมุดตำแหน่งตอนสร้างหน่วย (แสดงทั้ง dashboard และ Home)
+
+### เพิ่ม
+- **แผนที่หมุดหน่วยฝึกอบรม** (`MapSection` + `UnitMapInner`) ใน `OverviewCards` — ใช้ **Leaflet +
+  OpenStreetMap** (ไม่ต้องใช้ Google API key) หมุดเป็น CircleMarker สีตามภูมิภาค (เลี่ยงปัญหาไอคอน
+  default ของ Leaflet ในตัว bundler) มี legend ภูมิภาค, ตัวกรองภูมิภาค, ช่องค้นหาชื่อหน่วย, และป๊อปอัป
+  รายละเอียดเมื่อคลิกหมุด — โหลดแบบ client-only (`next/dynamic` `ssr:false`) เพราะ Leaflet แตะ window
+  ตอน import
+- **การ์ด "หน่วยฝึกอบรมล่าสุด"** ข้างแผนที่ — จาก `latest_units` (6 หน่วยล่าสุด) ที่เพิ่มใน
+  `get_dashboard_overview()` (migration `20261021100000_dashboard_overview_latest_units.sql`)
+- **ค้นหา + ปักหมุดตำแหน่งตอนสร้างหน่วย** ที่ `/unit-setup` (`LocationPicker` + `LocationPickerInner`):
+  ค้นหาสถานที่ผ่าน Nominatim (ฟรี) แล้วแผนที่เลื่อนไปปักหมุด หรือคลิกบนแผนที่เพื่อปักหมุดเอง — บังคับต้อง
+  มีพิกัดก่อนบันทึก เก็บ lat/lng ลง `training_unit_profiles`
+- ติดตั้ง dependencies: `leaflet` + `react-leaflet` v5 (รองรับ React 19) + `@types/leaflet`
+
+### เปลี่ยน
+- **`submit_training_unit()` รับพิกัด** (เพิ่มพารามิเตอร์ `p_latitude`/`p_longitude` nullable) — สร้าง/
+  อัปเดตแถว `training_unit_profiles` พร้อมพิกัดในทรานแซกชันเดียว (migration
+  `20261021100100_submit_unit_with_coords.sql`; drop overload 4-อาร์กเดิมก่อนเพื่อไม่ให้ชื่อซ้ำ)
+  อัปเดต `unit-setup` form + action ให้ส่งพิกัด
+- แผนที่ + หน่วยล่าสุดอยู่ใน `OverviewCards` จึงแสดงทั้ง **dashboard ฝั่งล็อกอินและหน้า Home** ตาม
+  ข้อกำหนด "ปรับ dashboard = รวม Home ด้วย"
+
+### ภายใน
+- regenerate types (มี `latest_units`, `p_latitude`); verify headless: coordinator สร้างหน่วยพร้อม
+  พิกัด → เก็บ lat/lng + unit_scope + หมุดขึ้นใน overview ถูกต้อง (ลบ test แล้ว)
+- ยืนยัน: typecheck + production build ผ่าน (Leaflet ไม่ crash ตอน SSR เพราะ dynamic ssr:false),
+  หน้า Home render map section ครบ (HTTP 200 ไม่มี error)
+- **ยังไม่ได้ตรวจด้วยตาจริงบนเบราว์เซอร์** (การวาดแผนที่/หมุด/ปักหมุด) — Chrome automation ใช้ไม่ได้
+  ใน session นี้ โครงสร้าง+ข้อมูลยืนยันแล้ว รอผู้ใช้ดูภาพจริง
+- **ข้อมูล DEMO:** seed ข้อมูลตัวอย่าง 14 หน่วย/220 ผู้เรียน (ชื่อขึ้นต้น "DEMO") ไว้ใน production
+  ชั่วคราวเพื่อดู dashboard แบบมีข้อมูล — ลบได้ด้วย scratchpad `cleanup_demo.mjs` (รันในโฟลเดอร์ app)
+
+---
+
+## [0.3.3] — 2026-10-21
+
+นำ layout แบบ reference (0.3.2) ไปใช้กับหน้า Home สาธารณะด้วย และรวมโค้ด layout ให้เป็นที่เดียว
+
+### เปลี่ยน
+- **หน้า Home สาธารณะ (PublicHome) ใช้ layout ภาพรวมชุดเดียวกับ dashboard ฝั่งล็อกอินแล้ว** — คง
+  nav/hero/footer เดิม แต่ส่วนข้อมูลเปลี่ยนมาใช้ `<OverviewCards>` ตัวเดียวกับ dashboard (แถวการ์ด 5
+  ใบ + 2 Donut) แทนบล็อก kpi-grid เดิมของ 0.3.1 — ไฟล์: `src/components/home/PublicHome.tsx`
+
+### เพิ่ม
+- **`OverviewCards`** คอมโพเนนต์ layout ภาพรวมที่ใช้ร่วมกันทั้ง 2 หน้า (`src/components/dashboard/
+  OverviewCards.tsx`) — ย้าย CountCard/CertCard/IconBadge/BigValue + 2 แถวออกจาก `page.tsx` มาไว้ที่นี่
+  ต่อไปแก้ layout dashboard ที่ไฟล์เดียวนี้ครอบคลุมทั้ง dashboard และ Home อัตโนมัติ
+
+### ภายใน
+- `src/app/page.tsx` เรียก `<OverviewCards>` แทน JSX เดิม (ลดโค้ดซ้ำ)
+- **บันทึกเป็นข้อกำหนดถาวร:** "ปรับ dashboard" = รวมหน้า Home ด้วยเสมอ (memory
+  `feedback_dashboard_includes_home`) — เหตุนี้จึงรวม layout ไว้ที่ `OverviewCards` ที่เดียว
+- typecheck + production build ผ่าน, หน้า Home render ครบ (HTTP 200 ไม่มี error)
+
+---
+
+## [0.3.2] — 2026-10-21
+
+ปรับ layout ของส่วนข้อมูลในหน้า Dashboard (ฝั่งล็อกอิน) ให้ตรงตามภาพ reference ที่ผู้ใช้ส่งมา
+
+### เปลี่ยน
+- **จัดวางการ์ดข้อมูลใหม่ตาม reference** (`src/app/page.tsx`):
+  - แถวที่ 1: 5 การ์ดเรียงแถวเดียว — การ์ด "จำนวนหน่วยฝึกอบรม" และ "จำนวนผู้เรียน" (แต่ละใบมีไอคอน
+    วงกลมสี + ตัวเลขใหญ่ + รายภูมิภาคแบบ 2 คอลัมน์พร้อมจุดสีประจำภูมิภาค) ตามด้วย 3 การ์ดมาตรฐาน
+    (ไอคอนวงกลมสี: โล่เขียว-กรมอนามัย / รางวัลชมพู-สคช. / เหรียญทอง-กพร.)
+  - แถวที่ 2: 2 การ์ด Donut — "ประเภทของสถาบัน" และ "สถานะการเรียน" (สำเร็จ/กำลังเรียน) พร้อม legend
+    ตัวเลข+% ข้างกราฟ
+  - *หมายเหตุ:* ปรับเฉพาะ layout ใช้ข้อมูลจริงที่มี — ไม่ใส่ตัวเลข trend "▲% จากเดือนก่อน" (ไม่มี
+    ข้อมูล month-over-month) และประเภทสถาบันมี 3 แบบตาม data model (ไม่ใช่ 6 แบบในภาพ)
+  - แผนที่การกระจายตัว + รายการหน่วยล่าสุด (แถวที่ 3 ในภาพ) ยังไม่ทำ — เป็นสเตจ 2
+
+### เพิ่ม
+- **`DonutChart`** คอมโพเนนต์ Donut+legend ใช้ซ้ำได้ (SVG ล้วน ไม่มี client JS) — ไฟล์
+  `src/components/dashboard/DonutChart.tsx` `InstitutionDonut` ถูก refactor ให้เรียกใช้ตัวนี้ และ
+  "สถานะการเรียน" ก็ใช้ตัวเดียวกัน (คู่สี aqua/violet ผ่าน validator: CVD ΔE 31.1)
+- `REGION_COLOR` แมปสีจุดประจำภูมิภาค (ใช้คู่กับ label เสมอ ไม่สื่อด้วยสีอย่างเดียว) — `src/lib/labels.ts`
+
+### ภายใน
+- typecheck + production build ผ่าน, สี donut ตรวจด้วย dataviz validator แล้ว
+- PublicHome (หน้า Home สาธารณะ) ยังใช้ layout เดิมของ 0.3.1 — การปรับครั้งนี้เจาะจงเฉพาะ dashboard
+  ฝั่งล็อกอินตามที่ผู้ใช้ระบุ (InstitutionDonut ที่ refactor ยังแสดงผลเหมือนเดิมทั้งสองหน้า)
+
+---
+
+## [0.3.1] — 2026-10-20
+
+นำ Dashboard ภาพรวมแบบใหม่ไปแสดงบนหน้า Home สาธารณะ (ผู้ที่ยังไม่ล็อกอิน) ด้วย โดยคงดีไซน์เดิมของ
+PublicHome ไว้ให้มากที่สุด
+
+### เปลี่ยน
+- **หน้า Home สาธารณะ (PublicHome) แสดงข้อมูลภาพรวมชุดเดียวกับ dashboard ฝั่งล็อกอิน** — ยังคง
+  nav/hero/footer และการ์ดหัวข้อ 4 ช่องสไตล์เดิม (ผู้เข้าร่วมโครงการ/ผู้ผ่านการอบรม/มาตรฐานที่ได้รับ/
+  หน่วยฝึกอบรม) แต่ตอนนี้ดึงจาก `get_dashboard_overview()` และเพิ่มส่วนด้านล่างด้วยสไตล์ `kpi-grid`
+  เดิม: หน่วยฯ แยก 6 ภูมิภาค, ผู้เรียนแยก 6 ภูมิภาค, 3 การ์ดมาตรฐาน, Donut ประเภทสถาบัน, สถานะการเรียน
+  - ไฟล์: `src/components/home/PublicHome.tsx` (รับ prop `ov: Overview` แทน `kpi`),
+    `src/app/page.tsx` (ส่วน logged-out ดึง `get_dashboard_overview` แทน `get_dashboard_kpis`)
+  - ข้อมูลที่ผู้ชมสาธารณะเห็น = ชุดเดียวกับ Executive (ทั้งโครงการ + ปกปิดกลุ่มเล็ก <5) ไม่มากกว่านั้น
+
+### เพิ่ม
+- **ให้ anonymous (ไม่ล็อกอิน) เรียก `get_dashboard_overview()` ได้** — เดิมฟังก์ชัน raise forbidden
+  เมื่อไม่มี role ตอนนี้ถ้า `auth.uid()` เป็น null จะถือเป็น executive (ทั้งโครงการ + suppression) และ
+  `grant execute ... to anon` เลียนแบบสิ่งที่ `20261020140000_public_dashboard.sql` ทำกับ
+  `get_dashboard_kpis` — ไฟล์: `supabase/migrations/20261020150200_dashboard_overview_public.sql`
+- CSS: `.kpi-grid.g6/.g3/.g2` (กริด 6/3/2 คอลัมน์ให้เข้ากับการ์ดเดิม), `.kpi-section-title`,
+  `.dash-card`, `.dash-split` — ไฟล์: `src/app/globals.css`
+
+### ภายใน
+- แยก type `Overview` + helper `fmt`/`totalCerts`/`SUPPRESSED` ออกเป็นโมดูลร่วม `src/lib/dashboard.ts`
+  ใช้ทั้ง `page.tsx` และ `PublicHome.tsx` (เดิมประกาศซ้ำใน `page.tsx`)
+- ยืนยัน: anonymous เรียก RPC ได้จริง (ไม่ forbidden) คืนข้อมูล production, หน้า Home render ครบทุก
+  ส่วนรวม กทม. (HTTP 200 ไม่มี error), typecheck + production build ผ่าน
+
+---
+
+## [0.3.0] — 2026-10-20
+
+รื้อหน้า Dashboard ตามสเปกใหม่ (สเตจ 1/2 — ยังไม่รวมแผนที่หมุด ซึ่งจะมาในสเตจ 2)
+
+### เพิ่ม
+- **ภูมิภาคที่ 6: กรุงเทพมหานคร** — เพิ่มค่า `bangkok` ใน enum `region_type` (เดิมมี 5 ภูมิภาค, กทม.
+  ถูกนับรวมในภาคกลาง) ตอนนี้สร้างหน่วยเป็น กทม. ได้โดยตรง และ dashboard แยก กทม. ออกมา
+  - ไฟล์: `supabase/migrations/20261020150000_bangkok_region_and_unit_geo.sql`, `src/lib/labels.ts`
+    (เพิ่ม `bangkok` + `REGION_ORDER` กำหนดลำดับแสดงผล เหนือ/อีสาน/กลาง/ใต้/ตะวันออก/กทม.)
+- **คอลัมน์พิกัด `latitude`/`longitude`** ใน `training_unit_profiles` (เตรียมไว้สำหรับแผนที่หมุดสเตจ 2
+  ยังว่างจนกว่าจะปักหมุด) — ไฟล์เดียวกับข้างบน
+- **ฟังก์ชัน `get_dashboard_overview()`** (SECURITY DEFINER) เป็นแหล่งข้อมูลเดียวของ dashboard ใหม่
+  คืน jsonb: จำนวนหน่วยฯ-รวม/แยกภูมิภาค/แยกประเภทสถาบัน, จำนวนผู้เรียน-รวม/แยกภูมิภาค, จำนวนผู้ได้รับ
+  3 มาตรฐาน (ผู้สัมผัสอาหาร-กรมอนามัย / สมรรถนะฯ ระดับ 4-สคช. / ฝีมือแรงงาน ระดับ 1-กพร.),
+  สถานะการเรียน (สำเร็จ/กำลังเรียน), และ pins สำหรับแผนที่
+  - *ทำไมต้องเป็น SECURITY DEFINER:* บทบาท Executive ไม่มีสิทธิ์ RLS อ่านตาราง learners/enrollments/
+    assessment_results เลย (ไม่เห็น PII) ตัวเลขสรุปจึงต้องมาจากฟังก์ชันที่คืนเฉพาะยอดรวม ไม่คืนแถว
+  - บังคับ scope ตามบทบาทในฟังก์ชันเอง (Unit Coordinator = หน่วยตัวเอง, Executive = ทั้งโครงการ +
+    ปกปิดกลุ่มเล็ก < 5 คน ตาม ST-4, Web Master/Central = กรองรายหน่วยได้) — ยอดนับ"หน่วย" ไม่ถูกปกปิด
+  - ไฟล์: `supabase/migrations/20261020150100_dashboard_overview.sql`
+- **Donut chart ประเภทของสถาบัน** — SVG ล้วน ไม่มีไลบรารีชาร์ต ใช้ 3 สีแรกของชุดสี data-viz ที่ผ่าน
+  การตรวจ colorblind-safe ทั้ง light/dark (blue/orange/aqua) และมี label+ตัวเลข+% กำกับทุกสไลซ์
+  (ไม่สื่อด้วยสีอย่างเดียว) — ไฟล์: `src/components/dashboard/InstitutionDonut.tsx`
+
+### เปลี่ยน
+- **หน้า Dashboard (`src/app/page.tsx`, ส่วนที่ล็อกอินแล้ว) รื้อใหม่ทั้งหมด** ตามสเปก: การ์ด
+  "จำนวนหน่วยฝึกอบรม" และ "จำนวนผู้เรียน" พร้อม sub-card แยก 6 ภูมิภาค, 3 การ์ดมาตรฐาน, Donut
+  ประเภทสถาบัน, และสถานะการเรียน (สำเร็จ/กำลังเรียน) — ดึงข้อมูลจาก `get_dashboard_overview()` ครั้งเดียว
+  (เดิมใช้ `get_dashboard_kpis` แบบ 7 KPI) ค่าที่ถูกปกปิดสำหรับ Executive แสดง "ข้อมูลน้อยเกินไปที่จะ
+  แสดงผลได้" ปุ่ม Export (Web Master/Central) ยังอยู่ครบ
+- หน้า Home สำหรับผู้ที่ยังไม่ล็อกอิน (PublicHome) ยังใช้ `get_dashboard_kpis` เหมือนเดิม — สเปกนี้
+  ปรับเฉพาะ dashboard ฝั่งล็อกอิน
+
+### ภายใน
+- regenerate Supabase TypeScript types (`src/lib/supabase/database.types.ts`) หลัง migration —
+  รวม `bangkok`, `latitude/longitude`, `get_dashboard_overview`
+- ยังค้าง (สเตจ 2): ตัวเลือกค้นหา+ปักหมุดตำแหน่งหน่วยตอนสร้าง (เก็บ lat/lng) และแผนที่หมุดบน dashboard
+
+---
+
+## [0.2.0] — 2026-10-20
+
+ชุดปรับปรุงประสบการณ์การเข้าสู่ระบบ (หน้าต่างลอย/MFA) ทั้งหมดทำฝั่ง client เพื่อเลี่ยงปัญหาการ redirect หลุดออกจาก popup
+
+### เปลี่ยน
+- **หน้าต่าง Login เป็น popup ลอยเต็มรูปแบบ (ทำงานฝั่ง client ล้วน):** เมื่อกด "เข้าสู่ระบบ" จากหน้า Home
+  จะเปิดเป็นหน้าต่างลอยทับหน้าเดิม (intercepting route) การล็อกอินเรียก Supabase ตรงจากเบราว์เซอร์
+  (ไม่ผ่าน server action) แล้วจึงทำ hard navigation ไปหน้า `/` ครั้งเดียวเมื่อเสร็จ
+  - *เหตุผลเชิงเทคนิค:* popup นี้ลอยทับหน้า `/` (Home ยังคงอยู่เป็นพื้นหลัง) ถ้าใช้ server action
+    Next.js จะ revalidate พื้นหลัง `/` ด้วย ซึ่งทำให้ middleware เด้ง Web Master ที่ยังไม่ตั้ง MFA
+    ออกไปหน้า `/mfa/enroll` เต็มจอกลางคัน การทำฝั่ง client ล้วนจึงตัดปัญหานี้
+  - ไฟล์: `src/app/@modal/(.)login/login-modal-flow.tsx`, `src/app/@modal/(.)login/page.tsx`
+- **ขั้นตอน MFA ของ Web Master ทำใน popup เดิม (ไม่เด้งออกหน้าใหม่):** หลังกรอก user/password ใน popup
+  ถ้าเป็น Web Master จะแสดงขั้นตอน MFA ต่อในหน้าต่างเดียวกันทันที
+  - บัญชีที่ยังไม่เคยตั้ง MFA → แสดง **QR code + ช่องกรอกรหัส 6 หลัก** (ขั้น enroll)
+  - บัญชีที่ตั้ง MFA แล้ว → แสดง **ช่องกรอกรหัส 6 หลัก** อย่างเดียว (ขั้น verify)
+  - บทบาทอื่นที่ไม่ใช่ Web Master ไม่ต้องทำ MFA เข้าหน้า Home ได้เลย (ตรงกับกติกาใน middleware)
+  - เรียก `supabase.auth.mfa.enroll/challenge/verify` ฝั่ง client ทั้งหมด เสร็จแล้ว hard-nav ไป `/`
+
+### แก้บั๊ก
+- **popup หายเมื่อลากเลือกข้อความแล้วปล่อยเมาส์นอกกล่อง:** เดิมการคลุมดำข้อความในช่องกรอกแล้วปล่อยเมาส์
+  บนพื้นหลัง (backdrop) ทำให้ popup ปิดทันที แก้โดยให้ปิดเฉพาะเมื่อ "กดเริ่ม" และ "ปล่อย" อยู่บน backdrop
+  ทั้งคู่ — การคลิกพื้นหลังเปล่าๆ ยังปิดได้ปกติ
+  - ไฟล์: `src/components/layout/Modal.tsx`
+- **(สืบเนื่อง) Web Master ถูกเด้งออกจาก popup ไปหน้า `/login` และ `/mfa` เต็มจอหลังกดส่ง:** แก้หมดไปพร้อมการ
+  ย้ายทั้ง flow มาทำฝั่ง client ข้างต้น
+
+### ภายใน
+- ลบ server action `signInCheckMfa` (และ type `SignInMfaState`) ที่ไม่ใช้แล้วออกจาก `src/app/login/actions.ts`
+  — `signIn`/`signOut` เดิมของหน้า `/login` แบบเต็มจอยังอยู่เหมือนเดิมสำหรับการเข้าตรงผ่าน URL
+- ถอดการยกเว้น `/login` ออกจาก MFA enforcement ใน `src/middleware.ts` (ไม่จำเป็นอีกต่อไป เพราะ popup
+  ไม่เรียก server action แล้ว)
+- หน้า `/login` เต็มจอ และหน้า `/mfa/enroll`, `/mfa/verify` เต็มจอ ยังคงอยู่ครบ ใช้กรณีเข้าตรงผ่าน URL
+  หรือเมื่อ middleware เด้งมาเอง

@@ -1,0 +1,35 @@
+// Shape returned by the get_dashboard_overview() RPC (a single jsonb object), shared by the
+// authenticated dashboard (src/app/page.tsx) and the public home (components/home/PublicHome).
+// Suppressible people-counts come back as number | null (null = suppressed for Executive / the
+// anonymous public view, ST-4).
+export type Overview = {
+  total_units: number;
+  units_by_region: Record<string, number>;
+  units_by_type: Record<string, number>;
+  total_learners: number | null;
+  learners_by_region: Record<string, number | null>;
+  cert_anamai_contact: number | null;
+  cert_professional_q: number | null;
+  cert_dsd_l1: number | null;
+  status_completed: number | null;
+  status_in_progress: number | null;
+  pins: { unit_id: string; name: string; region: string; type: string; province: string | null; lat: number; lng: number }[];
+  latest_units: { unit_id: string; name: string; region: string; type: string; status: string }[];
+};
+
+export const SUPPRESSED = "ข้อมูลน้อยเกินไปที่จะแสดงผลได้";
+
+export function fmt(v: number | null | undefined): string {
+  if (v === null || v === undefined) return SUPPRESSED;
+  return v.toLocaleString("th-TH");
+}
+
+// Sum of the 3 certification headcounts for the "มาตรฐานที่ได้รับ" headline. If any component is
+// suppressed (null), the total is suppressed too — otherwise it would leak the hidden value back
+// out by subtraction.
+export function totalCerts(ov: Overview): number | null {
+  if (ov.cert_anamai_contact === null || ov.cert_professional_q === null || ov.cert_dsd_l1 === null) {
+    return null;
+  }
+  return ov.cert_anamai_contact + ov.cert_professional_q + ov.cert_dsd_l1;
+}

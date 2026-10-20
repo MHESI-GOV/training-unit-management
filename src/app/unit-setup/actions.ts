@@ -29,21 +29,38 @@ export async function submitTrainingUnit(
   const type = String(formData.get("type") ?? "");
   const region = String(formData.get("region") ?? "");
   const externalRef = String(formData.get("external_ref") ?? "").trim() || null;
+  const latRaw = String(formData.get("latitude") ?? "").trim();
+  const lngRaw = String(formData.get("longitude") ?? "").trim();
+  const provinceName = String(formData.get("province_name") ?? "").trim() || null;
 
   if (!name || !(type in UNIT_TYPE_LABEL) || !(region in REGION_LABEL)) {
     return { error: "กรุณากรอกข้อมูลให้ครบถ้วน" };
   }
 
+  const latitude = latRaw ? Number(latRaw) : NaN;
+  const longitude = lngRaw ? Number(lngRaw) : NaN;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return { error: "กรุณาปักหมุดตำแหน่งที่ตั้งหน่วยฝึกอบรมบนแผนที่" };
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.rpc("submit_training_unit", {
+  const { data: unitId, error } = await supabase.rpc("submit_training_unit", {
     p_name: name,
     p_type: type as UnitType,
     p_region: region as RegionType,
     p_external_ref: externalRef ?? undefined,
+    p_latitude: latitude,
+    p_longitude: longitude,
   });
 
   if (error) {
     return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
+  }
+
+  // Store the reverse-geocoded province name on the profile row the RPC just created. Best-effort:
+  // the unit is already created and usable; the province only feeds the dashboard map's filter.
+  if (unitId && provinceName) {
+    await supabase.from("training_unit_profiles").update({ province_name: provinceName }).eq("unit_id", unitId);
   }
 
   redirect("/");

@@ -6,64 +6,8 @@ import { PublicHome } from "@/components/home/PublicHome";
 import { UnitFilter } from "@/components/dashboard/unit-filter";
 import { ExportLearners } from "@/components/dashboard/export-learners";
 import { ExportClasses } from "@/components/dashboard/export-classes";
-
-function Stat({ label, value, note }: { label: string; value: number | null; note?: string }) {
-  if (value === null) {
-    return (
-      <div className="stat-tile suppressed">
-        <div className="stat-label">{label}</div>
-        <div className="stat-value">ข้อมูลน้อยเกินไปที่จะแสดงผลได้</div>
-      </div>
-    );
-  }
-  return (
-    <div className="stat-tile">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value.toLocaleString("th-TH")}</div>
-      {note && <div className="stat-note">{note}</div>}
-    </div>
-  );
-}
-
-function RatePill({
-  label,
-  passed,
-  tested,
-}: {
-  label: string;
-  passed: number | null;
-  tested: number | null;
-}) {
-  if (tested === null) {
-    return (
-      <div className="stat-tile suppressed">
-        <div className="stat-label">{label}</div>
-        <div className="stat-value">ข้อมูลน้อยเกินไปที่จะแสดงผลได้</div>
-      </div>
-    );
-  }
-  if (tested === 0) {
-    return (
-      <div className="stat-tile suppressed">
-        <div className="stat-label">{label}</div>
-        <div className="stat-value" style={{ fontSize: 18 }}>
-          ยังไม่มีข้อมูล
-        </div>
-      </div>
-    );
-  }
-  const passedCount = passed ?? 0;
-  const pct = Math.round((passedCount / tested) * 1000) / 10;
-  return (
-    <div className="stat-tile">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{pct}%</div>
-      <div className="stat-note">
-        ผ่าน {passedCount.toLocaleString("th-TH")} / เข้าทดสอบ {tested.toLocaleString("th-TH")}
-      </div>
-    </div>
-  );
-}
+import { OverviewCards } from "@/components/dashboard/OverviewCards";
+import { type Overview } from "@/lib/dashboard";
 
 export default async function Home({
   searchParams,
@@ -73,25 +17,15 @@ export default async function Home({
   const { email, profile } = await getCurrentProfile();
   const { unit_id } = await searchParams;
 
-  const pendingUnitSetup = profile?.role === "unit_coordinator" && !profile.unit_scope;
-  const canFilterByUnit = profile?.role === "web_master" || profile?.role === "central_staff";
-  const filterUnitId = profile?.role === "unit_coordinator" ? undefined : canFilterByUnit ? unit_id : undefined;
-
   const supabase = await createClient();
-  const [{ data: kpiRows, error }, { data: units }] = await Promise.all([
-    supabase.rpc("get_dashboard_kpis", { p_unit_id: filterUnitId || undefined }),
-    canFilterByUnit
-      ? supabase.from("training_units").select("unit_id, name").order("name")
-      : Promise.resolve({ data: null }),
-  ]);
-  const kpi = kpiRows?.[0];
 
-  // Logged-out visitors get the standalone marketing/landing layout (top nav + hero + stat
-  // cards), not the sidebar app shell -- the sidebar only makes sense once there's a role-
-  // specific menu to show.
+  // Logged-out visitors get the standalone marketing/landing layout (the existing public
+  // dashboard design), now showing the same overview content as the authenticated dashboard.
   if (!profile) {
-    return kpi ? (
-      <PublicHome kpi={kpi} />
+    const { data: ovRaw, error } = await supabase.rpc("get_dashboard_overview", { p_unit_id: undefined });
+    const publicOv = ovRaw as Overview | null;
+    return publicOv ? (
+      <PublicHome ov={publicOv} />
     ) : (
       <main style={{ maxWidth: 480, margin: "4rem auto", textAlign: "center" }}>
         <p style={{ color: "var(--danger)" }}>โหลดข้อมูลไม่สำเร็จ{error ? `: ${error.message}` : ""}</p>
@@ -101,6 +35,18 @@ export default async function Home({
       </main>
     );
   }
+
+  const pendingUnitSetup = profile.role === "unit_coordinator" && !profile.unit_scope;
+  const canFilterByUnit = profile.role === "web_master" || profile.role === "central_staff";
+  const filterUnitId = canFilterByUnit ? unit_id : undefined;
+
+  const [{ data: ovRaw, error }, { data: units }] = await Promise.all([
+    supabase.rpc("get_dashboard_overview", { p_unit_id: filterUnitId ?? undefined }),
+    canFilterByUnit
+      ? supabase.from("training_units").select("unit_id, name").order("name")
+      : Promise.resolve({ data: null }),
+  ]);
+  const ov = (ovRaw as Overview | null) ?? null;
 
   return (
     <AppShell profile={profile} active="home" eyebrow="ภาพรวมโครงการ" title="หนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย">
@@ -122,34 +68,19 @@ export default async function Home({
 
       {error && <p style={{ color: "var(--danger)" }}>โหลดข้อมูลไม่สำเร็จ: {error.message}</p>}
 
-      {kpi && (
+      {ov && (
         <>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: canFilterByUnit ? 16 : 20 }}>
-            <Stat label="KPI-1 ผู้สมัครเข้าร่วม" value={kpi.applicants} />
-            <Stat label="KPI-2 ผู้เข้ารับการฝึกอบรมจริง" value={kpi.attended} />
-            <Stat label="KPI-3 ผู้สำเร็จหลักสูตร" value={kpi.completed} />
-          </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-            <RatePill label="KPI-4 %ผ่านมาตรฐานกรมอนามัย" passed={kpi.anamai_passed} tested={kpi.anamai_tested} />
-            <RatePill label="KPI-5 %ผ่าน DSD ระดับ 1" passed={kpi.dsd_passed} tested={kpi.dsd_tested} />
-          </div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-            <Stat label="KPI-6 หน่วยที่เป็นศูนย์ทดสอบ DSD" value={kpi.dsd_centers} />
-            <Stat label="KPI-7 หน่วยที่เป็นศูนย์ทดสอบคุณวุฒิวิชาชีพ" value={kpi.pq_centers} />
+          <div style={{ marginTop: canFilterByUnit ? 16 : 20 }}>
+            <OverviewCards ov={ov} />
           </div>
 
-          <p className="footnote" style={{ marginTop: 20 }}>
-            อัปเดตจากหน่วยฝึกอบรม {kpi.units_with_data.toLocaleString("th-TH")}/
-            {kpi.total_units.toLocaleString("th-TH")} แห่งที่มีข้อมูลผู้เรียน
-          </p>
+          {canFilterByUnit && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
+              <ExportLearners unitId={unit_id ?? ""} />
+              <ExportClasses unitId={unit_id ?? ""} />
+            </div>
+          )}
         </>
-      )}
-
-      {canFilterByUnit && (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
-          <ExportLearners unitId={unit_id ?? ""} />
-          <ExportClasses unitId={unit_id ?? ""} />
-        </div>
       )}
     </AppShell>
   );

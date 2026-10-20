@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { submitTrainingUnit, type SubmitUnitState } from "./actions";
 import { UNIT_TYPE_LABEL, REGION_LABEL } from "@/lib/labels";
+import { LocationPicker } from "./LocationPicker";
 
 const initialState: SubmitUnitState = {};
 
@@ -39,6 +40,7 @@ export function UnitSetupForm() {
         <span className="field-label">รหัสอ้างอิงเดิม (ถ้ามี)</span>
         <input name="external_ref" className="field" />
       </label>
+      <LocationPicker />
       <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : "บันทึกและเริ่มใช้งาน"}
       </button>

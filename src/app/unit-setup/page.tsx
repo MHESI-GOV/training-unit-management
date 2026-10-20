@@ -12,7 +12,7 @@ export default async function UnitSetupPage() {
 
   return (
     <AppShell profile={profile} active="unit-setup" eyebrow="ขั้นตอนเริ่มต้น" title="กรอกข้อมูลหน่วยฝึกอบรม">
-      <section className="card" style={{ maxWidth: 440 }}>
+      <section className="card" style={{ maxWidth: 680 }}>
         <span className="step on">บันทึกครั้งเดียว</span>
         <p className="footnote" style={{ marginTop: 10 }}>
           บันทึกครั้งนี้จะสร้างหน่วยฝึกอบรมจริงและผูกกับบัญชีนี้ทันที ทำได้เพียงครั้งเดียว

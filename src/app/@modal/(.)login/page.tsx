@@ -8,10 +8,10 @@ import { LoginModalFlow } from "./login-modal-flow";
 // src/app/login/page.tsx -- intercepting routes only apply to in-app client transitions,
 // which is exactly right here since there's no page to show "behind" a direct visit.
 //
-// The Web Master MFA step (enroll/verify) happens *inside* LoginModalFlow's own client state,
-// not as a further route -- a dedicated @modal/(.)mfa/* pair was tried first and removed, since
-// middleware's redirect() after a plain signIn() breaks route interception (confirmed by
-// testing), so a separate MFA route would just fall back to a full page anyway.
+// LoginModalFlow runs the whole login -> (Web Master only) MFA enroll/verify sequence entirely
+// client-side inside this popup, then hard-navigates to "/" once. See its long comment for why
+// everything here must be client-side (no server action) to avoid the "/" background
+// revalidation yanking a Web Master out to a full-page /mfa/* mid-flow.
 export default function LoginModal() {
   return (
     <Modal>

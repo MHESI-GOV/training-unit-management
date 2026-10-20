@@ -754,8 +754,11 @@ export type Database = {
           description: string | null
           district_id: string | null
           email: string | null
+          latitude: number | null
+          longitude: number | null
           phone: string | null
           province_id: string | null
+          province_name: string | null
           subdistrict_id: string | null
           unit_id: string
         }
@@ -765,8 +768,11 @@ export type Database = {
           description?: string | null
           district_id?: string | null
           email?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           province_id?: string | null
+          province_name?: string | null
           subdistrict_id?: string | null
           unit_id: string
         }
@@ -776,8 +782,11 @@ export type Database = {
           description?: string | null
           district_id?: string | null
           email?: string | null
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           province_id?: string | null
+          province_name?: string | null
           subdistrict_id?: string | null
           unit_id?: string
         }
@@ -886,9 +895,12 @@ export type Database = {
           units_with_data: number
         }[]
       }
+      get_dashboard_overview: { Args: { p_unit_id?: string }; Returns: Json }
       submit_training_unit: {
         Args: {
           p_external_ref?: string
+          p_latitude?: number
+          p_longitude?: number
           p_name: string
           p_region: Database["public"]["Enums"]["region_type"]
           p_type: Database["public"]["Enums"]["unit_type"]
@@ -909,7 +921,13 @@ export type Database = {
       image_visibility: "public" | "internal"
       import_job_status: "pending" | "processing" | "completed" | "failed"
       learner_source: "unit_self_entry" | "unit_import_file"
-      region_type: "north" | "east" | "northeast" | "central" | "south"
+      region_type:
+        | "north"
+        | "east"
+        | "northeast"
+        | "central"
+        | "south"
+        | "bangkok"
       testing_center_status_enum:
         | "not_registered"
         | "in_progress"
@@ -1064,7 +1082,14 @@ export const Constants = {
       image_visibility: ["public", "internal"],
       import_job_status: ["pending", "processing", "completed", "failed"],
       learner_source: ["unit_self_entry", "unit_import_file"],
-      region_type: ["north", "east", "northeast", "central", "south"],
+      region_type: [
+        "north",
+        "east",
+        "northeast",
+        "central",
+        "south",
+        "bangkok",
+      ],
       testing_center_status_enum: [
         "not_registered",
         "in_progress",
