@@ -29,22 +29,49 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", margin: "6px 0 -2px" }}>{children}</h3>;
 }
 
-// Editing is gated: the profile opens read-only, and the coordinator must click "ขอแก้ไขข้อมูล"
-// to reveal the editable form + save button. Mounting the edit form fresh each time means a prior
-// cancelled edit is discarded automatically (fields re-init from `initial`).
-export function ProfileForm({ unitId, initial }: { unitId: string; initial: ProfileInitial }) {
+// Editing is gated: the profile opens read-only. The edit button is a pencil icon next to the
+// "ข้อมูลหน่วยฝึก" heading (tooltip on hover); clicking it reveals the editable form + save button.
+// Mounting the edit form fresh each time means a cancelled edit is discarded (fields re-init from
+// `initial` / `unitName`).
+export function ProfileForm({
+  unitId,
+  unitName,
+  initial,
+}: {
+  unitId: string;
+  unitName: string;
+  initial: ProfileInitial;
+}) {
   const [editing, setEditing] = useState(false);
 
-  if (editing) {
-    return <ProfileEditForm unitId={unitId} initial={initial} onDone={() => setEditing(false)} />;
-  }
   return (
     <>
-      <ProfileView initial={initial} />
-      <button type="button" className="btn primary" style={{ marginTop: 18 }} onClick={() => setEditing(true)}>
-        <Pencil size={15} style={{ marginRight: 6, verticalAlign: "-2px" }} />
-        ขอแก้ไขข้อมูล
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700 }}>ข้อมูลหน่วยฝึก</h2>
+        {!editing && (
+          <button
+            type="button"
+            className="icon-btn"
+            data-tip="แก้ไขข้อมูลหน่วยฝึก"
+            aria-label="แก้ไขข้อมูลหน่วยฝึก"
+            onClick={() => setEditing(true)}
+          >
+            <Pencil size={15} />
+          </button>
+        )}
+      </div>
+      <div style={{ marginTop: 14 }}>
+        {editing ? (
+          <ProfileEditForm
+            unitId={unitId}
+            unitName={unitName}
+            initial={initial}
+            onDone={() => setEditing(false)}
+          />
+        ) : (
+          <ProfileView unitName={unitName} initial={initial} />
+        )}
+      </div>
     </>
   );
 }
@@ -58,7 +85,7 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   );
 }
 
-function ProfileView({ initial }: { initial: ProfileInitial }) {
+function ProfileView({ unitName, initial }: { unitName: string; initial: ProfileInitial }) {
   const pos =
     initial?.latitude != null && initial?.longitude != null
       ? { lat: initial.latitude, lng: initial.longitude }
@@ -76,6 +103,7 @@ function ProfileView({ initial }: { initial: ProfileInitial }) {
       </div>
 
       <SectionTitle>ข้อมูลทั่วไป</SectionTitle>
+      <Field label="ชื่อสถาบัน / หน่วยฝึกอบรม" value={unitName} />
       <LocationPicker readOnly initial={pos} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
         <Field label="เลขที่" value={initial?.house_no} />
@@ -99,10 +127,12 @@ function ProfileView({ initial }: { initial: ProfileInitial }) {
 
 function ProfileEditForm({
   unitId,
+  unitName,
   initial,
   onDone,
 }: {
   unitId: string;
+  unitName: string;
   initial: ProfileInitial;
   onDone: () => void;
 }) {
@@ -165,6 +195,10 @@ function ProfileEditForm({
       </div>
 
       <SectionTitle>ข้อมูลทั่วไป</SectionTitle>
+      <label>
+        <span className="field-label">ชื่อสถาบัน / หน่วยฝึกอบรม *</span>
+        <input name="name" required defaultValue={unitName} className="field" />
+      </label>
       <LocationPicker initial={initialPos} onGeocode={applyGeocode} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
         <label>

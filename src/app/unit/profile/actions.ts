@@ -33,6 +33,18 @@ export async function upsertUnitProfile(
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const supabase = await createClient();
 
+  // The institution name lives on training_units (NOT NULL + UNIQUE), not the profile row, so it
+  // takes its own update. Done first: if the name clashes we bail before touching the profile.
+  const name = clean(formData, "name");
+  if (formData.has("name")) {
+    if (!name) return { error: "กรุณากรอกชื่อสถาบัน" };
+    const { error: nameErr } = await supabase.from("training_units").update({ name }).eq("unit_id", unitId);
+    if (nameErr) {
+      const dup = nameErr.code === "23505" || /duplicate|unique/i.test(nameErr.message);
+      return { error: dup ? "มีหน่วยฝึกชื่อนี้อยู่แล้ว กรุณาใช้ชื่ออื่น" : `บันทึกชื่อไม่สำเร็จ: ${nameErr.message}` };
+    }
+  }
+
   const first = clean(formData, "coordinator_first_name");
   const last = clean(formData, "coordinator_last_name");
   const combined = [first, last].filter(Boolean).join(" ") || null;

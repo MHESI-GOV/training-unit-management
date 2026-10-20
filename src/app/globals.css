@@ -548,6 +548,52 @@ main.page {
   background: var(--blue-dark);
 }
 
+/* Small icon-only action button with a hover tooltip (data-tip). Used for the edit-pencil beside
+   the unit-profile heading. */
+.icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  flex: none;
+}
+
+.icon-btn:hover {
+  background: var(--paper);
+  color: var(--blue);
+  border-color: var(--blue);
+}
+
+.icon-btn[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 20;
+}
+
+.icon-btn[data-tip]:hover::after,
+.icon-btn[data-tip]:focus-visible::after {
+  opacity: 1;
+}
+
 /* Hamburger toggle + collapsible group — desktop shows links+login inline; ≤860px collapses
    them into a dropdown panel so the nav no longer wraps onto three stacked rows. */
 .public-nav-toggle {

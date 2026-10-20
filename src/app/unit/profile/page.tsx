@@ -54,10 +54,7 @@ export default async function UnitProfilePage({
       )}
 
       <section className="card" style={{ maxWidth: 680 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700 }}>ข้อมูลหน่วยฝึก</h2>
-        <div style={{ marginTop: 14 }}>
-          <ProfileForm unitId={unitId} initial={unitProfile ?? null} />
-        </div>
+        <ProfileForm unitId={unitId} unitName={unit?.name ?? ""} initial={unitProfile ?? null} />
       </section>
 
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: "24px 0 14px" }}>ภาพถ่ายหน่วย</h2>
