@@ -3,6 +3,7 @@ import { requireProfile } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
 import { UnitFilter } from "./unit-filter";
 import { ExportLearners } from "./export-learners";
+import { ExportClasses } from "./export-classes";
 
 function Stat({ label, value, note }: { label: string; value: number; note?: string }) {
   return (
@@ -96,6 +97,7 @@ export default async function DashboardPage({
       )}
 
       {canFilterByUnit && <ExportLearners unitId={unit_id ?? ""} />}
+      {canFilterByUnit && <ExportClasses unitId={unit_id ?? ""} />}
     </main>
   );
 }

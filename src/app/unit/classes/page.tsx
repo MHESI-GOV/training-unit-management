@@ -33,6 +33,10 @@ export default async function UnitClassesPage({
         </p>
       )}
       <h1>รุ่นฝึกอบรมของหน่วย</h1>
+      <p style={{ display: "flex", gap: 12 }}>
+        <Link href={`/unit/import-classes?unit_id=${unitId}`}>นำเข้ารุ่นฝึกอบรมจากไฟล์ CSV</Link>
+        <Link href={`/unit/import-instructors?unit_id=${unitId}`}>นำเข้าวิทยากรจากไฟล์ CSV</Link>
+      </p>
 
       <h2>สร้างรุ่นฝึกอบรมใหม่</h2>
       <ClassForm unitId={unitId} courses={courses ?? []} />

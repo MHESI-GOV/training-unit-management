@@ -40,6 +40,8 @@ export default async function AdminUnitsPage() {
             <Link href={`/unit/testing-center?unit_id=${u.unit_id}`}>ศูนย์ทดสอบมาตรฐาน</Link>
             <Link href={`/unit/import?unit_id=${u.unit_id}`}>นำเข้าผู้เรียน CSV</Link>
             <Link href={`/unit/import-assessments?unit_id=${u.unit_id}`}>นำเข้าผลทดสอบ CSV</Link>
+            <Link href={`/unit/import-classes?unit_id=${u.unit_id}`}>นำเข้ารุ่นฝึกอบรม CSV</Link>
+            <Link href={`/unit/import-instructors?unit_id=${u.unit_id}`}>นำเข้าวิทยากร CSV</Link>
             <Link href={`/dashboard?unit_id=${u.unit_id}`}>แดชบอร์ด</Link>
           </p>
         </div>

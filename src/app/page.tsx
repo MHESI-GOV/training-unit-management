@@ -69,6 +69,12 @@ export default async function Home() {
           <p>
             <Link href="/unit/import-assessments">นำเข้าผลทดสอบมาตรฐานจากไฟล์ CSV</Link>
           </p>
+          <p>
+            <Link href="/unit/import-classes">นำเข้ารุ่นฝึกอบรมจากไฟล์ CSV</Link>
+          </p>
+          <p>
+            <Link href="/unit/import-instructors">นำเข้าวิทยากรจากไฟล์ CSV</Link>
+          </p>
         </>
       )}
 
