@@ -6,6 +6,14 @@ const PUBLIC_PATHS = ["/login"];
 // Exact match only -- "/" must not use startsWith, since every path starts with "/".
 const PUBLIC_EXACT_PATHS = ["/"];
 const MFA_PATHS = ["/mfa/enroll", "/mfa/verify"];
+// /login is also exempt from the MFA *enforcement* check specifically (separate from being
+// "public" above) -- the login popup (@modal/(.)login) runs its own Web Master MFA step
+// in-flow, client-side, while never navigating away from /login. Next.js automatically
+// revalidates the current route after any server action call, and that revalidation request
+// goes through this same middleware; without this exemption it would catch that revalidation
+// mid-flow (now authenticated, MFA not yet satisfied) and redirect to a full-page
+// /mfa/enroll, yanking the user out of the modal before its own state ever gets to render.
+const MFA_ENFORCEMENT_EXEMPT_PATHS = [...MFA_PATHS, "/login"];
 // Vercel Cron calls this with no browser session and no cookies at all -- it authenticates
 // itself via the CRON_SECRET bearer token checked inside the route handler, not via the
 // Supabase session this middleware otherwise requires everywhere else.
@@ -44,7 +52,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublic =
     PUBLIC_PATHS.some((path) => pathname.startsWith(path)) || PUBLIC_EXACT_PATHS.includes(pathname);
-  const isMfaPath = MFA_PATHS.some((path) => pathname.startsWith(path));
+  const isMfaEnforcementExempt = MFA_ENFORCEMENT_EXEMPT_PATHS.some((path) => pathname.startsWith(path));
 
   // "/" is the one deliberate exception to §09 enforcement #10 (added 2026-10-20): the
   // dashboard is now the public home page, showing the same project-wide, cell-suppressed
@@ -59,12 +67,13 @@ export async function middleware(request: NextRequest) {
 
   // §09 enforcement #8 — MFA (TOTP) is mandatory for Web Master, not just recommended.
   // Checked on every request (not just at login) so an already-open tab can't skip it either.
-  // Deliberately does NOT exempt isPublic paths -- "/" being public-to-anonymous-visitors must
-  // never also mean "exempt from MFA for a logged-in Web Master who happens to land there" (a
-  // real bug caught during the 2026-10-20 redesign: a Web Master mid-AAL1 could sit on the new
-  // public home page with the full sidebar + KPI data visible, never forced through /mfa/verify,
+  // Deliberately does NOT exempt "/" -- "/" being public-to-anonymous-visitors must never also
+  // mean "exempt from MFA for a logged-in Web Master who happens to land there" (a real bug
+  // caught during the 2026-10-20 redesign: a Web Master mid-AAL1 could sit on the new public
+  // home page with the full sidebar + KPI data visible, never forced through /mfa/verify,
   // simply because "/" was in PUBLIC_PATHS for the *unauthenticated* redirect check above).
-  if (user && !isMfaPath) {
+  // It DOES exempt /login -- see MFA_ENFORCEMENT_EXEMPT_PATHS above for why.
+  if (user && !isMfaEnforcementExempt) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
