@@ -5,7 +5,18 @@ import { UnitFilter } from "./unit-filter";
 import { ExportLearners } from "./export-learners";
 import { ExportClasses } from "./export-classes";
 
-function Stat({ label, value, note }: { label: string; value: number; note?: string }) {
+function Stat({ label, value, note }: { label: string; value: number | null; note?: string }) {
+  // null = suppressed by get_dashboard_kpis for Executive (ST-4, a non-zero count under the
+  // 5-person disclosure-control threshold) -- never shown as "0", which would be a different,
+  // false claim.
+  if (value === null) {
+    return (
+      <div style={{ border: "1px solid #ccc", padding: 12, minWidth: 180, color: "#999" }}>
+        <div style={{ fontSize: 13 }}>{label}</div>
+        <div style={{ fontSize: 16 }}>ข้อมูลน้อยเกินไปที่จะแสดงผลได้</div>
+      </div>
+    );
+  }
   return (
     <div style={{ border: "1px solid #ccc", padding: 12, minWidth: 180 }}>
       <div style={{ fontSize: 13, color: "#666" }}>{label}</div>
@@ -15,7 +26,23 @@ function Stat({ label, value, note }: { label: string; value: number; note?: str
   );
 }
 
-function RatePill({ label, passed, tested }: { label: string; passed: number; tested: number }) {
+function RatePill({
+  label,
+  passed,
+  tested,
+}: {
+  label: string;
+  passed: number | null;
+  tested: number | null;
+}) {
+  if (tested === null) {
+    return (
+      <div style={{ border: "1px solid #ccc", padding: 12, minWidth: 180, color: "#999" }}>
+        <div style={{ fontSize: 13 }}>{label}</div>
+        <div style={{ fontSize: 16 }}>ข้อมูลน้อยเกินไปที่จะแสดงผลได้</div>
+      </div>
+    );
+  }
   if (tested === 0) {
     return (
       <div style={{ border: "1px solid #ccc", padding: 12, minWidth: 180, color: "#999" }}>
@@ -24,13 +51,16 @@ function RatePill({ label, passed, tested }: { label: string; passed: number; te
       </div>
     );
   }
-  const pct = Math.round((passed / tested) * 1000) / 10;
+  // passed is suppressed in lockstep with tested (same SQL branch sets both or neither to
+  // null) -- tested !== null above already guarantees passed !== null here too.
+  const passedCount = passed ?? 0;
+  const pct = Math.round((passedCount / tested) * 1000) / 10;
   return (
     <div style={{ border: "1px solid #ccc", padding: 12, minWidth: 180 }}>
       <div style={{ fontSize: 13, color: "#666" }}>{label}</div>
       <div style={{ fontSize: 28, fontWeight: "bold" }}>{pct}%</div>
       <div style={{ fontSize: 12, color: "#888" }}>
-        ผ่าน {passed.toLocaleString("th-TH")} / เข้าทดสอบ {tested.toLocaleString("th-TH")}
+        ผ่าน {passedCount.toLocaleString("th-TH")} / เข้าทดสอบ {tested.toLocaleString("th-TH")}
       </div>
     </div>
   );
