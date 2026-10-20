@@ -596,6 +596,27 @@ export type Database = {
         }
         Relationships: []
       }
+      storage_orphan_reports: {
+        Row: {
+          checked_at: string
+          orphan_count: number
+          orphan_keys: string[]
+          report_id: string
+        }
+        Insert: {
+          checked_at?: string
+          orphan_count?: number
+          orphan_keys?: string[]
+          report_id?: string
+        }
+        Update: {
+          checked_at?: string
+          orphan_count?: number
+          orphan_keys?: string[]
+          report_id?: string
+        }
+        Relationships: []
+      }
       subdistricts: {
         Row: {
           district_id: string

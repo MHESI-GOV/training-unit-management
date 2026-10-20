@@ -4,8 +4,16 @@ import type { Database } from "@/lib/supabase/database.types";
 
 const PUBLIC_PATHS = ["/login"];
 const MFA_PATHS = ["/mfa/enroll", "/mfa/verify"];
+// Vercel Cron calls this with no browser session and no cookies at all -- it authenticates
+// itself via the CRON_SECRET bearer token checked inside the route handler, not via the
+// Supabase session this middleware otherwise requires everywhere else.
+const CRON_PATHS = ["/api/cron/"];
 
 export async function middleware(request: NextRequest) {
+  if (CRON_PATHS.some((path) => request.nextUrl.pathname.startsWith(path))) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(

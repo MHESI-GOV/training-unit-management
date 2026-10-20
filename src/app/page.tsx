@@ -37,6 +37,9 @@ export default async function Home() {
           <p>
             <Link href="/admin/audit-log">Audit Log</Link>
           </p>
+          <p>
+            <Link href="/admin/storage-audit">ไฟล์ภาพกำพร้า</Link>
+          </p>
         </>
       )}
 
