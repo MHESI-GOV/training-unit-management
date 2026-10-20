@@ -13,10 +13,13 @@ export const metadata: Metadata = {
   description: "โครงการหนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children, modal }: LayoutProps<"/">) {
   return (
     <html lang="th" className={plexThai.variable}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {modal}
+      </body>
     </html>
   );
 }

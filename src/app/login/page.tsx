@@ -1,5 +1,6 @@
-import { signIn } from "./actions";
+import Link from "next/link";
 import { AuthShell } from "@/components/layout/AuthShell";
+import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
   searchParams,
@@ -10,20 +11,14 @@ export default async function LoginPage({
 
   return (
     <AuthShell title="เข้าสู่ระบบ" subtitle="ระบบจัดการหน่วยฝึกอบรม">
-      {error && <p className="notice error">เข้าสู่ระบบไม่สำเร็จ: {error}</p>}
-      <form action={signIn} style={{ display: "grid", gap: 14 }}>
-        <label>
-          <span className="field-label">อีเมล</span>
-          <input name="email" type="email" required className="field" />
-        </label>
-        <label>
-          <span className="field-label">รหัสผ่าน</span>
-          <input name="password" type="password" required className="field" />
-        </label>
-        <button type="submit" className="btn primary">
-          เข้าสู่ระบบ
-        </button>
-      </form>
+      <LoginForm
+        error={error}
+        cancelSlot={
+          <Link href="/" className="btn secondary">
+            ยกเลิก
+          </Link>
+        }
+      />
     </AuthShell>
   );
 }
