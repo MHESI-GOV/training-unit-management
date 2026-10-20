@@ -95,6 +95,8 @@ function ProfileView({ unitName, initial }: { unitName: string; initial: Profile
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      <Field label="ชื่อสถาบัน / หน่วยฝึกอบรม" value={unitName} />
+
       <SectionTitle>ผู้ประสานงานหน่วยฝึก</SectionTitle>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <Field label="ชื่อ - นามสกุล" value={fullName} />
@@ -103,7 +105,6 @@ function ProfileView({ unitName, initial }: { unitName: string; initial: Profile
       </div>
 
       <SectionTitle>ข้อมูลทั่วไป</SectionTitle>
-      <Field label="ชื่อสถาบัน / หน่วยฝึกอบรม" value={unitName} />
       <LocationPicker readOnly initial={pos} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
         <Field label="เลขที่" value={initial?.house_no} />
@@ -172,6 +173,11 @@ function ProfileEditForm({
     <form action={formAction} style={{ display: "grid", gap: 14 }}>
       <input type="hidden" name="unit_id" value={unitId} />
 
+      <label>
+        <span className="field-label">ชื่อสถาบัน / หน่วยฝึกอบรม *</span>
+        <input name="name" required defaultValue={unitName} className="field" />
+      </label>
+
       <SectionTitle>ผู้ประสานงานหน่วยฝึก</SectionTitle>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <label>
@@ -195,10 +201,6 @@ function ProfileEditForm({
       </div>
 
       <SectionTitle>ข้อมูลทั่วไป</SectionTitle>
-      <label>
-        <span className="field-label">ชื่อสถาบัน / หน่วยฝึกอบรม *</span>
-        <input name="name" required defaultValue={unitName} className="field" />
-      </label>
       <LocationPicker initial={initialPos} onGeocode={applyGeocode} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
         <label>
