@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { revealNationalId } from "./actions";
 
-export function RevealIdButton({ learnerId }: { learnerId: string }) {
+export function RevealIdButton({ unitId, learnerId }: { unitId: string; learnerId: string }) {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -18,7 +18,7 @@ export function RevealIdButton({ learnerId }: { learnerId: string }) {
       onClick={async () => {
         setPending(true);
         try {
-          setRevealed(await revealNationalId(learnerId));
+          setRevealed(await revealNationalId(unitId, learnerId));
         } finally {
           setPending(false);
         }

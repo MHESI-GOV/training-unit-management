@@ -6,11 +6,12 @@ import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels
 
 const initialState: AssessmentFormState = {};
 
-export function AssessmentForm({ learnerId }: { learnerId: string }) {
+export function AssessmentForm({ unitId, learnerId }: { unitId: string; learnerId: string }) {
   const [state, formAction, pending] = useActionState(recordAssessmentResult, initialState);
 
   return (
     <form action={formAction} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <input type="hidden" name="unit_id" value={unitId} />
       <input type="hidden" name="learner_id" value={learnerId} />
       <select name="standard_type" required>
         <option value="">-- มาตรฐาน --</option>

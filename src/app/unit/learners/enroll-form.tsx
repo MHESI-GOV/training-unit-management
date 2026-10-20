@@ -7,11 +7,20 @@ const initialState: EnrollFormState = {};
 
 type ClassOption = { class_id: string; label: string };
 
-export function EnrollForm({ learnerId, classes }: { learnerId: string; classes: ClassOption[] }) {
+export function EnrollForm({
+  unitId,
+  learnerId,
+  classes,
+}: {
+  unitId: string;
+  learnerId: string;
+  classes: ClassOption[];
+}) {
   const [state, formAction, pending] = useActionState(enrollLearner, initialState);
 
   return (
     <form action={formAction} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <input type="hidden" name="unit_id" value={unitId} />
       <input type="hidden" name="learner_id" value={learnerId} />
       <select name="class_id" required>
         <option value="">-- เลือกรุ่นฝึกอบรม --</option>

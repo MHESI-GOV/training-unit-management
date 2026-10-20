@@ -5,11 +5,12 @@ import { addInstructorToClass, type InstructorFormState } from "./actions";
 
 const initialState: InstructorFormState = {};
 
-export function InstructorForm({ classId }: { classId: string }) {
+export function InstructorForm({ unitId, classId }: { unitId: string; classId: string }) {
   const [state, formAction, pending] = useActionState(addInstructorToClass, initialState);
 
   return (
     <form action={formAction} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <input type="hidden" name="unit_id" value={unitId} />
       <input type="hidden" name="class_id" value={classId} />
       <input name="name" placeholder="ชื่อวิทยากร" required />
       <input name="phone" placeholder="เบอร์โทร" />

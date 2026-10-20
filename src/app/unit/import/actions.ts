@@ -2,17 +2,9 @@
 
 import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
-import { requireProfile } from "@/lib/auth/require-profile";
+import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { encryptNationalId, hashNationalId, bufferToByteaHex } from "@/lib/crypto/national-id";
-
-async function requireOwnUnitId(): Promise<string> {
-  const profile = await requireProfile();
-  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
-    throw new Error("บัญชีนี้ไม่มีหน่วยฝึกอบรมที่จัดการได้");
-  }
-  return profile.unit_scope;
-}
 
 export type PreviewRow = {
   rowNumber: number;
@@ -40,7 +32,7 @@ export async function previewImport(
   _prev: PreviewState,
   formData: FormData,
 ): Promise<PreviewState> {
-  await requireOwnUnitId();
+  await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -112,8 +104,7 @@ export async function commitImport(
   _prev: CommitState,
   formData: FormData,
 ): Promise<CommitState> {
-  const unitId = await requireOwnUnitId();
-  const profile = await requireProfile();
+  const { unitId, profile } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const fileName = String(formData.get("file_name") ?? "import.csv");
   const classId = String(formData.get("class_id") ?? "") || null;

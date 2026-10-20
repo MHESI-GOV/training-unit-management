@@ -6,11 +6,12 @@ import { ASSESSMENT_STANDARD_LABEL, TESTING_CENTER_STATUS_LABEL } from "@/lib/la
 
 const initialState: TestingCenterFormState = {};
 
-export function StatusForm() {
+export function StatusForm({ unitId }: { unitId: string }) {
   const [state, formAction, pending] = useActionState(upsertTestingCenterStatus, initialState);
 
   return (
     <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
+      <input type="hidden" name="unit_id" value={unitId} />
       <label>
         มาตรฐาน
         <select name="standard_type" required style={{ width: "100%" }}>

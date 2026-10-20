@@ -1,15 +1,16 @@
-import { redirect } from "next/navigation";
-import { requireProfile } from "@/lib/auth/require-profile";
+import Link from "next/link";
+import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
 import { ImageUploader } from "./image-uploader";
 
-export default async function UnitProfilePage() {
-  const profile = await requireProfile();
-
-  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
-    redirect("/");
-  }
+export default async function UnitProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ unit_id?: string }>;
+}) {
+  const { unit_id } = await searchParams;
+  const { unitId, isStaff } = await resolvePageUnit(unit_id);
 
   const supabase = await createClient();
 
@@ -17,13 +18,13 @@ export default async function UnitProfilePage() {
     supabase
       .from("training_unit_profiles")
       .select("address, phone, email, coordinator_name, description")
-      .eq("unit_id", profile.unit_scope)
+      .eq("unit_id", unitId)
       .maybeSingle(),
-    supabase.from("training_units").select("name").eq("unit_id", profile.unit_scope).single(),
+    supabase.from("training_units").select("name").eq("unit_id", unitId).single(),
     supabase
       .from("training_unit_images")
       .select("image_id, storage_key, original_filename")
-      .eq("unit_id", profile.unit_scope)
+      .eq("unit_id", unitId)
       .eq("status", "active")
       .order("display_order"),
   ]);
@@ -43,10 +44,15 @@ export default async function UnitProfilePage() {
 
   return (
     <main style={{ maxWidth: 560, margin: "3rem auto", fontFamily: "system-ui" }}>
+      {isStaff && (
+        <p>
+          <Link href="/admin/units">กลับไปหน้าเลือกหน่วย</Link>
+        </p>
+      )}
       <h1>โปรไฟล์หน่วย: {unit?.name}</h1>
-      <ProfileForm initial={unitProfile ?? null} />
+      <ProfileForm unitId={unitId} initial={unitProfile ?? null} />
       <h2 style={{ marginTop: 32 }}>ภาพถ่ายหน่วย</h2>
-      <ImageUploader images={imagesWithUrls} count={imagesWithUrls.length} />
+      <ImageUploader unitId={unitId} images={imagesWithUrls} count={imagesWithUrls.length} />
     </main>
   );
 }

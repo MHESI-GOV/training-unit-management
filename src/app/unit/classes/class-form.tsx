@@ -5,11 +5,18 @@ import { createClass, type ClassFormState } from "./actions";
 
 const initialState: ClassFormState = {};
 
-export function ClassForm({ courses }: { courses: { course_id: string; name: string }[] }) {
+export function ClassForm({
+  unitId,
+  courses,
+}: {
+  unitId: string;
+  courses: { course_id: string; name: string }[];
+}) {
   const [state, formAction, pending] = useActionState(createClass, initialState);
 
   return (
     <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 400 }}>
+      <input type="hidden" name="unit_id" value={unitId} />
       <label>
         หลักสูตร
         <select name="course_id" required style={{ width: "100%" }}>

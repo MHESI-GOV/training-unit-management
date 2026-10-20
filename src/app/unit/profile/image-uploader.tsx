@@ -7,7 +7,15 @@ type ImageRow = { image_id: string; original_filename: string | null; signedUrl:
 
 const initialState: UploadState = {};
 
-export function ImageUploader({ images, count }: { images: ImageRow[]; count: number }) {
+export function ImageUploader({
+  unitId,
+  images,
+  count,
+}: {
+  unitId: string;
+  images: ImageRow[];
+  count: number;
+}) {
   const [state, formAction, pending] = useActionState(uploadUnitImage, initialState);
 
   return (
@@ -20,7 +28,7 @@ export function ImageUploader({ images, count }: { images: ImageRow[]; count: nu
               // eslint-disable-next-line @next/next/no-img-element
               <img src={img.signedUrl} alt={img.original_filename ?? ""} width={120} height={90} style={{ objectFit: "cover" }} />
             )}
-            <form action={deleteUnitImage.bind(null, img.image_id)}>
+            <form action={deleteUnitImage.bind(null, unitId, img.image_id)}>
               <button type="submit">ลบ</button>
             </form>
           </div>
@@ -29,6 +37,7 @@ export function ImageUploader({ images, count }: { images: ImageRow[]; count: nu
 
       {count < 6 && (
         <form action={formAction} style={{ display: "grid", gap: 8 }}>
+          <input type="hidden" name="unit_id" value={unitId} />
           <input name="file" type="file" accept="image/jpeg,image/png" required />
           <button type="submit" disabled={pending}>
             {pending ? "กำลังอัปโหลด..." : "อัปโหลดภาพ"}

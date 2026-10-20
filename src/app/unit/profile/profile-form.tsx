@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { upsertUnitProfile, type ProfileFormState } from "./actions";
 
 type Props = {
+  unitId: string;
   initial: {
     address: string | null;
     phone: string | null;
@@ -15,11 +16,12 @@ type Props = {
 
 const initialState: ProfileFormState = {};
 
-export function ProfileForm({ initial }: Props) {
+export function ProfileForm({ unitId, initial }: Props) {
   const [state, formAction, pending] = useActionState(upsertUnitProfile, initialState);
 
   return (
     <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 420 }}>
+      <input type="hidden" name="unit_id" value={unitId} />
       <label>
         ชื่อผู้ประสานงาน
         <input name="coordinator_name" defaultValue={initial?.coordinator_name ?? ""} style={{ width: "100%" }} />

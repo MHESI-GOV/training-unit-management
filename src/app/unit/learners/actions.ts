@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireProfile } from "@/lib/auth/require-profile";
+import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import {
   encryptNationalId,
@@ -15,14 +15,6 @@ import type { Database } from "@/lib/supabase/database.types";
 type AssessmentStandard = Database["public"]["Enums"]["assessment_standard"];
 type AssessmentResultValue = Database["public"]["Enums"]["assessment_result_enum"];
 
-async function requireOwnUnitId(): Promise<string> {
-  const profile = await requireProfile();
-  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
-    throw new Error("บัญชีนี้ไม่มีหน่วยฝึกอบรมที่จัดการได้");
-  }
-  return profile.unit_scope;
-}
-
 export type LearnerFormState = { error?: string };
 
 const NATIONAL_ID_RE = /^\d{13}$/;
@@ -31,8 +23,7 @@ export async function createLearner(
   _prev: LearnerFormState,
   formData: FormData,
 ): Promise<LearnerFormState> {
-  const unitId = await requireOwnUnitId();
-  const profile = await requireProfile();
+  const { unitId, profile } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
@@ -85,7 +76,7 @@ export async function enrollLearner(
   _prev: EnrollFormState,
   formData: FormData,
 ): Promise<EnrollFormState> {
-  const unitId = await requireOwnUnitId();
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const learnerId = String(formData.get("learner_id") ?? "");
   const classId = String(formData.get("class_id") ?? "");
@@ -132,8 +123,12 @@ export async function enrollLearner(
   return { eligibility: ELIGIBILITY_LABEL.eligible };
 }
 
-export async function markEnrollmentOutcome(enrollmentId: string, outcome: "completed" | "failed") {
-  const unitId = await requireOwnUnitId();
+export async function markEnrollmentOutcome(
+  unitIdArg: string,
+  enrollmentId: string,
+  outcome: "completed" | "failed",
+) {
+  const { unitId } = await resolveActionUnit(unitIdArg);
   const supabase = await createClient();
 
   const { data: enrollment } = await supabase
@@ -166,8 +161,7 @@ export async function recordAssessmentResult(
   _prev: AssessmentFormState,
   formData: FormData,
 ): Promise<AssessmentFormState> {
-  const unitId = await requireOwnUnitId();
-  const profile = await requireProfile();
+  const { unitId, profile } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const learnerId = String(formData.get("learner_id") ?? "");
   const standardType = String(formData.get("standard_type") ?? "") as AssessmentStandard;
@@ -206,8 +200,8 @@ export async function recordAssessmentResult(
   return {};
 }
 
-export async function revealNationalId(learnerId: string): Promise<string> {
-  const unitId = await requireOwnUnitId();
+export async function revealNationalId(unitIdArg: string, learnerId: string): Promise<string> {
+  const { unitId } = await resolveActionUnit(unitIdArg);
   const supabase = await createClient();
 
   const { data: learner } = await supabase

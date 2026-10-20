@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireProfile } from "@/lib/auth/require-profile";
+import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -19,23 +20,13 @@ const SIGNATURES: { mime: string; ext: string; check: (b: Buffer) => boolean }[]
   },
 ];
 
-async function requireOwnUnitId(): Promise<string> {
-  const profile = await requireProfile();
-  // Web Master/Central Staff cross-unit profile editing isn't built yet — this page only
-  // supports the unit self-service workflow for now.
-  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
-    throw new Error("บัญชีนี้ไม่มีหน่วยฝึกอบรมที่แก้ไขได้");
-  }
-  return profile.unit_scope;
-}
-
 export type ProfileFormState = { error?: string; success?: boolean };
 
 export async function upsertUnitProfile(
   _prev: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
-  const unitId = await requireOwnUnitId();
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const supabase = await createClient();
 
   const { error } = await supabase.from("training_unit_profiles").upsert({
@@ -59,7 +50,7 @@ export async function uploadUnitImage(
   _prev: UploadState,
   formData: FormData,
 ): Promise<UploadState> {
-  const unitId = await requireOwnUnitId();
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
@@ -104,8 +95,8 @@ export async function uploadUnitImage(
   return { success: true };
 }
 
-export async function deleteUnitImage(imageId: string) {
-  const unitId = await requireOwnUnitId();
+export async function deleteUnitImage(unitIdArg: string, imageId: string) {
+  const { unitId } = await resolveActionUnit(unitIdArg);
   const supabase = await createClient();
 
   // Soft-delete only (§10 §3) — the storage object stays until a separate retention/cleanup

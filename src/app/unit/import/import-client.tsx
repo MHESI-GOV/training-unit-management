@@ -8,7 +8,7 @@ const commitInitial: CommitState = {};
 
 type ClassOption = { class_id: string; label: string };
 
-export function ImportClient({ classes }: { classes: ClassOption[] }) {
+export function ImportClient({ unitId, classes }: { unitId: string; classes: ClassOption[] }) {
   const [previewState, previewAction, previewPending] = useActionState(previewImport, previewInitial);
   const [commitState, commitAction, commitPending] = useActionState(commitImport, commitInitial);
   const [confirmArmed, setConfirmArmed] = useState(false);
@@ -29,6 +29,7 @@ export function ImportClient({ classes }: { classes: ClassOption[] }) {
   if (!previewState.rows) {
     return (
       <form action={previewAction} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
+        <input type="hidden" name="unit_id" value={unitId} />
         <p>
           <a href="/api/import-template/learners">ดาวน์โหลดเทมเพลต CSV</a>
         </p>
@@ -74,6 +75,7 @@ export function ImportClient({ classes }: { classes: ClassOption[] }) {
 
       {previewState.passCount! > 0 && (
         <form action={commitAction} style={{ display: "grid", gap: 8, maxWidth: 320 }}>
+          <input type="hidden" name="unit_id" value={unitId} />
           <input type="hidden" name="file_name" value={previewState.fileName} />
           <input type="hidden" name="rows" value={JSON.stringify(previewState.rows)} />
           <label>

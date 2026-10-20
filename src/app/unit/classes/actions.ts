@@ -1,16 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireProfile } from "@/lib/auth/require-profile";
+import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
-
-async function requireOwnUnitId(): Promise<string> {
-  const profile = await requireProfile();
-  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
-    throw new Error("บัญชีนี้ไม่มีหน่วยฝึกอบรมที่จัดการได้");
-  }
-  return profile.unit_scope;
-}
 
 export type ClassFormState = { error?: string };
 
@@ -18,7 +10,7 @@ export async function createClass(
   _prev: ClassFormState,
   formData: FormData,
 ): Promise<ClassFormState> {
-  const unitId = await requireOwnUnitId();
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const courseId = String(formData.get("course_id") ?? "");
   const startDate = String(formData.get("start_date") ?? "");
@@ -55,7 +47,7 @@ export async function addInstructorToClass(
   _prev: InstructorFormState,
   formData: FormData,
 ): Promise<InstructorFormState> {
-  const unitId = await requireOwnUnitId();
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const classId = String(formData.get("class_id") ?? "");
   const name = String(formData.get("name") ?? "").trim();

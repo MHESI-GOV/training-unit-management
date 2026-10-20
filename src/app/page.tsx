@@ -40,6 +40,12 @@ export default async function Home() {
         </>
       )}
 
+      {(profile?.role === "web_master" || profile?.role === "central_staff") && (
+        <p>
+          <Link href="/admin/units">หน่วยฝึกอบรมทั้งหมด</Link>
+        </p>
+      )}
+
       {profile?.role === "unit_coordinator" && profile.unit_scope && (
         <>
           <p>

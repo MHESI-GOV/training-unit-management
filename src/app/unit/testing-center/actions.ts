@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireProfile } from "@/lib/auth/require-profile";
+import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -14,10 +14,7 @@ export async function upsertTestingCenterStatus(
   _prev: TestingCenterFormState,
   formData: FormData,
 ): Promise<TestingCenterFormState> {
-  const profile = await requireProfile();
-  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
-    return { error: "บัญชีนี้ไม่มีหน่วยฝึกอบรมที่จัดการได้" };
-  }
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const standardType = String(formData.get("standard_type") ?? "") as AssessmentStandard;
   const status = String(formData.get("status") ?? "") as TestingCenterStatusValue;
@@ -27,7 +24,7 @@ export async function upsertTestingCenterStatus(
 
   const supabase = await createClient();
   const { error } = await supabase.from("testing_center_statuses").upsert({
-    unit_id: profile.unit_scope,
+    unit_id: unitId,
     standard_type: standardType,
     status,
     evidence_ref: evidenceRef,

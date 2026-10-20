@@ -5,11 +5,12 @@ import { createLearner, type LearnerFormState } from "./actions";
 
 const initialState: LearnerFormState = {};
 
-export function LearnerForm() {
+export function LearnerForm({ unitId }: { unitId: string }) {
   const [state, formAction, pending] = useActionState(createLearner, initialState);
 
   return (
     <form action={formAction} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
+      <input type="hidden" name="unit_id" value={unitId} />
       <label>
         ชื่อ
         <input name="first_name" required style={{ width: "100%" }} />

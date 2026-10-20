@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { requireProfile } from "@/lib/auth/require-profile";
+import Link from "next/link";
+import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
 import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
@@ -16,11 +16,13 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "ไม่สำเร็จ",
 };
 
-export default async function UnitLearnersPage() {
-  const profile = await requireProfile();
-  if (profile.role !== "unit_coordinator" || !profile.unit_scope) {
-    redirect("/");
-  }
+export default async function UnitLearnersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ unit_id?: string }>;
+}) {
+  const { unit_id } = await searchParams;
+  const { unitId, isStaff } = await resolvePageUnit(unit_id);
 
   const supabase = await createClient();
 
@@ -30,12 +32,12 @@ export default async function UnitLearnersPage() {
       .select(
         "learner_id, first_name, last_name, national_id_encrypted, phone, email, enrollments(enrollment_id, status, classes(start_date, courses(name))), assessment_results(result_id, standard_type, result, tested_at)",
       )
-      .eq("unit_id", profile.unit_scope)
+      .eq("unit_id", unitId)
       .order("created_at", { ascending: false }),
     supabase
       .from("classes")
       .select("class_id, start_date, courses(name)")
-      .eq("unit_id", profile.unit_scope)
+      .eq("unit_id", unitId)
       .order("start_date", { ascending: false }),
   ]);
 
@@ -46,10 +48,15 @@ export default async function UnitLearnersPage() {
 
   return (
     <main style={{ maxWidth: 720, margin: "3rem auto", fontFamily: "system-ui" }}>
+      {isStaff && (
+        <p>
+          <Link href="/admin/units">กลับไปหน้าเลือกหน่วย</Link>
+        </p>
+      )}
       <h1>ผู้เรียนของหน่วย</h1>
 
       <h2>เพิ่มผู้เรียนใหม่</h2>
-      <LearnerForm />
+      <LearnerForm unitId={unitId} />
 
       <h2 style={{ marginTop: 32 }}>รายชื่อผู้เรียน</h2>
       {(learners ?? []).length === 0 && <p>ยังไม่มีผู้เรียน</p>}
@@ -64,7 +71,7 @@ export default async function UnitLearnersPage() {
               — เลขบัตร {maskNationalId(nationalId)} — {l.phone} {l.email}
             </p>
             <p>
-              <RevealIdButton learnerId={l.learner_id} />
+              <RevealIdButton unitId={unitId} learnerId={l.learner_id} />
             </p>
             <ul>
               {l.enrollments.map((e) => (
@@ -75,13 +82,13 @@ export default async function UnitLearnersPage() {
                     <>
                       {" "}
                       <form
-                        action={markEnrollmentOutcome.bind(null, e.enrollment_id, "completed")}
+                        action={markEnrollmentOutcome.bind(null, unitId, e.enrollment_id, "completed")}
                         style={{ display: "inline" }}
                       >
                         <button type="submit">สำเร็จ</button>
                       </form>{" "}
                       <form
-                        action={markEnrollmentOutcome.bind(null, e.enrollment_id, "failed")}
+                        action={markEnrollmentOutcome.bind(null, unitId, e.enrollment_id, "failed")}
                         style={{ display: "inline" }}
                       >
                         <button type="submit">ไม่สำเร็จ</button>
@@ -91,7 +98,7 @@ export default async function UnitLearnersPage() {
                 </li>
               ))}
             </ul>
-            <EnrollForm learnerId={l.learner_id} classes={classOptions} />
+            <EnrollForm unitId={unitId} learnerId={l.learner_id} classes={classOptions} />
 
             <p style={{ marginTop: 12, marginBottom: 4 }}>ผลทดสอบ/คุณวุฒิมาตรฐาน:</p>
             <ul>
@@ -104,7 +111,7 @@ export default async function UnitLearnersPage() {
               ))}
               {l.assessment_results.length === 0 && <li>ยังไม่มีข้อมูล</li>}
             </ul>
-            <AssessmentForm learnerId={l.learner_id} />
+            <AssessmentForm unitId={unitId} learnerId={l.learner_id} />
           </div>
         );
       })}
