@@ -54,6 +54,9 @@ export default async function UnitLearnersPage({
         </p>
       )}
       <h1>ผู้เรียนของหน่วย</h1>
+      <p>
+        <Link href={`/unit/import-assessments?unit_id=${unitId}`}>นำเข้าผลทดสอบมาตรฐานจากไฟล์ CSV</Link>
+      </p>
 
       <h2>เพิ่มผู้เรียนใหม่</h2>
       <LearnerForm unitId={unitId} />
