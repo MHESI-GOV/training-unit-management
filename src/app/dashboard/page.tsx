@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
 import { UnitFilter } from "./unit-filter";
+import { ExportLearners } from "./export-learners";
 
 function Stat({ label, value, note }: { label: string; value: number; note?: string }) {
   return (
@@ -93,6 +94,8 @@ export default async function DashboardPage({
           </p>
         </>
       )}
+
+      {canFilterByUnit && <ExportLearners unitId={unit_id ?? ""} />}
     </main>
   );
 }

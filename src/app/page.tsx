@@ -54,6 +54,9 @@ export default async function Home() {
           <p>
             <Link href="/unit/testing-center">สถานะศูนย์ทดสอบมาตรฐาน</Link>
           </p>
+          <p>
+            <Link href="/unit/import">นำเข้าผู้เรียนจากไฟล์ CSV</Link>
+          </p>
         </>
       )}
 
