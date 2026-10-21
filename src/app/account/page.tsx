@@ -28,7 +28,7 @@ export default async function AccountPage() {
 
   return (
     <AppShell profile={profile} active="account" eyebrow="บัญชีของฉัน" title="การตั้งค่าบัญชี">
-      <div style={{ display: "grid", gap: 20, maxWidth: 720 }}>
+      <div style={{ display: "grid", gap: 20, maxWidth: 680 }}>
         {mustChange && (
           <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6" }}>
             นี่เป็นการเข้าสู่ระบบด้วยรหัสผ่านชั่วคราว — กรุณาตั้งรหัสผ่านใหม่ก่อนใช้งานระบบต่อ
