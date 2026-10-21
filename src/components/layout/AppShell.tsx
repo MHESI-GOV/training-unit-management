@@ -28,7 +28,6 @@ function navForProfile(profile: Profile | null): NavItem[] {
 
   if (profile.role === "unit_coordinator") {
     return [
-      { href: "/unit/profile", label: "โปรไฟล์หน่วยฝึก", icon: <ImageIcon size={17} />, id: "profile" },
       { href: "/unit/classes", label: "รุ่นฝึกอบรมและวิทยากร", icon: <Users size={17} />, id: "classes" },
       { href: "/unit/learners", label: "ผู้เรียน", icon: <UsersRound size={17} />, id: "learners" },
       { href: "/unit/testing-center", label: "สถานะศูนย์ทดสอบมาตรฐาน", icon: <ClipboardList size={17} />, id: "testing-center" },

@@ -1,9 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
-import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
-import { ProfileForm } from "./profile-form";
-import { ImageUploader } from "./image-uploader";
+import { UnitProfilePanel } from "./unit-profile-panel";
 
 export default async function UnitProfilePage({
   searchParams,
@@ -13,52 +12,16 @@ export default async function UnitProfilePage({
   const { unit_id } = await searchParams;
   const { unitId, isStaff, profile } = await resolvePageUnit(unit_id);
 
-  const supabase = await createClient();
-
-  const [{ data: unitProfile }, { data: unit }, { data: images }] = await Promise.all([
-    supabase
-      .from("training_unit_profiles")
-      .select(
-        "house_no, road, province_name, district_name, subdistrict_name, address, phone, email, coordinator_first_name, coordinator_last_name, description, is_food_testing_center, latitude, longitude",
-      )
-      .eq("unit_id", unitId)
-      .maybeSingle(),
-    supabase.from("training_units").select("name").eq("unit_id", unitId).single(),
-    supabase
-      .from("training_unit_images")
-      .select("image_id, storage_key, original_filename")
-      .eq("unit_id", unitId)
-      .eq("status", "active")
-      .order("display_order"),
-  ]);
-
-  const imagesWithUrls = await Promise.all(
-    (images ?? []).map(async (img) => {
-      const { data } = await supabase.storage
-        .from("unit-photos")
-        .createSignedUrl(img.storage_key, 3600);
-      return {
-        image_id: img.image_id,
-        original_filename: img.original_filename,
-        signedUrl: data?.signedUrl ?? null,
-      };
-    }),
-  );
+  // A Unit Coordinator's own unit profile now lives on /account (one account = one unit), so the
+  // standalone page is for Web Master / Central Staff viewing other units only.
+  if (!isStaff) redirect("/account");
 
   return (
-    <AppShell profile={profile} active="profile" eyebrow="" title="โปรไฟล์หน่วยฝึก">
-      {isStaff && (
-        <p style={{ marginBottom: 14 }}>
-          <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
-        </p>
-      )}
-
-      <section className="card" style={{ maxWidth: 680 }}>
-        <ProfileForm unitId={unitId} unitName={unit?.name ?? ""} initial={unitProfile ?? null} />
-      </section>
-
-      <h2 style={{ fontSize: 18, fontWeight: 700, margin: "24px 0 14px" }}>ภาพถ่ายหน่วย</h2>
-      <ImageUploader unitId={unitId} images={imagesWithUrls} count={imagesWithUrls.length} />
+    <AppShell profile={profile} active="units" eyebrow="" title="โปรไฟล์หน่วยฝึก">
+      <p style={{ marginBottom: 14 }}>
+        <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
+      </p>
+      <UnitProfilePanel unitId={unitId} />
     </AppShell>
   );
 }

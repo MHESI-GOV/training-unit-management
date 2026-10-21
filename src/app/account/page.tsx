@@ -8,6 +8,7 @@ import { ChangePasswordForm, EmailChangeForm } from "./account-forms";
 import { AvatarUploader } from "./avatar-uploader";
 import { Collapsible } from "./collapsible";
 import { cancelEmailRequest } from "./actions";
+import { UnitProfilePanel } from "@/app/unit/profile/unit-profile-panel";
 
 export default async function AccountPage() {
   const profile = await requireProfile();
@@ -27,7 +28,7 @@ export default async function AccountPage() {
 
   return (
     <AppShell profile={profile} active="account" eyebrow="บัญชีของฉัน" title="การตั้งค่าบัญชี">
-      <div style={{ display: "grid", gap: 20, maxWidth: 560 }}>
+      <div style={{ display: "grid", gap: 20, maxWidth: 720 }}>
         {mustChange && (
           <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6" }}>
             นี่เป็นการเข้าสู่ระบบด้วยรหัสผ่านชั่วคราว — กรุณาตั้งรหัสผ่านใหม่ก่อนใช้งานระบบต่อ
@@ -47,6 +48,13 @@ export default async function AccountPage() {
             <p className="footnote">อีเมลเข้าสู่ระบบ: <strong>{email ?? "-"}</strong></p>
           </div>
         </section>
+
+        {profile.role === "unit_coordinator" && profile.unit_scope && (
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: "4px 0 14px" }}>โปรไฟล์หน่วยฝึก</h2>
+            <UnitProfilePanel unitId={profile.unit_scope} />
+          </div>
+        )}
 
         <Collapsible title="เปลี่ยนรหัสผ่าน" openLabel="เปลี่ยนรหัสผ่าน">
           <ChangePasswordForm />

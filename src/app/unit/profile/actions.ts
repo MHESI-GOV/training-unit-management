@@ -78,6 +78,7 @@ export async function upsertUnitProfile(
   if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
 
   revalidatePath("/unit/profile");
+  revalidatePath("/account");
   return { success: true };
 }
 
@@ -129,6 +130,7 @@ export async function uploadUnitImage(
   }
 
   revalidatePath("/unit/profile");
+  revalidatePath("/account");
   return { success: true };
 }
 
@@ -147,4 +149,5 @@ export async function deleteUnitImage(unitIdArg: string, imageId: string) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/unit/profile");
+  revalidatePath("/account");
 }
