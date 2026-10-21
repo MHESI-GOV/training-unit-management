@@ -1011,3 +1011,29 @@ main.page {
 .profile-pop-item.danger {
   color: var(--danger);
 }
+
+/* Image variant of the avatar circle (used when a profile picture is uploaded). */
+.profile-avatar.img {
+  object-fit: cover;
+  background: none;
+}
+
+/* Larger avatar on the account settings page. */
+.account-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+}
+
+.account-avatar.placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 32px;
+}

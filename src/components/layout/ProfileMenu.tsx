@@ -2,17 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { UserRound, LogOut, Repeat, Settings } from "lucide-react";
-import { signOut, signOutToLogin } from "@/app/login/actions";
+import { UserRound, LogOut, Settings } from "lucide-react";
+import { signOut } from "@/app/login/actions";
 
 export function ProfileMenu({
   displayName,
   roleLabel,
   email,
+  avatarUrl,
 }: {
   displayName: string;
   roleLabel: string;
   email: string | null;
+  avatarUrl?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -34,6 +36,8 @@ export function ProfileMenu({
   }, [open]);
 
   const initial = (displayName || email || "?").trim().charAt(0).toUpperCase();
+  // eslint-disable-next-line @next/next/no-img-element
+  const avatarImg = (cls: string) => <img className={cls} src={avatarUrl!} alt="" />;
 
   return (
     <div className="profile-menu" ref={ref}>
@@ -44,7 +48,7 @@ export function ProfileMenu({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className="profile-avatar">{initial}</span>
+        {avatarUrl ? avatarImg("profile-avatar img") : <span className="profile-avatar">{initial}</span>}
         <span className="profile-trigger-text">
           <span className="profile-trigger-name">{displayName}</span>
           <span className="profile-trigger-role">{roleLabel}</span>
@@ -54,7 +58,7 @@ export function ProfileMenu({
       {open && (
         <div className="profile-pop" role="menu">
           <div className="profile-pop-head">
-            <span className="profile-avatar lg">{initial}</span>
+            {avatarUrl ? avatarImg("profile-avatar lg img") : <span className="profile-avatar lg">{initial}</span>}
             <div style={{ minWidth: 0 }}>
               <div className="profile-pop-name">{displayName}</div>
               <div className="profile-pop-sub">{roleLabel}</div>
@@ -68,13 +72,6 @@ export function ProfileMenu({
             <Settings size={16} />
             <span>บัญชีของฉัน</span>
           </Link>
-
-          <form action={signOutToLogin}>
-            <button type="submit" className="profile-pop-item" role="menuitem">
-              <Repeat size={16} />
-              <span>เข้าสู่ระบบด้วยบัญชีอื่น</span>
-            </button>
-          </form>
 
           <div className="profile-pop-divider" />
 

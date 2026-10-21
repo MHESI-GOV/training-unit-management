@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { Profile } from "@/lib/auth/get-profile";
 import { getCurrentProfile } from "@/lib/auth/get-profile";
+import { getAvatarUrl } from "@/lib/avatar";
 import { ROLE_LABEL } from "@/lib/labels";
 import { ProfileMenu, LoginTrigger } from "./ProfileMenu";
 
@@ -73,6 +74,7 @@ export async function AppShell({
 }) {
   const navItems = navForProfile(profile);
   const email = profile ? (await getCurrentProfile()).email : null;
+  const avatarUrl = profile ? await getAvatarUrl(profile.avatar_path) : null;
 
   return (
     <div className="shell">
@@ -112,6 +114,7 @@ export async function AppShell({
                 displayName={profile.display_name ?? (email ?? "ผู้ใช้")}
                 roleLabel={ROLE_LABEL[profile.role] ?? profile.role}
                 email={email}
+                avatarUrl={avatarUrl}
               />
             ) : (
               <LoginTrigger />

@@ -1,14 +1,18 @@
 import { requireProfile } from "@/lib/auth/require-profile";
 import { getCurrentProfile } from "@/lib/auth/get-profile";
+import { getAvatarUrl } from "@/lib/avatar";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/labels";
 import { ChangePasswordForm, EmailChangeForm } from "./account-forms";
+import { AvatarUploader } from "./avatar-uploader";
+import { Collapsible } from "./collapsible";
 import { cancelEmailRequest } from "./actions";
 
 export default async function AccountPage() {
   const profile = await requireProfile();
   const { email } = await getCurrentProfile();
+  const avatarUrl = await getAvatarUrl(profile.avatar_path);
 
   const supabase = await createClient();
   const { data: pending } = await supabase
@@ -19,6 +23,7 @@ export default async function AccountPage() {
     .maybeSingle();
 
   const mustChange = profile.must_change_password;
+  const initial = (profile.display_name || email || "?").trim().charAt(0).toUpperCase();
 
   return (
     <AppShell profile={profile} active="account" eyebrow="บัญชีของฉัน" title="การตั้งค่าบัญชี">
@@ -30,6 +35,11 @@ export default async function AccountPage() {
         )}
 
         <section className="card">
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>รูปโปรไฟล์</h2>
+          <AvatarUploader avatarUrl={avatarUrl} initial={initial} />
+        </section>
+
+        <section className="card">
           <h2 style={{ fontSize: 16, fontWeight: 700 }}>ข้อมูลบัญชี</h2>
           <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
             <p className="footnote">ชื่อผู้ใช้: <strong>{profile.display_name ?? "-"}</strong></p>
@@ -38,14 +48,13 @@ export default async function AccountPage() {
           </div>
         </section>
 
-        <section className="card">
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>เปลี่ยนรหัสผ่าน</h2>
+        <Collapsible title="เปลี่ยนรหัสผ่าน" openLabel="เปลี่ยนรหัสผ่าน">
           <ChangePasswordForm />
-        </section>
+        </Collapsible>
 
-        <section className="card">
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>เปลี่ยนอีเมลเข้าสู่ระบบ</h2>
-          {pending ? (
+        {pending ? (
+          <section className="card">
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>เปลี่ยนอีเมลเข้าสู่ระบบ</h2>
             <div style={{ display: "grid", gap: 12 }}>
               <p className="pill pending">รออนุมัติ: {pending.requested_email}</p>
               <p className="footnote">
@@ -56,10 +65,12 @@ export default async function AccountPage() {
                 <button type="submit" className="btn secondary">ยกเลิกคำขอ</button>
               </form>
             </div>
-          ) : (
+          </section>
+        ) : (
+          <Collapsible title="เปลี่ยนอีเมลเข้าสู่ระบบ" openLabel="เปลี่ยนอีเมล">
             <EmailChangeForm currentEmail={email} />
-          )}
-        </section>
+          </Collapsible>
+        )}
       </div>
     </AppShell>
   );

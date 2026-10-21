@@ -8,6 +8,7 @@ export type Profile = {
   unit_scope: string | null;
   display_name: string | null;
   must_change_password: boolean;
+  avatar_path: string | null;
 };
 
 export async function getCurrentProfile(): Promise<{
@@ -23,7 +24,7 @@ export async function getCurrentProfile(): Promise<{
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, unit_scope, display_name, must_change_password")
+    .select("id, role, unit_scope, display_name, must_change_password, avatar_path")
     .eq("id", user.id)
     .single();
 

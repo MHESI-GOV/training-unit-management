@@ -583,6 +583,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
           created_at: string
           created_by: string | null
           display_name: string | null
@@ -594,6 +595,7 @@ export type Database = {
           unit_scope: string | null
         }
         Insert: {
+          avatar_path?: string | null
           created_at?: string
           created_by?: string | null
           display_name?: string | null
@@ -605,6 +607,7 @@ export type Database = {
           unit_scope?: string | null
         }
         Update: {
+          avatar_path?: string | null
           created_at?: string
           created_by?: string | null
           display_name?: string | null

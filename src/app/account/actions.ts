@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient as createRawClient } from "@supabase/supabase-js";
 import { requireProfile } from "@/lib/auth/require-profile";
@@ -9,8 +10,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ChangePasswordState = { error?: string; success?: boolean };
 export type EmailRequestState = { error?: string; success?: boolean };
+export type AvatarState = { error?: string; success?: boolean };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+
+// Real file-signature check (magic bytes), same approach as the unit-photo uploader.
+const AVATAR_SIGNATURES: { mime: string; ext: string; check: (b: Buffer) => boolean }[] = [
+  { mime: "image/jpeg", ext: "jpg", check: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  {
+    mime: "image/png",
+    ext: "png",
+    check: (b) =>
+      b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a,
+  },
+];
 
 export async function changePassword(
   _prev: ChangePasswordState,
@@ -113,4 +128,70 @@ export async function cancelEmailRequest(formData: FormData): Promise<void> {
     .eq("status", "pending");
 
   revalidatePath("/account");
+}
+
+export async function uploadAvatar(
+  _prev: AvatarState,
+  formData: FormData,
+): Promise<AvatarState> {
+  const profile = await requireProfile();
+  const file = formData.get("file");
+
+  if (!(file instanceof File) || file.size === 0) return { error: "กรุณาเลือกไฟล์รูปภาพ" };
+  if (file.size > MAX_AVATAR_BYTES) return { error: "ไฟล์ใหญ่เกิน 5MB" };
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const signature = AVATAR_SIGNATURES.find((s) => s.check(buffer));
+  if (!signature) return { error: "รองรับเฉพาะไฟล์ JPEG หรือ PNG เท่านั้น" };
+
+  const supabase = await createClient();
+  const storageKey = `${profile.id}/${randomUUID()}.${signature.ext}`;
+
+  // Storage RLS (avatars_insert_own) scopes this to the caller's own "<uid>/" folder.
+  const { error: uploadErr } = await supabase.storage
+    .from("avatars")
+    .upload(storageKey, buffer, { contentType: signature.mime });
+  if (uploadErr) return { error: `อัปโหลดไม่สำเร็จ: ${uploadErr.message}` };
+
+  // profiles_update is Web-Master-only, so set avatar_path via the admin client.
+  const admin = createAdminClient();
+  const { error: updErr } = await admin
+    .from("profiles")
+    .update({ avatar_path: storageKey })
+    .eq("id", profile.id);
+  if (updErr) {
+    await supabase.storage.from("avatars").remove([storageKey]);
+    return { error: `บันทึกไม่สำเร็จ: ${updErr.message}` };
+  }
+
+  // Remove the previous avatar file so each user keeps only one (no orphan build-up).
+  if (profile.avatar_path && profile.avatar_path !== storageKey) {
+    await supabase.storage.from("avatars").remove([profile.avatar_path]);
+  }
+
+  await admin.from("audit_log").insert({
+    actor_user_id: profile.id,
+    action: "update_avatar",
+    entity_type: "profile",
+    record_id: profile.id,
+    changed_fields: ["avatar_path"],
+  });
+
+  revalidatePath("/account");
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+export async function removeAvatar(): Promise<void> {
+  const profile = await requireProfile();
+  if (!profile.avatar_path) return;
+
+  const supabase = await createClient();
+  await supabase.storage.from("avatars").remove([profile.avatar_path]);
+
+  const admin = createAdminClient();
+  await admin.from("profiles").update({ avatar_path: null }).eq("id", profile.id);
+
+  revalidatePath("/account");
+  revalidatePath("/", "layout");
 }
