@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient as createRawClient } from "@supabase/supabase-js";
 import { requireProfile } from "@/lib/auth/require-profile";
 import { getCurrentProfile } from "@/lib/auth/get-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -28,17 +29,25 @@ export async function changePassword(
   if (next === current) return { error: "รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม" };
   if (!email) return { error: "ไม่พบอีเมลของบัญชีนี้" };
 
-  const supabase = await createClient();
-
-  // Re-authenticate: verify the current password before allowing a change. signInWithPassword
-  // on the server client re-establishes the SAME user's session (same cookies), so it is safe
-  // here -- it is purely a credential check, not a user switch.
-  const { error: reauthErr } = await supabase.auth.signInWithPassword({
+  // Re-authenticate on a THROWAWAY client that does not persist a session, so it never touches
+  // the caller's real session cookies. Doing signInWithPassword on the cookie-bound server
+  // client would mint a fresh AAL1 session and overwrite an MFA user's AAL2 session -- the
+  // subsequent updateUser would then fail with "AAL2 session is required to update email or
+  // password when MFA is enabled" (hit by Web Master accounts, which always have MFA).
+  const verifier = createRawClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+  const { error: reauthErr } = await verifier.auth.signInWithPassword({
     email,
     password: current,
   });
   if (reauthErr) return { error: "รหัสผ่านปัจจุบันไม่ถูกต้อง" };
 
+  // Update on the real server client, whose existing session keeps its assurance level (AAL2
+  // for MFA users), so Supabase accepts the password change.
+  const supabase = await createClient();
   const { error: updErr } = await supabase.auth.updateUser({ password: next });
   if (updErr) return { error: `เปลี่ยนรหัสผ่านไม่สำเร็จ: ${updErr.message}` };
 
