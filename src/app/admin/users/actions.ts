@@ -1,9 +1,12 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCredentialsEmail } from "@/lib/email/send-credentials";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type GenerateUserState = {
   error?: string;
@@ -88,4 +91,163 @@ export async function generateUser(
       emailSent: emailResult.sent,
     },
   };
+}
+
+// --- Email-change request handling (self-service requests approved/rejected by Web Master) ---
+
+export async function approveEmailChange(formData: FormData): Promise<void> {
+  const wm = await requireWebMaster();
+  const requestId = String(formData.get("request_id") ?? "");
+  if (!requestId) return;
+
+  const admin = createAdminClient();
+  const { data: req } = await admin
+    .from("email_change_requests")
+    .select("request_id, user_id, requested_email, status")
+    .eq("request_id", requestId)
+    .maybeSingle();
+  if (!req || req.status !== "pending") return;
+
+  const { error: updErr } = await admin.auth.admin.updateUserById(req.user_id, {
+    email: req.requested_email,
+    email_confirm: true,
+  });
+
+  if (updErr) {
+    // Surface the failure to the WM by rejecting the request with the reason (e.g. the email is
+    // already used by another account) instead of silently leaving it pending.
+    await admin
+      .from("email_change_requests")
+      .update({
+        status: "rejected",
+        reject_reason: `อนุมัติไม่สำเร็จ: ${updErr.message}`,
+        decided_at: new Date().toISOString(),
+        decided_by: wm.id,
+      })
+      .eq("request_id", requestId);
+    revalidatePath("/admin/users");
+    return;
+  }
+
+  await admin
+    .from("email_change_requests")
+    .update({ status: "approved", decided_at: new Date().toISOString(), decided_by: wm.id })
+    .eq("request_id", requestId);
+  await admin.from("audit_log").insert({
+    actor_user_id: wm.id,
+    action: "approve_email_change",
+    entity_type: "profile",
+    record_id: req.user_id,
+    changed_fields: ["email"],
+  });
+
+  revalidatePath("/admin/users");
+}
+
+export async function rejectEmailChange(formData: FormData): Promise<void> {
+  const wm = await requireWebMaster();
+  const requestId = String(formData.get("request_id") ?? "");
+  if (!requestId) return;
+  const reason = String(formData.get("reason") ?? "").trim() || "ไม่ระบุเหตุผล";
+
+  const admin = createAdminClient();
+  await admin
+    .from("email_change_requests")
+    .update({
+      status: "rejected",
+      reject_reason: reason,
+      decided_at: new Date().toISOString(),
+      decided_by: wm.id,
+    })
+    .eq("request_id", requestId)
+    .eq("status", "pending");
+  await admin.from("audit_log").insert({
+    actor_user_id: wm.id,
+    action: "reject_email_change",
+    entity_type: "profile",
+    record_id: requestId,
+    changed_fields: [],
+  });
+
+  revalidatePath("/admin/users");
+}
+
+// --- Direct account maintenance by Web Master (handover: new coordinator takes over a unit) ---
+
+export type AdminEmailState = { error?: string; success?: string };
+
+export async function adminChangeEmail(
+  _prev: AdminEmailState,
+  formData: FormData,
+): Promise<AdminEmailState> {
+  const wm = await requireWebMaster();
+  const userId = String(formData.get("user_id") ?? "");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+  if (!userId) return { error: "ไม่พบบัญชี" };
+  if (!EMAIL_RE.test(email)) return { error: "รูปแบบอีเมลไม่ถูกต้อง" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    email,
+    email_confirm: true,
+  });
+  if (error) return { error: `เปลี่ยนอีเมลไม่สำเร็จ: ${error.message}` };
+
+  await admin.from("audit_log").insert({
+    actor_user_id: wm.id,
+    action: "admin_change_email",
+    entity_type: "profile",
+    record_id: userId,
+    changed_fields: ["email"],
+  });
+
+  revalidatePath("/admin/users");
+  return { success: `เปลี่ยนอีเมลเป็น ${email} แล้ว` };
+}
+
+export type AdminResetState = {
+  error?: string;
+  result?: { email: string; temporaryPassword: string; emailSent: boolean };
+};
+
+export async function adminResetPassword(
+  _prev: AdminResetState,
+  formData: FormData,
+): Promise<AdminResetState> {
+  const wm = await requireWebMaster();
+  const userId = String(formData.get("user_id") ?? "");
+  if (!userId) return { error: "ไม่พบบัญชี" };
+
+  const admin = createAdminClient();
+  const { data: u, error: getErr } = await admin.auth.admin.getUserById(userId);
+  if (getErr || !u.user?.email) return { error: "ไม่พบอีเมลของบัญชีนี้" };
+  const email = u.user.email;
+
+  const temporaryPassword = randomBytes(18).toString("base64url");
+  const { error: updErr } = await admin.auth.admin.updateUserById(userId, {
+    password: temporaryPassword,
+  });
+  if (updErr) return { error: `รีเซ็ตรหัสผ่านไม่สำเร็จ: ${updErr.message}` };
+
+  // Force the user to set their own password on next login.
+  await admin.from("profiles").update({ must_change_password: true }).eq("id", userId);
+  await admin.from("audit_log").insert({
+    actor_user_id: wm.id,
+    action: "admin_reset_password",
+    entity_type: "profile",
+    record_id: userId,
+    changed_fields: ["password"],
+  });
+
+  const loginUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://training-unit-management.vercel.app";
+  const emailResult = await sendCredentialsEmail({
+    to: email,
+    username: email,
+    temporaryPassword,
+    loginUrl: `${loginUrl}/login`,
+  });
+
+  revalidatePath("/admin/users");
+  return { result: { email, temporaryPassword, emailSent: emailResult.sent } };
 }

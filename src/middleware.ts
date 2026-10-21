@@ -67,9 +67,24 @@ export async function middleware(request: NextRequest) {
   if (user && !isMfaPath) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, must_change_password")
       .eq("id", user.id)
       .maybeSingle();
+
+    // Force a password change on first login (temp password from Generate User / admin reset).
+    // Only gate GET navigations so server-action POSTs (the change-password form itself, logout)
+    // still reach their handlers. /account is the destination and must stay reachable; /api/* is
+    // exempt (route handlers do their own auth).
+    if (
+      profile?.must_change_password &&
+      request.method === "GET" &&
+      pathname !== "/account" &&
+      !pathname.startsWith("/api/")
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/account";
+      return NextResponse.redirect(url);
+    }
 
     if (profile?.role === "web_master") {
       const { data: factors } = await supabase.auth.mfa.listFactors();

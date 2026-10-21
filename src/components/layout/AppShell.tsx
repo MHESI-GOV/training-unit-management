@@ -10,12 +10,11 @@ import {
   UsersRound,
   ClipboardList,
   Image as ImageIcon,
-  LogOut,
-  LogIn,
 } from "lucide-react";
 import type { Profile } from "@/lib/auth/get-profile";
+import { getCurrentProfile } from "@/lib/auth/get-profile";
 import { ROLE_LABEL } from "@/lib/labels";
-import { signOut } from "@/app/login/actions";
+import { ProfileMenu, LoginTrigger } from "./ProfileMenu";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; id: string };
 
@@ -59,7 +58,7 @@ function navForProfile(profile: Profile | null): NavItem[] {
   return [];
 }
 
-export function AppShell({
+export async function AppShell({
   profile,
   active,
   children,
@@ -73,6 +72,7 @@ export function AppShell({
   title: string;
 }) {
   const navItems = navForProfile(profile);
+  const email = profile ? (await getCurrentProfile()).email : null;
 
   return (
     <div className="shell">
@@ -97,19 +97,6 @@ export function AppShell({
             </Link>
           ))}
         </nav>
-        {profile ? (
-          <form action={signOut} style={{ marginTop: 24 }}>
-            <button type="submit" className="nav-btn" style={{ border: "1px solid rgba(255,255,255,0.2)" }}>
-              <LogOut size={17} />
-              <span>ออกจากระบบ ({ROLE_LABEL[profile.role] ?? profile.role})</span>
-            </button>
-          </form>
-        ) : (
-          <Link href="/login" className="nav-btn" style={{ marginTop: 24, border: "1px solid rgba(255,255,255,0.2)" }}>
-            <LogIn size={17} />
-            <span>เข้าสู่ระบบ</span>
-          </Link>
-        )}
         <p className="sidebar-note desktop-only">ระบบบริหารจัดการหน่วยฝึกอบรม กระทรวงการอุดมศึกษา วิทยาศาสตร์ วิจัยและนวัตกรรม</p>
       </aside>
 
@@ -120,6 +107,15 @@ export function AppShell({
               {eyebrow ? <p className="topbar-label">{eyebrow}</p> : null}
               <strong className="topbar-title">{title}</strong>
             </div>
+            {profile ? (
+              <ProfileMenu
+                displayName={profile.display_name ?? (email ?? "ผู้ใช้")}
+                roleLabel={ROLE_LABEL[profile.role] ?? profile.role}
+                email={email}
+              />
+            ) : (
+              <LoginTrigger />
+            )}
           </div>
         </header>
         <main className="page">{children}</main>

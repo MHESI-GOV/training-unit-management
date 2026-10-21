@@ -291,6 +291,57 @@ export type Database = {
           },
         ]
       }
+      email_change_requests: {
+        Row: {
+          current_email: string
+          decided_at: string | null
+          decided_by: string | null
+          reject_reason: string | null
+          request_id: string
+          requested_at: string
+          requested_email: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          current_email: string
+          decided_at?: string | null
+          decided_by?: string | null
+          reject_reason?: string | null
+          request_id?: string
+          requested_at?: string
+          requested_email: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          current_email?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          reject_reason?: string | null
+          request_id?: string
+          requested_at?: string
+          requested_email?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_change_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_change_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           applied_at: string
