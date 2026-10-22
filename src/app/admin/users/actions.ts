@@ -93,6 +93,46 @@ export async function generateUser(
   };
 }
 
+// Disable (ban) or re-enable a login account. User Management is meant to disable accounts, never
+// hard-delete them (docs/planning §09; hard delete also FK-fails for any account that created a
+// unit or has audit history). Web Master accounts can't be disabled here, to avoid locking the
+// whole admin surface out. Ban is reversible: a disabled user keeps all their data/history and can
+// be re-enabled anytime.
+export type AdminDisableState = { error?: string; success?: string };
+
+export async function adminSetDisabled(
+  _prev: AdminDisableState,
+  formData: FormData,
+): Promise<AdminDisableState> {
+  const wm = await requireWebMaster();
+  const userId = String(formData.get("user_id") ?? "");
+  const disabled = String(formData.get("disabled") ?? "") === "true";
+  if (!userId) return { error: "ไม่พบบัญชี" };
+  if (userId === wm.id) return { error: "ปิดบัญชีของตัวเองไม่ได้" };
+
+  const admin = createAdminClient();
+  const { data: target } = await admin.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (target?.role === "web_master") {
+    return { error: "ปิดบัญชี Web Master ไม่ได้ (ป้องกันการล็อกระบบผู้ดูแล)" };
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    ban_duration: disabled ? "876000h" : "none", // ~100 years = effectively disabled; "none" re-enables
+  });
+  if (error) return { error: `ดำเนินการไม่สำเร็จ: ${error.message}` };
+
+  await admin.from("audit_log").insert({
+    actor_user_id: wm.id,
+    action: disabled ? "admin_disable_account" : "admin_enable_account",
+    entity_type: "profile",
+    record_id: userId,
+    changed_fields: ["banned_until"],
+  });
+
+  revalidatePath("/admin/users");
+  return { success: disabled ? "ปิดใช้งานบัญชีแล้ว" : "เปิดใช้งานบัญชีแล้ว" };
+}
+
 // --- Email-change request handling (self-service requests approved/rejected by Web Master) ---
 
 export async function approveEmailChange(formData: FormData): Promise<void> {
