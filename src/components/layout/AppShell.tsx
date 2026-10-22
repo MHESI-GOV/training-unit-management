@@ -16,6 +16,9 @@ import type { Profile } from "@/lib/auth/get-profile";
 import { getCurrentProfile } from "@/lib/auth/get-profile";
 import { getAvatarUrl } from "@/lib/avatar";
 import { ROLE_LABEL } from "@/lib/labels";
+import { createClient } from "@/lib/supabase/server";
+import { getPendingParticipation } from "@/lib/participation";
+import { ParticipationGate } from "@/components/participation/ParticipationGate";
 import { ProfileMenu, LoginTrigger } from "./ProfileMenu";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; id: string };
@@ -78,6 +81,13 @@ export async function AppShell({
   const email = profile ? (await getCurrentProfile()).email : null;
   const avatarUrl = profile ? await getAvatarUrl(profile.avatar_path) : null;
 
+  // Force the fiscal-year participation popup before any other function: once Web Master opens a
+  // round, a Unit Coordinator with an unanswered invite is gated on EVERY page until they respond.
+  const pendingParticipation =
+    profile?.role === "unit_coordinator" && profile.unit_scope
+      ? await getPendingParticipation(await createClient(), profile.unit_scope)
+      : null;
+
   return (
     <div className="shell">
       <aside className="sidebar" aria-label="เมนูหลัก">
@@ -125,6 +135,7 @@ export async function AppShell({
         </header>
         <main className="page">{children}</main>
       </div>
+      {pendingParticipation && <ParticipationGate pending={pendingParticipation} />}
     </div>
   );
 }
