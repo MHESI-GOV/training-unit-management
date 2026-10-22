@@ -581,6 +581,57 @@ export type Database = {
           },
         ]
       }
+      participation_rounds: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          deadline: string | null
+          fiscal_year: number
+          notice_message: string | null
+          opened_at: string
+          opened_by: string | null
+          round_id: string
+          status: Database["public"]["Enums"]["round_status"]
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          deadline?: string | null
+          fiscal_year: number
+          notice_message?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          round_id?: string
+          status?: Database["public"]["Enums"]["round_status"]
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          deadline?: string | null
+          fiscal_year?: number
+          notice_message?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          round_id?: string
+          status?: Database["public"]["Enums"]["round_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participation_rounds_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participation_rounds_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_path: string | null
@@ -940,6 +991,64 @@ export type Database = {
           },
         ]
       }
+      unit_participation: {
+        Row: {
+          created_at: string
+          fiscal_year: number
+          note: string | null
+          participation_id: string
+          responded_at: string | null
+          responded_by: string | null
+          round_id: string
+          status: Database["public"]["Enums"]["participation_status"]
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string
+          fiscal_year: number
+          note?: string | null
+          participation_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          round_id: string
+          status?: Database["public"]["Enums"]["participation_status"]
+          unit_id: string
+        }
+        Update: {
+          created_at?: string
+          fiscal_year?: number
+          note?: string | null
+          participation_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          round_id?: string
+          status?: Database["public"]["Enums"]["participation_status"]
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_participation_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unit_participation_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "participation_rounds"
+            referencedColumns: ["round_id"]
+          },
+          {
+            foreignKeyName: "unit_participation_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "training_units"
+            referencedColumns: ["unit_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -971,6 +1080,34 @@ export type Database = {
         }[]
       }
       get_dashboard_overview: { Args: { p_unit_id?: string }; Returns: Json }
+      get_participation_summary: {
+        Args: { p_fiscal_year: number }
+        Returns: {
+          confirmed: number
+          declined: number
+          invited: number
+          total: number
+        }[]
+      }
+      open_participation_round: {
+        Args: { p_deadline?: string; p_fiscal_year: number; p_notice?: string }
+        Returns: string
+      }
+      respond_participation: {
+        Args: {
+          p_note?: string
+          p_round_id: string
+          p_status: Database["public"]["Enums"]["participation_status"]
+        }
+        Returns: undefined
+      }
+      set_participation_round_status: {
+        Args: {
+          p_round_id: string
+          p_status: Database["public"]["Enums"]["round_status"]
+        }
+        Returns: undefined
+      }
       submit_training_unit: {
         Args: {
           p_external_ref?: string
@@ -981,6 +1118,10 @@ export type Database = {
           p_type: Database["public"]["Enums"]["unit_type"]
         }
         Returns: string
+      }
+      sync_participation_round: {
+        Args: { p_round_id: string }
+        Returns: number
       }
     }
     Enums: {
@@ -996,6 +1137,7 @@ export type Database = {
       image_visibility: "public" | "internal"
       import_job_status: "pending" | "processing" | "completed" | "failed"
       learner_source: "unit_self_entry" | "unit_import_file"
+      participation_status: "invited" | "confirmed" | "declined"
       region_type:
         | "north"
         | "east"
@@ -1003,6 +1145,7 @@ export type Database = {
         | "central"
         | "south"
         | "bangkok"
+      round_status: "open" | "closed"
       testing_center_status_enum:
         | "not_registered"
         | "in_progress"
@@ -1157,6 +1300,7 @@ export const Constants = {
       image_visibility: ["public", "internal"],
       import_job_status: ["pending", "processing", "completed", "failed"],
       learner_source: ["unit_self_entry", "unit_import_file"],
+      participation_status: ["invited", "confirmed", "declined"],
       region_type: [
         "north",
         "east",
@@ -1165,6 +1309,7 @@ export const Constants = {
         "south",
         "bangkok",
       ],
+      round_status: ["open", "closed"],
       testing_center_status_enum: [
         "not_registered",
         "in_progress",

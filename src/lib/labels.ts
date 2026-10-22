@@ -53,3 +53,15 @@ export const TESTING_CENTER_STATUS_LABEL: Record<string, string> = {
   in_progress: "อยู่ระหว่างขอ",
   registered: "ได้รับแล้ว",
 };
+
+// Fiscal-year participation ("รอบยืนยันการเข้าร่วมรายปีงบประมาณ")
+export const PARTICIPATION_STATUS_LABEL: Record<string, string> = {
+  invited: "ยังไม่ตอบรับ",
+  confirmed: "ยืนยันเข้าร่วม",
+  declined: "ขอไม่เข้าร่วม",
+};
+
+export const ROUND_STATUS_LABEL: Record<string, string> = {
+  open: "เปิดรับยืนยัน",
+  closed: "ปิดรอบแล้ว",
+};

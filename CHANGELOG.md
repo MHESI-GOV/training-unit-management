@@ -6,6 +6,39 @@
 
 ---
 
+## [0.7.0] — 2026-10-23
+
+ระบบยืนยันการเข้าร่วมรายปีงบประมาณ — ตอบโจทย์ "จำนวนหน่วยฝึก active ในแต่ละปีงบ" อย่างแม่นยำ
+(หน่วยลงทะเบียนใหม่ทุกปีงบ; หน่วยที่ไม่เข้าร่วมปีไหนก็แค่ไม่ถูกนับ ข้อมูลเดิมไม่ถูกลบ)
+
+### เพิ่ม
+- **ตาราง `participation_rounds` (รอบรายปีงบ) + `unit_participation` (หน่วย × ปีงบ)** — "หน่วย active
+  ปีงบ X" = แถวที่ `status='confirmed'` ของปีนั้น; `fiscal_year` เก็บเป็นเลข พ.ศ. (ปีงบไทย 1 ต.ค.–30 ก.ย.,
+  ตรรกะขอบเขต/แปลง พ.ศ. อยู่ที่ `src/lib/fiscal-year.ts`)
+- **หน้า WM `/admin/participation`** (Web Master เท่านั้น) — เปิดรอบปีงบใหม่ (modal: ปีงบ/กำหนด/ข้อความแจ้ง)
+  ซึ่งส่งคำเชิญยืนยันไปทุกหน่วยอัตโนมัติ + อีเมล Notice (ผ่าน Gmail SMTP เดิม, มี fallback แจ้งในแอป);
+  รายการรอบพร้อมตัวเลข "หน่วย active (ยืนยันแล้ว) N/total"; `/admin/participation/[roundId]` ตารางสถานะ
+  รายหน่วย (เรียงหน่วยที่ยังไม่ตอบขึ้นก่อน) + "ส่ง Notice ซ้ำ" (sync หน่วยใหม่ + เตือนเฉพาะที่ยังไม่ตอบ) +
+  ปิด/เปิดรอบ
+- **หน้า Coordinator `/unit/participation`** — เห็นรอบที่เปิดให้หน่วยตัวเอง + ปุ่ม "ยืนยันเข้าร่วม" /
+  "ขอไม่เข้าร่วมปีนี้" (เปลี่ยนคำตอบได้ระหว่างรอบเปิด) + ประวัติรายปี; เมนู sidebar ใหม่ทั้งฝั่ง WM และ
+  coordinator
+- **ฟังก์ชัน DB (SECURITY DEFINER + audit):** `open_participation_round` / `sync_participation_round` /
+  `respond_participation` / `set_participation_round_status` / `get_participation_summary` — บังคับสิทธิ์
+  ในฟังก์ชันเอง (เปิด/ปิดรอบ = Web Master เท่านั้น, ตอบรับ = เจ้าของหน่วยเท่านั้น), RLS จำกัด coordinator
+  ให้เห็นเฉพาะแถวหน่วยตัวเอง
+
+### ภายใน
+- migration `20261023100000_participation_rounds.sql`; regenerate `database.types.ts`
+- typecheck + production build ผ่าน
+- verify end-to-end กับ live Supabase ด้วย session ผู้ใช้จริง (temp WM + coordinator): เปิดรอบ→เชิญทุกหน่วย,
+  กันเปิดรอบซ้ำปีเดิม (unique), coordinator ยืนยัน/เปลี่ยนเป็นไม่เข้าร่วม, RLS เห็นเฉพาะหน่วยตัวเอง,
+  role-gate กันไม่ให้ coordinator เปิดรอบ, สรุปนับ confirmed ถูกต้อง, ปิดรอบแล้วตอบไม่ได้ (11/11 ผ่าน) +
+  ทดสอบ UI ฝั่ง coordinator ในเบราว์เซอร์จริง (ยืนยัน→สถานะเปลี่ยนเป็น "ยืนยันเข้าร่วม"); ลบข้อมูล/บัญชี
+  ทดสอบทั้งหมดแล้ว
+
+---
+
 ## [0.6.0] — 2026-10-22
 
 ระบบจัดการบัญชีผู้ใช้ (account management) — เปลี่ยนรหัสผ่าน/อีเมลเข้าระบบ, รูปโปรไฟล์, และรวมโปรไฟล์หน่วยฝึก

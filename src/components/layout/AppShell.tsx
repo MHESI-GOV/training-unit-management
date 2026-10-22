@@ -9,6 +9,7 @@ import {
   UserRound,
   UsersRound,
   ClipboardList,
+  CalendarCheck,
   Image as ImageIcon,
 } from "lucide-react";
 import type { Profile } from "@/lib/auth/get-profile";
@@ -30,6 +31,7 @@ function navForProfile(profile: Profile | null): NavItem[] {
     return [
       { href: "/unit/classes", label: "รุ่นฝึกอบรมและวิทยากร", icon: <Users size={17} />, id: "classes" },
       { href: "/unit/learners", label: "ผู้เรียน", icon: <UsersRound size={17} />, id: "learners" },
+      { href: "/unit/participation", label: "ยืนยันการเข้าร่วมปีงบ", icon: <CalendarCheck size={17} />, id: "participation" },
       { href: "/unit/testing-center", label: "สถานะศูนย์ทดสอบมาตรฐาน", icon: <ClipboardList size={17} />, id: "testing-center" },
       { href: "/unit/import", label: "นำเข้าผู้เรียน CSV", icon: <FileUp size={17} />, id: "import" },
       { href: "/unit/import-assessments", label: "นำเข้าผลทดสอบ CSV", icon: <FileUp size={17} />, id: "import-assessments" },
@@ -47,6 +49,7 @@ function navForProfile(profile: Profile | null): NavItem[] {
     if (profile.role === "web_master") {
       items.unshift(
         { href: "/admin/users", label: "User Management", icon: <UserRound size={17} />, id: "users" },
+        { href: "/admin/participation", label: "รอบยืนยันการเข้าร่วม", icon: <CalendarCheck size={17} />, id: "participation" },
         { href: "/admin/audit-log", label: "Audit Log", icon: <ClipboardList size={17} />, id: "audit" },
         { href: "/admin/storage-audit", label: "ไฟล์ภาพกำพร้า", icon: <ImageIcon size={17} />, id: "storage-audit" },
       );
