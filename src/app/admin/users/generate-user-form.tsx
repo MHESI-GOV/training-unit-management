@@ -18,7 +18,7 @@ export function GenerateUserForm() {
     <div style={{ display: "grid", gap: 16 }}>
       <form action={formAction} style={{ display: "grid", gap: 12 }}>
         <label>
-          <span className="field-label">ชื่อผู้แทน</span>
+          <span className="field-label">ชื่อหน่วยงาน</span>
           <input name="display_name" required className="field" />
         </label>
         <label>

@@ -3,14 +3,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AppShell } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/labels";
 import { GenerateUserDialog } from "./generate-user-dialog";
-import { AccountAdminActions } from "./account-admin";
+import { AccountRow } from "./account-admin";
 import { approveEmailChange, rejectEmailChange } from "./actions";
 
 export default async function UserManagementPage() {
   const profile = await requireWebMaster();
   const admin = createAdminClient();
 
-  const [{ data: profiles }, { data: authList }, { data: pending }, { data: units }] = await Promise.all([
+  const [{ data: profiles }, { data: authList }, { data: pending }] = await Promise.all([
     admin.from("profiles").select("id, role, unit_scope, display_name"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
     admin
@@ -18,12 +18,10 @@ export default async function UserManagementPage() {
       .select("request_id, user_id, current_email, requested_email, requested_at")
       .eq("status", "pending")
       .order("requested_at", { ascending: true }),
-    admin.from("training_units").select("unit_id, name"),
   ]);
 
   const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? "-"]));
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name ?? "-"]));
-  const unitNameById = new Map((units ?? []).map((u) => [u.unit_id, u.name]));
   const bannedById = new Map(
     (authList?.users ?? []).map((u) => {
       const bu = (u as { banned_until?: string | null }).banned_until;
@@ -78,50 +76,28 @@ export default async function UserManagementPage() {
           </div>
 
           <div style={{ marginTop: 16, overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
-                  <th style={{ padding: "8px 10px" }}>ชื่อ</th>
-                  <th style={{ padding: "8px 10px" }}>อีเมล</th>
-                  <th style={{ padding: "8px 10px" }}>บทบาท</th>
-                  <th style={{ padding: "8px 10px" }}>หน่วย</th>
-                  <th style={{ padding: "8px 10px" }}>สถานะ</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>การจัดการ</th>
+                  <th style={{ padding: "10px" }}>หน่วยงาน</th>
+                  <th style={{ padding: "10px" }}>Email (ใช้เข้าระบบ)</th>
+                  <th style={{ padding: "10px" }}>สถานะบัญชี</th>
+                  <th style={{ padding: "10px" }}>บทบาท (role)</th>
+                  <th style={{ padding: "10px", textAlign: "right" }}>รีเซ็ตรหัส</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedProfiles.map((p) => {
-                  const email = emailById.get(p.id) ?? "-";
-                  const isSelf = p.id === profile.id;
-                  const banned = bannedById.get(p.id) ?? false;
-                  return (
-                    <tr key={p.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td style={{ padding: "8px 10px", fontWeight: 600 }}>{p.display_name ?? "-"}</td>
-                      <td style={{ padding: "8px 10px" }} className="footnote">{email}</td>
-                      <td style={{ padding: "8px 10px" }}>{ROLE_LABEL[p.role] ?? p.role}</td>
-                      <td style={{ padding: "8px 10px" }} className="footnote">
-                        {p.unit_scope ? unitNameById.get(p.unit_scope) ?? p.unit_scope : "—"}
-                      </td>
-                      <td style={{ padding: "8px 10px" }}>
-                        <span className={`pill ${banned ? "muted" : "done"}`}>
-                          {banned ? "ปิดใช้งาน" : "ใช้งานอยู่"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "8px 10px", textAlign: "right" }}>
-                        {isSelf ? (
-                          <span className="footnote">บัญชีของคุณ (จัดการที่ &quot;บัญชีของฉัน&quot;)</span>
-                        ) : (
-                          <AccountAdminActions
-                            userId={p.id}
-                            currentEmail={email}
-                            disabled={banned}
-                            canDisable={p.role !== "web_master"}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {sortedProfiles.map((p) => (
+                  <AccountRow
+                    key={p.id}
+                    userId={p.id}
+                    name={p.display_name ?? "-"}
+                    email={emailById.get(p.id) ?? "-"}
+                    roleRaw={p.role}
+                    disabled={bannedById.get(p.id) ?? false}
+                    isSelf={p.id === profile.id}
+                  />
+                ))}
               </tbody>
             </table>
           </div>

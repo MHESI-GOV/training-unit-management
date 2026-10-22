@@ -133,6 +133,35 @@ export async function adminSetDisabled(
   return { success: disabled ? "ปิดใช้งานบัญชีแล้ว" : "เปิดใช้งานบัญชีแล้ว" };
 }
 
+// Edit an account's organization name (profiles.display_name). Low-risk, no auth/role side effects.
+export type AdminNameState = { error?: string; success?: string };
+
+export async function adminChangeName(
+  _prev: AdminNameState,
+  formData: FormData,
+): Promise<AdminNameState> {
+  const wm = await requireWebMaster();
+  const userId = String(formData.get("user_id") ?? "");
+  const name = String(formData.get("display_name") ?? "").trim();
+  if (!userId) return { error: "ไม่พบบัญชี" };
+  if (!name) return { error: "กรุณากรอกชื่อหน่วยงาน" };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("profiles").update({ display_name: name }).eq("id", userId);
+  if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
+
+  await admin.from("audit_log").insert({
+    actor_user_id: wm.id,
+    action: "admin_change_name",
+    entity_type: "profile",
+    record_id: userId,
+    changed_fields: ["display_name"],
+  });
+
+  revalidatePath("/admin/users");
+  return { success: "บันทึกชื่อหน่วยงานแล้ว" };
+}
+
 // --- Email-change request handling (self-service requests approved/rejected by Web Master) ---
 
 export async function approveEmailChange(formData: FormData): Promise<void> {
