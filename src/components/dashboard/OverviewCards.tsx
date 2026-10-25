@@ -1,9 +1,10 @@
-import { Building2, Users, ShieldCheck, Award, Medal } from "lucide-react";
+import { Building2, Users, ShieldCheck, Award, Medal, CheckCircle2 } from "lucide-react";
 import { InstitutionDonut } from "./InstitutionDonut";
 import { DonutChart } from "./DonutChart";
 import { MapSection } from "./MapSection";
 import { REGION_ORDER, REGION_LABEL, REGION_COLOR } from "@/lib/labels";
 import { type Overview, fmt } from "@/lib/dashboard";
+import { formatFiscalYear } from "@/lib/fiscal-year";
 
 // The shared Dashboard overview layout — the 5-card headline row + the 2-donut row — rendered
 // identically on the authenticated dashboard (src/app/page.tsx) and the public Home
@@ -49,6 +50,7 @@ function CountCard({
   icon,
   iconBg,
   iconColor,
+  extra,
 }: {
   label: string;
   unit: string;
@@ -57,6 +59,7 @@ function CountCard({
   icon: React.ReactNode;
   iconBg: string;
   iconColor: string;
+  extra?: React.ReactNode;
 }) {
   return (
     <section className="card" style={{ flex: "1 1 300px", minWidth: 280 }}>
@@ -67,6 +70,8 @@ function CountCard({
           <BigValue value={total} unit={unit} />
         </div>
       </div>
+
+      {extra}
 
       <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, margin: "16px 0 10px" }}>รายภูมิภาค</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 18px" }}>
@@ -121,6 +126,40 @@ function CertCard({
   );
 }
 
+// หน่วยที่ยืนยันเข้าร่วมในปีงบประมาณล่าสุด — org-level count (ไม่ใช่ PII) จึงแสดงได้ทุกบทบาท/หน้า
+// สาธารณะ. ถ้ายังไม่มีการเปิดรอบยืนยัน (participation_fiscal_year = null) แสดงข้อความ muted แทน.
+function ActiveUnitsBadge({ ov }: { ov: Overview }) {
+  if (ov.participation_fiscal_year === null) {
+    return (
+      <div style={{ marginTop: 12, fontSize: 12.5, color: "var(--muted)" }}>
+        ยังไม่เปิดรอบยืนยันการเข้าร่วมปีงบประมาณ
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 12px",
+        borderRadius: 999,
+        background: "#e2f3e9",
+        color: "#147a54",
+      }}
+    >
+      <CheckCircle2 size={16} />
+      <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+        ยืนยันเข้าร่วม {formatFiscalYear(ov.participation_fiscal_year)}
+      </span>
+      <span style={{ fontSize: 13, fontWeight: 700 }}>
+        {ov.active_units.toLocaleString("th-TH")}/{ov.participation_total.toLocaleString("th-TH")} แห่ง
+      </span>
+    </div>
+  );
+}
+
 export function OverviewCards({ ov }: { ov: Overview }) {
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -134,6 +173,7 @@ export function OverviewCards({ ov }: { ov: Overview }) {
           icon={<Building2 size={22} />}
           iconBg="#ede6fb"
           iconColor="#4a3aa7"
+          extra={<ActiveUnitsBadge ov={ov} />}
         />
         <CountCard
           label="จำนวนผู้เรียน"

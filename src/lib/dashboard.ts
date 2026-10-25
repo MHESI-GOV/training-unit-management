@@ -13,6 +13,13 @@ export type Overview = {
   cert_dsd_l1: number | null;
   status_completed: number | null;
   status_in_progress: number | null;
+  // Fiscal-year participation ("active units") for the most recent round. participation_fiscal_year
+  // is null when no round has been opened yet; active_units/participation_total are org-level counts
+  // (no PII) so they are never suppressed.
+  participation_fiscal_year: number | null;
+  participation_round_open: boolean | null;
+  active_units: number;
+  participation_total: number;
   pins: { unit_id: string; name: string; region: string; type: string; province: string | null; lat: number; lng: number }[];
   latest_units: { unit_id: string; name: string; region: string; type: string; status: string }[];
 };
