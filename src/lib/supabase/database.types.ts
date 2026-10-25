@@ -1063,6 +1063,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       current_user_unit_scope: { Args: never; Returns: string }
+      get_dashboard_fiscal_years: { Args: never; Returns: number[] }
       get_dashboard_kpis: {
         Args: { p_unit_id?: string }
         Returns: {
@@ -1079,7 +1080,10 @@ export type Database = {
           units_with_data: number
         }[]
       }
-      get_dashboard_overview: { Args: { p_unit_id?: string }; Returns: Json }
+      get_dashboard_overview: {
+        Args: { p_fiscal_year?: number; p_unit_id?: string }
+        Returns: Json
+      }
       get_participation_summary: {
         Args: { p_fiscal_year: number }
         Returns: {

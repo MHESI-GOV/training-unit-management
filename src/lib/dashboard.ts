@@ -26,6 +26,20 @@ export type Overview = {
 
 export const SUPPRESSED = "ข้อมูลน้อยเกินไปที่จะแสดงผลได้";
 
+// Resolve the dashboard year dropdown from the `fy` query param against the list of years that
+// have data (newest first). Default = latest year; "all" = every year (p_fiscal_year null); an
+// unknown/missing value falls back to the latest year (or "all" when there is no data at all).
+// `selected` is the <select> value; `param` is what to pass to get_dashboard_overview.
+export function resolveFiscalYear(
+  fy: string | undefined,
+  years: number[],
+): { selected: string; param: number | null } {
+  if (fy === "all") return { selected: "all", param: null };
+  if (fy && years.includes(Number(fy))) return { selected: fy, param: Number(fy) };
+  if (years.length > 0) return { selected: String(years[0]), param: years[0] };
+  return { selected: "all", param: null };
+}
+
 export function fmt(v: number | null | undefined): string {
   if (v === null || v === undefined) return SUPPRESSED;
   return v.toLocaleString("th-TH");

@@ -2,9 +2,18 @@ import Link from "next/link";
 import { ChefHat, Soup, Leaf } from "lucide-react";
 import { type Overview } from "@/lib/dashboard";
 import { OverviewCards } from "@/components/dashboard/OverviewCards";
+import { YearFilter } from "@/components/dashboard/year-filter";
 import { PublicNav } from "./PublicNav";
 
-export function PublicHome({ ov }: { ov: Overview }) {
+export function PublicHome({
+  ov,
+  years,
+  selectedYear,
+}: {
+  ov: Overview;
+  years: number[];
+  selectedYear: string;
+}) {
   return (
     <div className="public-page">
       <PublicNav />
@@ -28,6 +37,9 @@ export function PublicHome({ ov }: { ov: Overview }) {
 
       {/* ภาพรวม — layout เดียวกับ dashboard ฝั่งล็อกอิน (OverviewCards) */}
       <div id="stats" style={{ maxWidth: 1200, margin: "32px auto 0", padding: "0 24px" }}>
+        <div style={{ marginBottom: 16 }}>
+          <YearFilter years={years} selected={selectedYear} />
+        </div>
         <OverviewCards ov={ov} />
       </div>
 

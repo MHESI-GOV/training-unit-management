@@ -4,28 +4,35 @@ import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
 import { PublicHome } from "@/components/home/PublicHome";
 import { UnitFilter } from "@/components/dashboard/unit-filter";
+import { YearFilter } from "@/components/dashboard/year-filter";
 import { ExportLearners } from "@/components/dashboard/export-learners";
 import { ExportClasses } from "@/components/dashboard/export-classes";
 import { OverviewCards } from "@/components/dashboard/OverviewCards";
-import { type Overview } from "@/lib/dashboard";
+import { type Overview, resolveFiscalYear } from "@/lib/dashboard";
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ unit_id?: string }>;
+  searchParams: Promise<{ unit_id?: string; fy?: string }>;
 }) {
   const { email, profile } = await getCurrentProfile();
-  const { unit_id } = await searchParams;
+  const { unit_id, fy } = await searchParams;
 
   const supabase = await createClient();
 
   // Logged-out visitors get the standalone marketing/landing layout (the existing public
   // dashboard design), now showing the same overview content as the authenticated dashboard.
   if (!profile) {
-    const { data: ovRaw, error } = await supabase.rpc("get_dashboard_overview", { p_unit_id: undefined });
+    const { data: yearsRaw } = await supabase.rpc("get_dashboard_fiscal_years");
+    const years = (yearsRaw as number[] | null) ?? [];
+    const { selected, param } = resolveFiscalYear(fy, years);
+    const { data: ovRaw, error } = await supabase.rpc("get_dashboard_overview", {
+      p_unit_id: undefined,
+      p_fiscal_year: param ?? undefined,
+    });
     const publicOv = ovRaw as Overview | null;
     return publicOv ? (
-      <PublicHome ov={publicOv} />
+      <PublicHome ov={publicOv} years={years} selectedYear={selected} />
     ) : (
       <main style={{ maxWidth: 480, margin: "4rem auto", textAlign: "center" }}>
         <p style={{ color: "var(--danger)" }}>โหลดข้อมูลไม่สำเร็จ{error ? `: ${error.message}` : ""}</p>
@@ -40,8 +47,15 @@ export default async function Home({
   const canFilterByUnit = profile.role === "web_master" || profile.role === "central_staff";
   const filterUnitId = canFilterByUnit ? unit_id : undefined;
 
+  const { data: yearsRaw } = await supabase.rpc("get_dashboard_fiscal_years");
+  const years = (yearsRaw as number[] | null) ?? [];
+  const { selected: selectedYear, param: fyParam } = resolveFiscalYear(fy, years);
+
   const [{ data: ovRaw, error }, { data: units }] = await Promise.all([
-    supabase.rpc("get_dashboard_overview", { p_unit_id: filterUnitId ?? undefined }),
+    supabase.rpc("get_dashboard_overview", {
+      p_unit_id: filterUnitId ?? undefined,
+      p_fiscal_year: fyParam ?? undefined,
+    }),
     canFilterByUnit
       ? supabase.from("training_units").select("unit_id, name").order("name")
       : Promise.resolve({ data: null }),
@@ -70,9 +84,10 @@ export default async function Home({
 
       {ov && (
         <>
-          <div style={{ marginTop: canFilterByUnit ? 16 : 20 }}>
-            <OverviewCards ov={ov} />
+          <div style={{ marginTop: canFilterByUnit ? 16 : 20, marginBottom: 16 }}>
+            <YearFilter years={years} selected={selectedYear} />
           </div>
+          <OverviewCards ov={ov} />
 
           {canFilterByUnit && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
