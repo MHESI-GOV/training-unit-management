@@ -4,10 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
 import { PublicHome } from "@/components/home/PublicHome";
 import { UnitFilter } from "@/components/dashboard/unit-filter";
-import { YearFilter } from "@/components/dashboard/year-filter";
 import { ExportLearners } from "@/components/dashboard/export-learners";
 import { ExportClasses } from "@/components/dashboard/export-classes";
-import { OverviewCards } from "@/components/dashboard/OverviewCards";
+import { OverviewSection } from "@/components/dashboard/OverviewSection";
 import { type Overview, resolveFiscalYear } from "@/lib/dashboard";
 
 export default async function Home({
@@ -84,10 +83,15 @@ export default async function Home({
 
       {ov && (
         <>
-          <div style={{ marginTop: canFilterByUnit ? 16 : 20, marginBottom: 16 }}>
-            <YearFilter years={years} selected={selectedYear} />
+          <div style={{ marginTop: canFilterByUnit ? 16 : 20 }}>
+            <OverviewSection
+              key={filterUnitId ?? "all"}
+              initialOv={ov}
+              years={years}
+              initialSelected={selectedYear}
+              unitId={filterUnitId}
+            />
           </div>
-          <OverviewCards ov={ov} />
 
           {canFilterByUnit && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
