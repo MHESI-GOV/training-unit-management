@@ -1,52 +1,82 @@
-import Link from "next/link";
 import { requireStaffProfile } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
-import { UNIT_TYPE_LABEL, REGION_LABEL } from "@/lib/labels";
 import { AppShell } from "@/components/layout/AppShell";
+import { UnitsList, type UnitCard } from "./units-list";
+
+// The three standards shown as testing-center tags (max 3), with short labels for the card.
+const TESTING_TAGS: { type: string; label: string }[] = [
+  { type: "dsd_l1", label: "ฝีมือแรงงาน" },
+  { type: "professional_qualification", label: "คุณวุฒิวิชาชีพ" },
+  { type: "anamai_food_contact", label: "ผู้สัมผัสอาหาร" },
+];
 
 export default async function AdminUnitsPage() {
   const profile = await requireStaffProfile();
 
   const supabase = await createClient();
-  const { data: units } = await supabase
+  // Aggregate embeds (classes(count), learners(count)) aren't modeled by the generated types,
+  // so the row shape is declared explicitly and cast.
+  type UnitRow = {
+    unit_id: string;
+    name: string;
+    type: string;
+    region: string;
+    classes: { count: number }[] | null;
+    learners: { count: number }[] | null;
+    testing_center_statuses: { standard_type: string; status: string }[] | null;
+    training_unit_images: { storage_key: string; display_order: number | null; status: string }[] | null;
+  };
+  const { data: unitsRaw } = await supabase
     .from("training_units")
-    .select("unit_id, name, type, region, training_unit_profiles(coordinator_name, phone)")
+    .select(
+      "unit_id, name, type, region, classes(count), learners(count), " +
+        "testing_center_statuses(standard_type, status), " +
+        "training_unit_images(storage_key, display_order, status)",
+    )
     .order("name");
+  const units = (unitsRaw ?? []) as unknown as UnitRow[];
+
+  const cards: UnitCard[] = await Promise.all(
+    units.map(async (u) => {
+      const classCount = (u.classes as { count: number }[] | null)?.[0]?.count ?? 0;
+      const learnerCount = (u.learners as { count: number }[] | null)?.[0]?.count ?? 0;
+
+      const registered = new Set(
+        (u.testing_center_statuses ?? [])
+          .filter((s) => s.status === "registered")
+          .map((s) => s.standard_type),
+      );
+      const tags = TESTING_TAGS.filter((t) => registered.has(t.type));
+
+      const cover = (u.training_unit_images ?? [])
+        .filter((i) => i.status === "active")
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))[0];
+      let coverUrl: string | null = null;
+      if (cover) {
+        const { data } = await supabase.storage.from("unit-photos").createSignedUrl(cover.storage_key, 3600);
+        coverUrl = data?.signedUrl ?? null;
+      }
+
+      return {
+        unit_id: u.unit_id,
+        name: u.name,
+        type: u.type,
+        region: u.region,
+        classCount,
+        learnerCount,
+        tags,
+        coverUrl,
+      };
+    }),
+  );
 
   return (
     <AppShell profile={profile} active="units" eyebrow="หน่วยในระบบ" title="หน่วยฝึกอบรมทั้งหมด">
-      {(units ?? []).length === 0 && <p className="footnote">ยังไม่มีหน่วยฝึกอบรมในระบบ</p>}
-
-      <div style={{ display: "grid", gap: 14 }}>
-        {(units ?? []).map((u) => (
-          <article key={u.unit_id} className="card">
-            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-              <strong>{u.name}</strong>
-              <div style={{ display: "flex", gap: 6 }}>
-                <span className="pill study">{UNIT_TYPE_LABEL[u.type] ?? u.type}</span>
-                <span className="pill muted">{REGION_LABEL[u.region] ?? u.region}</span>
-              </div>
-            </div>
-            {u.training_unit_profiles && (
-              <p className="footnote" style={{ marginTop: 6 }}>
-                ผู้ประสานงาน: {u.training_unit_profiles.coordinator_name ?? "—"}{" "}
-                {u.training_unit_profiles.phone ? `(${u.training_unit_profiles.phone})` : ""}
-              </p>
-            )}
-            <p style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12, fontSize: 13 }}>
-              <Link href={`/unit/profile?unit_id=${u.unit_id}`}>โปรไฟล์หน่วย</Link>
-              <Link href={`/unit/classes?unit_id=${u.unit_id}`}>รุ่นฝึกอบรม</Link>
-              <Link href={`/unit/learners?unit_id=${u.unit_id}`}>ผู้เรียน</Link>
-              <Link href={`/unit/testing-center?unit_id=${u.unit_id}`}>ศูนย์ทดสอบมาตรฐาน</Link>
-              <Link href={`/unit/import?unit_id=${u.unit_id}`}>นำเข้าผู้เรียน CSV</Link>
-              <Link href={`/unit/import-assessments?unit_id=${u.unit_id}`}>นำเข้าผลทดสอบ CSV</Link>
-              <Link href={`/unit/import-classes?unit_id=${u.unit_id}`}>นำเข้ารุ่นฝึกอบรม CSV</Link>
-              <Link href={`/unit/import-instructors?unit_id=${u.unit_id}`}>นำเข้าวิทยากร CSV</Link>
-              <Link href={`/?unit_id=${u.unit_id}`}>แดชบอร์ด</Link>
-            </p>
-          </article>
-        ))}
-      </div>
+      {cards.length === 0 ? (
+        <p className="footnote">ยังไม่มีหน่วยฝึกอบรมในระบบ</p>
+      ) : (
+        <UnitsList units={cards} />
+      )}
     </AppShell>
   );
 }

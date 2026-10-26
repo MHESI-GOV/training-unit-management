@@ -6,6 +6,33 @@
 
 ---
 
+## [0.8.0] — 2026-10-26
+
+ปรับโฉมหน้า "หน่วยฝึกอบรมทั้งหมด" (Web Master/Central Staff) + data sheet รายหน่วยแบบแท็บ,
+export หน่วยที่ยืนยันเข้าร่วม, และ filter/ค้นหา
+
+### เพิ่ม
+- **หน้า "หน่วยฝึกอบรมทั้งหมด" เป็น list แบบเว็บจองโรงแรม** — แต่ละแถว: thumbnail (รูปแรกของหน่วย
+  จาก `training_unit_images` ที่ status=active, display_order น้อยสุด → signed URL; ไม่มีรูปใช้
+  placeholder gradient สีตามภูมิภาค + ไอคอนตามประเภท) · ชื่อ+ประเภท+ภูมิภาค · tag ศูนย์ทดสอบสูงสุด 3
+  (ฝีมือแรงงาน/คุณวุฒิวิชาชีพ/ผู้สัมผัสอาหาร เฉพาะที่สถานะ registered) · จำนวนรุ่น/ผู้เรียน · ปุ่มแก้ไขข้อมูล
+- **ช่องค้นหาชื่อหน่วย + filter ภูมิภาค (chip)** — กรองฝั่ง client แบบ realtime (AND กัน) ใน
+  `units-list.tsx`; data ยังดึงฝั่ง server
+- **Data sheet รายหน่วยแบบแท็บ** ที่ `/admin/units/[unitId]` — แท็บ แดชบอร์ด (ภาพรวมของหน่วยนั้น
+  ผ่าน `OverviewSection`), โปรไฟล์หน่วยฝึก (`UnitProfilePanel` เดิม), รุ่นฝึกอบรม (ClassForm/
+  InstructorForm เดิม), ผู้สอน (รายชื่อผู้สอนรวมทุกรุ่นของหน่วย) — ปุ่ม "แก้ไขข้อมูล" ของการ์ดเข้าหน้านี้
+- **Export หน่วยที่ยืนยันเข้าร่วม เป็น Excel (CSV+BOM)** — `/api/export/participation?round_id=`
+  (Web Master เท่านั้น ตรวจที่ backend + audit log) และหน้า `/admin/participation/[roundId]`
+  แสดงรายหน่วย **เฉพาะที่ยืนยันเข้าร่วมแล้ว** เรียงตามภูมิภาค + ปุ่ม Export
+
+### ภายใน
+- CSS: `.unit-list`/`.unit-row`/`.unit-thumb` (hotel-style), `.unit-filterbar`/`.region-chip`,
+  `.sheet-tabs`/`.sheet-tab` ใน globals.css
+- aggregate embed `classes(count)`/`learners(count)` ไม่ถูก model โดย generated types จึง
+  declare shape เองแล้ว cast
+
+---
+
 ## [0.7.5] — 2026-10-25
 
 แยกข้อมูลภาพรวมเป็นรายปีงบประมาณ + dropdown เลือกปีตรงกลางด้านบน Dashboard และหน้า Home

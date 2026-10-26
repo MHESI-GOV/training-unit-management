@@ -8,7 +8,9 @@ import {
   ROUND_STATUS_LABEL,
   REGION_LABEL,
   UNIT_TYPE_LABEL,
+  REGION_ORDER,
 } from "@/lib/labels";
+import { Download } from "lucide-react";
 import { formatFiscalYear } from "@/lib/fiscal-year";
 import { resendNotice, setRoundStatus } from "../actions";
 
@@ -34,15 +36,24 @@ export default async function RoundDetailPage({
     .maybeSingle();
   if (!round) notFound();
 
+  // Only units that have CONFIRMED participation are listed here.
   const { data: rows } = await supabase
     .from("unit_participation")
     .select("participation_id, status, responded_at, training_units(name, region, type)")
     .eq("round_id", roundId)
-    .order("status");
+    .eq("status", "confirmed");
 
-  // Sort: pending first (invited), then declined, then confirmed — so follow-up work is on top.
-  const order: Record<string, number> = { invited: 0, declined: 1, confirmed: 2 };
-  const sorted = (rows ?? []).slice().sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+  // Sort by region (fixed dashboard order) then unit name.
+  const regionRank = (r: string | undefined) => {
+    const i = REGION_ORDER.indexOf((r ?? "") as (typeof REGION_ORDER)[number]);
+    return i === -1 ? 99 : i;
+  };
+  const sorted = (rows ?? []).slice().sort((a, b) => {
+    const ra = regionRank(a.training_units?.region);
+    const rb = regionRank(b.training_units?.region);
+    if (ra !== rb) return ra - rb;
+    return (a.training_units?.name ?? "").localeCompare(b.training_units?.name ?? "", "th");
+  });
 
   return (
     <AppShell
@@ -85,6 +96,20 @@ export default async function RoundDetailPage({
         </section>
 
         <section className="card" style={{ overflowX: "auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700 }}>
+              หน่วยที่ยืนยันเข้าร่วม <span className="footnote">({sorted.length} แห่ง)</span>
+            </h2>
+            {sorted.length > 0 && (
+              <a
+                href={`/api/export/participation?round_id=${round.round_id}`}
+                className="btn secondary"
+                download
+              >
+                <Download size={15} /> Export Excel
+              </a>
+            )}
+          </div>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
             <thead>
               <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
@@ -116,7 +141,7 @@ export default async function RoundDetailPage({
               })}
             </tbody>
           </table>
-          {sorted.length === 0 && <p className="footnote">ยังไม่มีหน่วยในรอบนี้</p>}
+          {sorted.length === 0 && <p className="footnote">ยังไม่มีหน่วยที่ยืนยันเข้าร่วมในรอบนี้</p>}
         </section>
       </div>
     </AppShell>
