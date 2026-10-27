@@ -7,25 +7,33 @@ import { StepIndicator } from "@/components/ui/StepIndicator";
 const previewInitial: PreviewState = {};
 const commitInitial: CommitState = {};
 
-type ClassOption = { class_id: string; label: string };
-
-export function ImportClient({ unitId, classes }: { unitId: string; classes: ClassOption[] }) {
+export function ImportClient({
+  unitId,
+  classId,
+  classLabel,
+}: {
+  unitId: string;
+  classId: string;
+  classLabel: string;
+}) {
   const [previewState, previewAction, previewPending] = useActionState(previewImport, previewInitial);
   const [commitState, commitAction, commitPending] = useActionState(commitImport, commitInitial);
   const [confirmArmed, setConfirmArmed] = useState(false);
 
   const step = commitState.created !== undefined ? 2 : previewState.rows ? 1 : 0;
+  const steps = ["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"];
+  const importHref = `/unit/import?unit_id=${unitId}&class_id=${classId}`;
 
   if (commitState.created !== undefined) {
     return (
       <div className="card" style={{ maxWidth: 480 }}>
-        <StepIndicator steps={["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"]} current={step} />
+        <StepIndicator steps={steps} current={step} />
         <p className="notice success">
-          นำเข้าสำเร็จ: เพิ่มผู้เรียน {commitState.created} คน
-          {commitState.enrolled ? ` ลงทะเบียนเรียนสำเร็จ ${commitState.enrolled} คน` : ""}
-          {commitState.blocked ? ` ถูกบล็อกโดยการตรวจสอบสิทธิ์ ${commitState.blocked} คน` : ""}
+          นำเข้าสำเร็จ: บันทึกผู้เรียน {commitState.created} คน ลงรุ่น {classLabel}
+          {commitState.enrolled ? ` · ลงรุ่นสำเร็จ ${commitState.enrolled} คน` : ""}
+          {commitState.blocked ? ` · ถูกบล็อกโดยการตรวจสอบสิทธิ์ ${commitState.blocked} คน` : ""}
         </p>
-        <a href="/unit/import" className="btn secondary">
+        <a href={importHref} className="btn secondary">
           นำเข้าไฟล์อื่น
         </a>
       </div>
@@ -34,12 +42,12 @@ export function ImportClient({ unitId, classes }: { unitId: string; classes: Cla
 
   if (!previewState.rows) {
     return (
-      <div className="card" style={{ maxWidth: 420 }}>
-        <StepIndicator steps={["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"]} current={step} />
+      <div className="card" style={{ maxWidth: 440 }}>
+        <StepIndicator steps={steps} current={step} />
         <form action={previewAction} style={{ display: "grid", gap: 12 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <a href="/api/import-template/learners" className="footnote">
-            ดาวน์โหลดเทมเพลต CSV
+            ดาวน์โหลดเทมเพลต CSV (มีคอลัมน์ birth_date สำหรับคำนวณอายุ)
           </a>
           <input name="file" type="file" accept=".csv" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>
@@ -53,7 +61,7 @@ export function ImportClient({ unitId, classes }: { unitId: string; classes: Cla
 
   return (
     <div className="card">
-      <StepIndicator steps={["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"]} current={step} />
+      <StepIndicator steps={steps} current={step} />
       <p style={{ marginBottom: 14 }}>
         ไฟล์ {previewState.fileName}: ผ่าน <strong>{previewState.passCount}</strong> แถว / ไม่ผ่าน{" "}
         <strong>{previewState.failCount}</strong> แถว
@@ -65,6 +73,7 @@ export function ImportClient({ unitId, classes }: { unitId: string; classes: Cla
               <th>แถว</th>
               <th>ชื่อ-นามสกุล</th>
               <th>เลขบัตร</th>
+              <th>วันเกิด</th>
               <th>สถานะ</th>
               <th>สาเหตุ</th>
             </tr>
@@ -77,6 +86,7 @@ export function ImportClient({ unitId, classes }: { unitId: string; classes: Cla
                   {r.first_name} {r.last_name}
                 </td>
                 <td>{r.national_id}</td>
+                <td>{r.birth_date || "—"}</td>
                 <td>
                   <span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>
                     {r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}
@@ -90,29 +100,19 @@ export function ImportClient({ unitId, classes }: { unitId: string; classes: Cla
       </div>
 
       {previewState.passCount! > 0 && (
-        <form action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 360, marginTop: 20 }}>
+        <form action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 420, marginTop: 20 }}>
           <input type="hidden" name="unit_id" value={unitId} />
+          <input type="hidden" name="class_id" value={classId} />
           <input type="hidden" name="file_name" value={previewState.fileName} />
           <input type="hidden" name="rows" value={JSON.stringify(previewState.rows)} />
-          <label>
-            <span className="field-label">ลงทะเบียนเรียนรุ่น (ไม่บังคับ)</span>
-            <select name="class_id" className="field">
-              <option value="">-- ไม่ลงทะเบียน (เพิ่มผู้เรียนอย่างเดียว) --</option>
-              {classes.map((c) => (
-                <option key={c.class_id} value={c.class_id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
           {!confirmArmed ? (
             <button type="button" className="btn primary" onClick={() => setConfirmArmed(true)}>
-              นำเข้า {previewState.passCount} รายการ
+              บันทึก {previewState.passCount} คน ลงรุ่น {classLabel}
             </button>
           ) : (
             <>
               <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6" }}>
-                ยืนยันอีกครั้ง — การนำเข้าจะสร้างผู้เรียน {previewState.passCount} คนในระบบทันที
+                ยืนยันอีกครั้ง — จะสร้างผู้เรียน {previewState.passCount} คน และลงรุ่น {classLabel} ทันที
               </p>
               <button type="submit" className="btn primary" disabled={commitPending}>
                 {commitPending ? "กำลังนำเข้า..." : "ยืนยันนำเข้า"}

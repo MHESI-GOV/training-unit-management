@@ -65,3 +65,41 @@ export const ROUND_STATUS_LABEL: Record<string, string> = {
   open: "เปิดรับยืนยัน",
   closed: "ปิดรอบแล้ว",
 };
+
+// Class (ชั้นเรียน/รุ่นฝึกอบรม) descriptive enums — stored as ascii codes, shown in Thai.
+export const CLASS_MODE_LABEL: Record<string, string> = {
+  onsite: "เรียนในสถานที่",
+  online: "เรียนออนไลน์",
+  hybrid: "ผสม (ในสถานที่ + ออนไลน์)",
+};
+
+export const CLASS_STATUS_LABEL: Record<string, string> = {
+  planned: "วางแผน",
+  open: "เปิดรับสมัคร",
+  ongoing: "กำลังอบรม",
+  completed: "จบแล้ว",
+  cancelled: "ยกเลิก",
+};
+
+export const CLASS_STATUS_PILL: Record<string, string> = {
+  planned: "muted",
+  open: "pending",
+  ongoing: "study",
+  completed: "done",
+  cancelled: "fail",
+};
+
+// Enrollment status (per learner within a class)
+export const ENROLL_STATUS_LABEL: Record<string, string> = {
+  applied: "สมัคร",
+  attending: "เข้าร่วม",
+  completed: "สำเร็จ",
+  failed: "ไม่สำเร็จ",
+};
+
+export const ENROLL_STATUS_PILL: Record<string, string> = {
+  applied: "pending",
+  attending: "study",
+  completed: "done",
+  failed: "fail",
+};

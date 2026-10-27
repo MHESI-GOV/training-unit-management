@@ -3,102 +3,345 @@
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type ClassFormState = { error?: string };
+export type ClassFormState = { error?: string; success?: string };
 
-export async function createClass(
-  _prev: ClassFormState,
-  formData: FormData,
-): Promise<ClassFormState> {
-  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+const MODES = new Set(["onsite", "online", "hybrid"]);
+const STATUSES = new Set(["planned", "open", "ongoing", "completed", "cancelled"]);
 
-  const courseId = String(formData.get("course_id") ?? "");
-  const startDate = String(formData.get("start_date") ?? "");
-  const endDate = String(formData.get("end_date") ?? "");
-  const seatCount = Number(formData.get("seat_count"));
-  const externalRef = String(formData.get("external_ref") ?? "").trim() || null;
-
-  if (!courseId || !startDate || !endDate || !Number.isFinite(seatCount) || seatCount <= 0) {
-    return { error: "กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง" };
+// Auto-generate the next per-unit batch code (R001, R002, …). The unique index on
+// (unit_id, batch_code) is the real guard; this just picks the next free number.
+async function nextBatchCode(supabase: SupabaseClient, unitId: string): Promise<string> {
+  const { data } = await supabase
+    .from("classes")
+    .select("batch_code")
+    .eq("unit_id", unitId);
+  let max = 0;
+  for (const row of data ?? []) {
+    const m = /^R(\d+)$/.exec(row.batch_code ?? "");
+    if (m) max = Math.max(max, Number(m[1]));
   }
-  if (startDate > endDate) {
-    return { error: "วันเริ่มต้องไม่มากกว่าวันสิ้นสุด" };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("classes").insert({
-    course_id: courseId,
-    unit_id: unitId,
-    start_date: startDate,
-    end_date: endDate,
-    seat_count: seatCount,
-    external_ref: externalRef,
-  });
-
-  if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
-
-  revalidatePath("/unit/classes");
-  return {};
+  return `R${String(max + 1).padStart(3, "0")}`;
 }
 
-export type InstructorFormState = { error?: string };
+function readClassFields(formData: FormData) {
+  return {
+    courseId: String(formData.get("course_id") ?? ""),
+    name: String(formData.get("name") ?? "").trim() || null,
+    startDate: String(formData.get("start_date") ?? ""),
+    endDate: String(formData.get("end_date") ?? ""),
+    seatCount: Number(formData.get("seat_count")),
+    scheduleTime: String(formData.get("schedule_time") ?? "").trim() || null,
+    leadInstructorId: String(formData.get("lead_instructor_id") ?? "").trim() || null,
+    mode: String(formData.get("mode") ?? "").trim() || null,
+    location: String(formData.get("location") ?? "").trim() || null,
+    status: String(formData.get("status") ?? "planned").trim() || "planned",
+    note: String(formData.get("note") ?? "").trim() || null,
+  };
+}
 
-export async function addInstructorToClass(
-  _prev: InstructorFormState,
-  formData: FormData,
-): Promise<InstructorFormState> {
-  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
-
-  const classId = String(formData.get("class_id") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim() || null;
-  const email = String(formData.get("email") ?? "").trim() || null;
-  const roleInClass = String(formData.get("role_in_class") ?? "").trim() || "วิทยากร";
-
-  if (!classId || !name) {
-    return { error: "กรุณากรอกชื่อวิทยากร" };
+function validateClass(f: ReturnType<typeof readClassFields>): string | null {
+  if (!f.courseId || !f.startDate || !f.endDate || !Number.isFinite(f.seatCount) || f.seatCount <= 0) {
+    return "กรุณากรอกหลักสูตร วันเริ่ม–สิ้นสุด และจำนวนที่รองรับให้ครบถ้วน";
   }
+  if (f.startDate > f.endDate) return "วันเริ่มต้องไม่มากกว่าวันสิ้นสุด";
+  if (f.mode && !MODES.has(f.mode)) return "รูปแบบการเรียนไม่ถูกต้อง";
+  if (!STATUSES.has(f.status)) return "สถานะรุ่นไม่ถูกต้อง";
+  return null;
+}
+
+export async function createClass(_prev: ClassFormState, formData: FormData): Promise<ClassFormState> {
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const f = readClassFields(formData);
+  const err = validateClass(f);
+  if (err) return { error: err };
 
   const supabase = await createClient();
 
-  // Confirms this class actually belongs to the caller's own unit before touching it —
-  // RLS would also reject the class_instructors insert below, but this gives a clear error
-  // instead of a confusing silent no-op/RLS denial.
+  // If a lead instructor is given, verify it belongs to this unit's library.
+  if (f.leadInstructorId) {
+    const { data: ins } = await supabase
+      .from("instructors")
+      .select("instructor_id")
+      .eq("instructor_id", f.leadInstructorId)
+      .eq("unit_id", unitId)
+      .maybeSingle();
+    if (!ins) return { error: "ไม่พบหัวหน้าผู้สอนในคลังวิทยากรของหน่วย" };
+  }
+
+  // Retry once on the off chance two classes grab the same code concurrently.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const batchCode = await nextBatchCode(supabase, unitId);
+    const { data: created, error } = await supabase
+      .from("classes")
+      .insert({
+        course_id: f.courseId,
+        unit_id: unitId,
+        batch_code: batchCode,
+        name: f.name,
+        start_date: f.startDate,
+        end_date: f.endDate,
+        seat_count: f.seatCount,
+        schedule_time: f.scheduleTime,
+        lead_instructor_id: f.leadInstructorId,
+        mode: f.mode,
+        location: f.location,
+        status: f.status,
+        note: f.note,
+      })
+      .select("class_id")
+      .single();
+
+    if (!error && created) {
+      // If a lead instructor was picked, make sure they're also linked to the class roster.
+      if (f.leadInstructorId) {
+        await supabase.from("class_instructors").upsert(
+          { class_id: created.class_id, instructor_id: f.leadInstructorId, role_in_class: "หัวหน้าผู้สอน" },
+          { onConflict: "class_id,instructor_id" },
+        );
+      }
+      revalidatePath("/unit/classes");
+      return { success: `สร้างชั้นเรียนรหัส ${batchCode} เรียบร้อยแล้ว` };
+    }
+    if (!error.message.includes("classes_unit_batch_code_key")) {
+      return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
+    }
+  }
+  return { error: "สร้างรหัสรุ่นไม่สำเร็จ กรุณาลองอีกครั้ง" };
+}
+
+export async function updateClass(_prev: ClassFormState, formData: FormData): Promise<ClassFormState> {
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const classId = String(formData.get("class_id") ?? "");
+  const f = readClassFields(formData);
+  const err = validateClass(f);
+  if (err) return { error: err };
+
+  const supabase = await createClient();
+
   const { data: cls } = await supabase
     .from("classes")
     .select("class_id")
     .eq("class_id", classId)
     .eq("unit_id", unitId)
     .maybeSingle();
-  if (!cls) return { error: "ไม่พบรุ่นฝึกอบรมนี้ในหน่วยของคุณ" };
+  if (!cls) return { error: "ไม่พบชั้นเรียนนี้ในหน่วยของคุณ" };
 
-  let instructorId: string | null = null;
-  if (phone || email) {
-    let query = supabase.from("instructors").select("instructor_id");
-    query = phone ? query.eq("phone", phone) : query.is("phone", null);
-    query = email ? query.eq("email", email) : query.is("email", null);
-    const { data: existing } = await query.maybeSingle();
-    instructorId = existing?.instructor_id ?? null;
+  if (f.leadInstructorId) {
+    const { data: ins } = await supabase
+      .from("instructors")
+      .select("instructor_id")
+      .eq("instructor_id", f.leadInstructorId)
+      .eq("unit_id", unitId)
+      .maybeSingle();
+    if (!ins) return { error: "ไม่พบหัวหน้าผู้สอนในคลังวิทยากรของหน่วย" };
   }
 
+  const { error } = await supabase
+    .from("classes")
+    .update({
+      course_id: f.courseId,
+      name: f.name,
+      start_date: f.startDate,
+      end_date: f.endDate,
+      seat_count: f.seatCount,
+      schedule_time: f.scheduleTime,
+      lead_instructor_id: f.leadInstructorId,
+      mode: f.mode,
+      location: f.location,
+      status: f.status,
+      note: f.note,
+    })
+    .eq("class_id", classId);
+  if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
+
+  if (f.leadInstructorId) {
+    await supabase.from("class_instructors").upsert(
+      { class_id: classId, instructor_id: f.leadInstructorId, role_in_class: "หัวหน้าผู้สอน" },
+      { onConflict: "class_id,instructor_id" },
+    );
+  }
+
+  revalidatePath("/unit/classes");
+  revalidatePath(`/unit/classes/${classId}`);
+  return { success: "บันทึกการแก้ไขชั้นเรียนแล้ว" };
+}
+
+export type InstructorLinkState = { error?: string; success?: string };
+
+// Link one or more existing library instructors to a class.
+export async function addInstructorsFromLibrary(
+  _prev: InstructorLinkState,
+  formData: FormData,
+): Promise<InstructorLinkState> {
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const classId = String(formData.get("class_id") ?? "");
+  const instructorIds = formData.getAll("instructor_id").map(String).filter(Boolean);
+  const role = String(formData.get("role_in_class") ?? "").trim() || "วิทยากร";
+
+  if (!classId || instructorIds.length === 0) return { error: "กรุณาเลือกวิทยากรอย่างน้อย 1 คน" };
+
+  const supabase = await createClient();
+
+  const { data: cls } = await supabase
+    .from("classes")
+    .select("class_id")
+    .eq("class_id", classId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!cls) return { error: "ไม่พบชั้นเรียนนี้ในหน่วยของคุณ" };
+
+  // Only accept instructor ids that are in this unit's library.
+  const { data: libs } = await supabase
+    .from("instructors")
+    .select("instructor_id")
+    .eq("unit_id", unitId)
+    .in("instructor_id", instructorIds);
+  const valid = new Set((libs ?? []).map((l) => l.instructor_id));
+
+  const rows = instructorIds
+    .filter((id) => valid.has(id))
+    .map((id) => ({ class_id: classId, instructor_id: id, role_in_class: role }));
+  if (rows.length === 0) return { error: "ไม่พบวิทยากรที่เลือกในคลังของหน่วย" };
+
+  const { error } = await supabase
+    .from("class_instructors")
+    .upsert(rows, { onConflict: "class_id,instructor_id" });
+  if (error) return { error: `เพิ่มวิทยากรเข้าชั้นเรียนไม่สำเร็จ: ${error.message}` };
+
+  revalidatePath(`/unit/classes/${classId}`);
+  return { success: `เพิ่มวิทยากร ${rows.length} คนเข้าชั้นเรียนแล้ว` };
+}
+
+// Create a brand-new instructor in the unit's library AND link it to this class in one step.
+export async function createInstructorInClass(
+  _prev: InstructorLinkState,
+  formData: FormData,
+): Promise<InstructorLinkState> {
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const classId = String(formData.get("class_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim() || null;
+  const role = String(formData.get("role_in_class") ?? "").trim() || "วิทยากร";
+
+  if (!classId || !name) return { error: "กรุณากรอกชื่อวิทยากร" };
+
+  const supabase = await createClient();
+  const { data: cls } = await supabase
+    .from("classes")
+    .select("class_id")
+    .eq("class_id", classId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!cls) return { error: "ไม่พบชั้นเรียนนี้ในหน่วยของคุณ" };
+
+  // Reuse an existing library entry (same phone+email in this unit) or create a new one.
+  let instructorId: string | null = null;
+  if (phone || email) {
+    let q = supabase.from("instructors").select("instructor_id").eq("unit_id", unitId);
+    q = phone ? q.eq("phone", phone) : q.is("phone", null);
+    q = email ? q.eq("email", email) : q.is("email", null);
+    const { data } = await q.maybeSingle();
+    instructorId = data?.instructor_id ?? null;
+  }
   if (!instructorId) {
-    const { data: created, error: createErr } = await supabase
+    const { data: created, error: insErr } = await supabase
       .from("instructors")
-      .insert({ name, phone, email })
+      .insert({ name, phone, email, unit_id: unitId })
       .select("instructor_id")
       .single();
-    if (createErr) return { error: `บันทึกวิทยากรไม่สำเร็จ: ${createErr.message}` };
+    if (insErr) return { error: `บันทึกวิทยากรไม่สำเร็จ: ${insErr.message}` };
     instructorId = created.instructor_id;
   }
 
-  const { error: linkErr } = await supabase.from("class_instructors").insert({
-    class_id: classId,
-    instructor_id: instructorId,
-    role_in_class: roleInClass,
-  });
+  const { error: linkErr } = await supabase
+    .from("class_instructors")
+    .upsert({ class_id: classId, instructor_id: instructorId, role_in_class: role }, { onConflict: "class_id,instructor_id" });
+  if (linkErr) return { error: `ผูกวิทยากรกับชั้นเรียนไม่สำเร็จ: ${linkErr.message}` };
 
-  if (linkErr) return { error: `ผูกวิทยากรกับรุ่นไม่สำเร็จ: ${linkErr.message}` };
+  revalidatePath(`/unit/classes/${classId}`);
+  revalidatePath("/unit/instructors");
+  return { success: "เพิ่มวิทยากรเข้าชั้นเรียนและคลังแล้ว" };
+}
 
-  revalidatePath("/unit/classes");
-  return {};
+export type ClassInstructorCsvState = { error?: string; created?: number; linked?: number };
+
+// Bulk-add instructors to a class from CSV: each row is created in the unit library (deduped
+// within the unit) then linked to this class.
+export async function commitClassInstructorImport(
+  _prev: ClassInstructorCsvState,
+  formData: FormData,
+): Promise<ClassInstructorCsvState> {
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const classId = String(formData.get("class_id") ?? "");
+  const role = String(formData.get("role_in_class") ?? "").trim() || "วิทยากร";
+  const rows: { name: string; phone: string; email: string; status: string }[] = JSON.parse(
+    String(formData.get("rows") ?? "[]"),
+  ).filter((r: { status: string }) => r.status === "pass");
+  if (!classId) return { error: "ไม่พบชั้นเรียน" };
+  if (rows.length === 0) return { error: "ไม่มีแถวที่ผ่านการตรวจสอบให้นำเข้า" };
+
+  const supabase = await createClient();
+  const { data: cls } = await supabase
+    .from("classes")
+    .select("class_id")
+    .eq("class_id", classId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!cls) return { error: "ไม่พบชั้นเรียนนี้ในหน่วยของคุณ" };
+
+  let created = 0;
+  let linked = 0;
+  for (const r of rows) {
+    const phone = r.phone || null;
+    const email = r.email || null;
+    let instructorId: string | null = null;
+    if (phone || email) {
+      let q = supabase.from("instructors").select("instructor_id").eq("unit_id", unitId);
+      q = phone ? q.eq("phone", phone) : q.is("phone", null);
+      q = email ? q.eq("email", email) : q.is("email", null);
+      const { data } = await q.maybeSingle();
+      instructorId = data?.instructor_id ?? null;
+    }
+    if (!instructorId) {
+      const { data: ins, error } = await supabase
+        .from("instructors")
+        .insert({ name: r.name, phone, email, unit_id: unitId })
+        .select("instructor_id")
+        .single();
+      if (error) continue;
+      instructorId = ins.instructor_id;
+      created++;
+    }
+    const { error: linkErr } = await supabase
+      .from("class_instructors")
+      .upsert({ class_id: classId, instructor_id: instructorId, role_in_class: role }, { onConflict: "class_id,instructor_id" });
+    if (!linkErr) linked++;
+  }
+
+  revalidatePath(`/unit/classes/${classId}`);
+  revalidatePath("/unit/instructors");
+  return { created, linked };
+}
+
+export async function removeInstructorFromClass(unitIdArg: string, classId: string, instructorId: string) {
+  const { unitId } = await resolveActionUnit(unitIdArg);
+  const supabase = await createClient();
+
+  const { data: cls } = await supabase
+    .from("classes")
+    .select("class_id, lead_instructor_id")
+    .eq("class_id", classId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!cls) throw new Error("ไม่พบชั้นเรียนนี้ในหน่วยของคุณ");
+
+  await supabase.from("class_instructors").delete().eq("class_id", classId).eq("instructor_id", instructorId);
+  // If this was the class's lead instructor, clear that too.
+  if (cls.lead_instructor_id === instructorId) {
+    await supabase.from("classes").update({ lead_instructor_id: null }).eq("class_id", classId);
+  }
+  revalidatePath(`/unit/classes/${classId}`);
 }

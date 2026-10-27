@@ -118,16 +118,28 @@ export async function commitClassImport(
   const supabase = await createClient();
   let created = 0;
 
+  // Compute the next per-unit batch number once, then increment locally per inserted row
+  // (batch_code is unique per unit and required by the class-detail/management model).
+  const { data: existing } = await supabase.from("classes").select("batch_code").eq("unit_id", unitId);
+  let seq = 0;
+  for (const e of existing ?? []) {
+    const m = /^R(\d+)$/.exec(e.batch_code ?? "");
+    if (m) seq = Math.max(seq, Number(m[1]));
+  }
+
   for (const row of rows) {
+    seq += 1;
     const { error } = await supabase.from("classes").insert({
       course_id: row.course_id!,
       unit_id: unitId,
+      batch_code: `R${String(seq).padStart(3, "0")}`,
       start_date: row.start_date,
       end_date: row.end_date,
       seat_count: Number(row.seat_count),
       external_ref: row.external_ref || null,
     });
     if (!error) created++;
+    else seq -= 1; // roll back the number if the insert failed so it isn't skipped
   }
 
   revalidatePath("/unit/classes");

@@ -15,9 +15,10 @@ import type { Database } from "@/lib/supabase/database.types";
 type AssessmentStandard = Database["public"]["Enums"]["assessment_standard"];
 type AssessmentResultValue = Database["public"]["Enums"]["assessment_result_enum"];
 
-export type LearnerFormState = { error?: string };
+export type LearnerFormState = { error?: string; success?: string };
 
 const NATIONAL_ID_RE = /^\d{13}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function createLearner(
   _prev: LearnerFormState,
@@ -31,37 +32,85 @@ export async function createLearner(
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
+  const birthDate = String(formData.get("birth_date") ?? "").trim() || null;
+  // When a learner is added from a class context the enrollment is mandatory — the
+  // learner is recorded "into that class", not standalone (per the class-centric flow).
+  const classId = String(formData.get("class_id") ?? "").trim() || null;
 
   if (!firstName || !lastName) return { error: "กรุณากรอกชื่อ-นามสกุล" };
   if (!NATIONAL_ID_RE.test(nationalId)) {
     return { error: "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก" };
   }
+  if (birthDate && !DATE_RE.test(birthDate)) {
+    return { error: "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว" };
+  }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("learners").insert({
-    first_name: firstName,
-    last_name: lastName,
-    national_id_encrypted: bufferToByteaHex(encryptNationalId(nationalId)),
-    national_id_hash: hashNationalId(nationalId),
-    phone,
-    email,
-    address,
-    source: "unit_self_entry",
-    created_by: profile.id,
-    unit_id: unitId,
-  });
 
-  if (error) {
-    const duplicate = error.message.includes("learners_national_id_hash_key");
+  // If recording into a class, verify it belongs to this unit and check eligibility up front
+  // for a readable message (the enforce_enrollment_eligibility trigger is still the hard backstop).
+  let courseId: string | null = null;
+  if (classId) {
+    const { data: cls } = await supabase
+      .from("classes")
+      .select("course_id")
+      .eq("class_id", classId)
+      .eq("unit_id", unitId)
+      .maybeSingle();
+    if (!cls) return { error: "ไม่พบรุ่นฝึกอบรมนี้ในหน่วยของคุณ" };
+    courseId = cls.course_id;
+
+    const { data: eligibility, error: eligErr } = await supabase.rpc("check_learner_eligibility", {
+      p_national_id_hash: hashNationalId(nationalId),
+      p_course_id: courseId,
+    });
+    if (eligErr) return { error: `ตรวจสอบสิทธิ์ไม่สำเร็จ: ${eligErr.message}` };
+    if (eligibility && eligibility !== "eligible") {
+      return { error: ELIGIBILITY_LABEL[eligibility] ?? String(eligibility) };
+    }
+  }
+
+  const { data: learner, error } = await supabase
+    .from("learners")
+    .insert({
+      first_name: firstName,
+      last_name: lastName,
+      national_id_encrypted: bufferToByteaHex(encryptNationalId(nationalId)),
+      national_id_hash: hashNationalId(nationalId),
+      phone,
+      email,
+      address,
+      birth_date: birthDate,
+      source: "unit_self_entry",
+      created_by: profile.id,
+      unit_id: unitId,
+    })
+    .select("learner_id")
+    .single();
+
+  if (error || !learner) {
+    const duplicate = error?.message.includes("learners_national_id_hash_key");
     return {
       error: duplicate
         ? "เลขบัตรประชาชนนี้มีอยู่ในระบบแล้ว (อาจลงทะเบียนไว้ที่หน่วยอื่น)"
-        : `บันทึกไม่สำเร็จ: ${error.message}`,
+        : `บันทึกไม่สำเร็จ: ${error?.message}`,
     };
   }
 
+  if (classId) {
+    const { error: enrollErr } = await supabase
+      .from("enrollments")
+      .insert({ learner_id: learner.learner_id, class_id: classId });
+    if (enrollErr) {
+      return {
+        error: `บันทึกผู้เรียนแล้ว แต่ลงรุ่นไม่สำเร็จ: ${enrollErr.message}`,
+      };
+    }
+  }
+
   revalidatePath("/unit/learners");
-  return {};
+  revalidatePath("/unit/import");
+  return { success: classId ? "บันทึกผู้เรียนและลงรุ่นเรียบร้อยแล้ว" : "บันทึกผู้เรียนเรียบร้อยแล้ว" };
 }
 
 export type EnrollFormState = { error?: string; eligibility?: string };

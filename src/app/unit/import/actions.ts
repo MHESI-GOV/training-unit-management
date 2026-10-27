@@ -11,6 +11,7 @@ export type PreviewRow = {
   first_name: string;
   last_name: string;
   national_id: string;
+  birth_date: string;
   phone: string;
   email: string;
   address: string;
@@ -27,6 +28,7 @@ export type PreviewState = {
 };
 
 const NATIONAL_ID_RE = /^\d{13}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function previewImport(
   _prev: PreviewState,
@@ -56,6 +58,7 @@ export async function previewImport(
     const first_name = (r.first_name ?? "").trim();
     const last_name = (r.last_name ?? "").trim();
     const national_id = (r.national_id ?? "").trim();
+    const birth_date = (r.birth_date ?? "").trim();
     const phone = (r.phone ?? "").trim();
     const email = (r.email ?? "").trim();
     const address = (r.address ?? "").trim();
@@ -69,6 +72,9 @@ export async function previewImport(
     } else if (!NATIONAL_ID_RE.test(national_id)) {
       status = "fail";
       reason = "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก";
+    } else if (birth_date && !DATE_RE.test(birth_date)) {
+      status = "fail";
+      reason = "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว";
     } else if (seenInFile.has(national_id)) {
       status = "fail";
       reason = "เลขบัตรประชาชนซ้ำภายในไฟล์เดียวกัน";
@@ -87,7 +93,7 @@ export async function previewImport(
 
     if (status === "pass") seenInFile.add(national_id);
 
-    rows.push({ rowNumber, first_name, last_name, national_id, phone, email, address, status, reason });
+    rows.push({ rowNumber, first_name, last_name, national_id, birth_date, phone, email, address, status, reason });
   }
 
   return {
@@ -107,13 +113,23 @@ export async function commitImport(
   const { unitId, profile } = await resolveActionUnit(formData.get("unit_id")?.toString());
 
   const fileName = String(formData.get("file_name") ?? "import.csv");
-  const classId = String(formData.get("class_id") ?? "") || null;
+  const classId = String(formData.get("class_id") ?? "").trim();
   const rowsJson = String(formData.get("rows") ?? "[]");
   const rows: PreviewRow[] = JSON.parse(rowsJson).filter((r: PreviewRow) => r.status === "pass");
 
   if (rows.length === 0) return { error: "ไม่มีแถวที่ผ่านการตรวจสอบให้นำเข้า" };
+  if (!classId) return { error: "กรุณาเลือกรุ่นฝึกอบรมที่จะบันทึกผู้เรียนลงไป" };
 
   const supabase = await createClient();
+
+  // Confirm the target class belongs to this unit before inserting anything.
+  const { data: cls } = await supabase
+    .from("classes")
+    .select("class_id")
+    .eq("class_id", classId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!cls) return { error: "ไม่พบรุ่นฝึกอบรมนี้ในหน่วยของคุณ" };
 
   const { data: job, error: jobErr } = await supabase
     .from("import_jobs")
@@ -144,6 +160,7 @@ export async function commitImport(
         phone: row.phone || null,
         email: row.email || null,
         address: row.address || null,
+        birth_date: row.birth_date || null,
         source: "unit_import_file",
         created_by: profile.id,
         unit_id: unitId,

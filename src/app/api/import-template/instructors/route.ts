@@ -2,8 +2,8 @@ import { toCsv } from "@/lib/csv";
 
 export async function GET() {
   const csv = toCsv([
-    ["name", "phone", "email", "role_in_class"],
-    ["อาจารย์สมชาย ใจดี", "0812345678", "somchai@example.com", "วิทยากร"],
+    ["name", "phone", "email"],
+    ["อาจารย์สมชาย ใจดี", "0812345678", "somchai@example.com"],
   ]);
 
   return new Response(csv, {

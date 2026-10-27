@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { ClassForm } from "@/app/unit/classes/class-form";
-import { InstructorForm } from "@/app/unit/classes/instructor-form";
+import { ClassList, type ClassRow } from "@/app/unit/classes/class-list";
 
 export default async function UnitSheetClasses({
   params,
@@ -11,57 +9,34 @@ export default async function UnitSheetClasses({
   const { unitId } = await params;
   const supabase = await createClient();
 
-  const [{ data: courses }, { data: classes }] = await Promise.all([
+  const [{ data: courses }, { data: instructors }, { data: classes }] = await Promise.all([
     supabase.from("courses").select("course_id, name").order("name"),
+    supabase.from("instructors").select("instructor_id, name").eq("unit_id", unitId).order("name"),
     supabase
       .from("classes")
       .select(
-        "class_id, start_date, end_date, seat_count, external_ref, courses(name), class_instructors(role_in_class, instructors(name, phone, email))",
+        "class_id, batch_code, name, status, start_date, end_date, schedule_time, seat_count, courses(name), lead:instructors!classes_lead_instructor_id_fkey(name), enrollments(count), class_instructors(count)",
       )
       .eq("unit_id", unitId)
-      .order("start_date", { ascending: false }),
+      .order("batch_code", { ascending: true }),
   ]);
 
+  const rows: ClassRow[] = (classes ?? []).map((c) => ({
+    class_id: c.class_id,
+    batch_code: c.batch_code,
+    name: c.name,
+    course_name: c.courses?.name ?? "—",
+    status: c.status,
+    start_date: c.start_date,
+    end_date: c.end_date,
+    schedule_time: c.schedule_time,
+    seat_count: c.seat_count,
+    learner_count: (c.enrollments as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
+    instructor_count: (c.class_instructors as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
+    lead_instructor_name: (c.lead as unknown as { name: string } | null)?.name ?? null,
+  }));
+
   return (
-    <>
-      <p style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-        <Link href={`/unit/import-classes?unit_id=${unitId}`} className="btn secondary">
-          นำเข้ารุ่นฝึกอบรมจากไฟล์ CSV
-        </Link>
-        <Link href={`/unit/import-instructors?unit_id=${unitId}`} className="btn secondary">
-          นำเข้าวิทยากรจากไฟล์ CSV
-        </Link>
-      </p>
-
-      <section className="card" style={{ marginBottom: 24, maxWidth: 440 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700 }}>สร้างรุ่นฝึกอบรมใหม่</h2>
-        <div style={{ marginTop: 14 }}>
-          <ClassForm unitId={unitId} courses={courses ?? []} />
-        </div>
-      </section>
-
-      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>รุ่นฝึกอบรมที่มีอยู่</h2>
-      {(classes ?? []).length === 0 && <p className="footnote">ยังไม่มีรุ่นฝึกอบรม</p>}
-
-      <div style={{ display: "grid", gap: 14 }}>
-        {(classes ?? []).map((cls) => (
-          <article key={cls.class_id} className="card">
-            <strong>{cls.courses?.name}</strong>
-            <p className="footnote" style={{ marginTop: 2 }}>
-              {cls.start_date} ถึง {cls.end_date} · {cls.seat_count} ที่นั่ง
-            </p>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, marginBottom: 10 }}>
-              {cls.class_instructors.map((ci, i) => (
-                <span key={i} className="pill study">
-                  {ci.instructors?.name} ({ci.role_in_class})
-                </span>
-              ))}
-              {cls.class_instructors.length === 0 && <span className="pill muted">ยังไม่มีวิทยากร</span>}
-            </div>
-            <InstructorForm unitId={unitId} classId={cls.class_id} />
-          </article>
-        ))}
-      </div>
-    </>
+    <ClassList unitId={unitId} isStaff courses={courses ?? []} instructors={instructors ?? []} classes={rows} />
   );
 }

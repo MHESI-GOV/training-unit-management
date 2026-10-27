@@ -4,12 +4,12 @@ import {
   Building2,
   Users,
   SlidersHorizontal,
-  FileUp,
   BookOpen,
   UserRound,
   UsersRound,
   ClipboardList,
   CalendarCheck,
+  GraduationCap,
   Image as ImageIcon,
 } from "lucide-react";
 import type { Profile } from "@/lib/auth/get-profile";
@@ -32,14 +32,11 @@ function navForProfile(profile: Profile | null): NavItem[] {
 
   if (profile.role === "unit_coordinator") {
     return [
-      { href: "/unit/classes", label: "รุ่นฝึกอบรมและวิทยากร", icon: <Users size={17} />, id: "classes" },
-      { href: "/unit/learners", label: "ผู้เรียน", icon: <UsersRound size={17} />, id: "learners" },
+      { href: "/unit/classes", label: "จัดการชั้นเรียน", icon: <Users size={17} />, id: "classes" },
+      { href: "/unit/learners", label: "ผู้เรียน (ค้นหา/รายงาน)", icon: <UsersRound size={17} />, id: "learners" },
+      { href: "/unit/instructors", label: "คลังวิทยากร", icon: <GraduationCap size={17} />, id: "instructors" },
       { href: "/unit/participation", label: "ยืนยันการเข้าร่วมปีงบ", icon: <CalendarCheck size={17} />, id: "participation" },
       { href: "/unit/testing-center", label: "สถานะศูนย์ทดสอบมาตรฐาน", icon: <ClipboardList size={17} />, id: "testing-center" },
-      { href: "/unit/import", label: "นำเข้าผู้เรียน CSV", icon: <FileUp size={17} />, id: "import" },
-      { href: "/unit/import-assessments", label: "นำเข้าผลทดสอบ CSV", icon: <FileUp size={17} />, id: "import-assessments" },
-      { href: "/unit/import-classes", label: "นำเข้ารุ่นฝึกอบรม CSV", icon: <FileUp size={17} />, id: "import-classes" },
-      { href: "/unit/import-instructors", label: "นำเข้าวิทยากร CSV", icon: <FileUp size={17} />, id: "import-instructors" },
       { href: "/courses", label: "หลักสูตร", icon: <BookOpen size={17} />, id: "courses" },
     ];
   }

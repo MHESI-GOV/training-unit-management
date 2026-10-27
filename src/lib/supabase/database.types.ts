@@ -186,33 +186,57 @@ export type Database = {
       }
       classes: {
         Row: {
+          batch_code: string | null
           class_id: string
           course_id: string
           created_at: string
           end_date: string
           external_ref: string | null
+          lead_instructor_id: string | null
+          location: string | null
+          mode: string | null
+          name: string | null
+          note: string | null
+          schedule_time: string | null
           seat_count: number
           start_date: string
+          status: string
           unit_id: string
         }
         Insert: {
+          batch_code?: string | null
           class_id?: string
           course_id: string
           created_at?: string
           end_date: string
           external_ref?: string | null
+          lead_instructor_id?: string | null
+          location?: string | null
+          mode?: string | null
+          name?: string | null
+          note?: string | null
+          schedule_time?: string | null
           seat_count: number
           start_date: string
+          status?: string
           unit_id: string
         }
         Update: {
+          batch_code?: string | null
           class_id?: string
           course_id?: string
           created_at?: string
           end_date?: string
           external_ref?: string | null
+          lead_instructor_id?: string | null
+          location?: string | null
+          mode?: string | null
+          name?: string | null
+          note?: string | null
+          schedule_time?: string | null
           seat_count?: number
           start_date?: string
+          status?: string
           unit_id?: string
         }
         Relationships: [
@@ -222,6 +246,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "classes_lead_instructor_id_fkey"
+            columns: ["lead_instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructors"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "classes_unit_id_fkey"
@@ -473,24 +504,36 @@ export type Database = {
           instructor_id: string
           name: string
           phone: string | null
+          unit_id: string | null
         }
         Insert: {
           email?: string | null
           instructor_id?: string
           name: string
           phone?: string | null
+          unit_id?: string | null
         }
         Update: {
           email?: string | null
           instructor_id?: string
           name?: string
           phone?: string | null
+          unit_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "instructors_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "training_units"
+            referencedColumns: ["unit_id"]
+          },
+        ]
       }
       learners: {
         Row: {
           address: string | null
+          birth_date: string | null
           created_at: string
           created_by: string
           district_id: string | null
@@ -509,6 +552,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          birth_date?: string | null
           created_at?: string
           created_by: string
           district_id?: string | null
@@ -527,6 +571,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          birth_date?: string | null
           created_at?: string
           created_by?: string
           district_id?: string | null

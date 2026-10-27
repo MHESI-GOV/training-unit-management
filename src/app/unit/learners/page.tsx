@@ -2,27 +2,10 @@ import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
-import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
+import { ASSESSMENT_STANDARD_LABEL, ENROLL_STATUS_LABEL, ENROLL_STATUS_PILL } from "@/lib/labels";
+import { computeAge } from "@/lib/age";
 import { AppShell } from "@/components/layout/AppShell";
-import { LearnerForm } from "./learner-form";
-import { EnrollForm } from "./enroll-form";
-import { AssessmentForm } from "./assessment-form";
-import { RevealIdButton } from "./reveal-id-button";
-import { markEnrollmentOutcome } from "./actions";
-
-const STATUS_LABEL: Record<string, string> = {
-  applied: "สมัคร",
-  attending: "เข้าร่วม",
-  completed: "สำเร็จ",
-  failed: "ไม่สำเร็จ",
-};
-
-const STATUS_PILL: Record<string, string> = {
-  applied: "pending",
-  attending: "study",
-  completed: "done",
-  failed: "fail",
-};
+import { LearnersTable, type LearnerRow } from "./learners-table";
 
 export default async function UnitLearnersPage({
   searchParams,
@@ -38,113 +21,64 @@ export default async function UnitLearnersPage({
     supabase
       .from("learners")
       .select(
-        "learner_id, first_name, last_name, national_id_encrypted, phone, email, enrollments(enrollment_id, status, classes(start_date, courses(name))), assessment_results(result_id, standard_type, result, tested_at)",
+        "learner_id, first_name, last_name, birth_date, national_id_encrypted, phone, email, enrollments(status, class_id, classes(batch_code, start_date, courses(name))), assessment_results(standard_type, result)",
       )
       .eq("unit_id", unitId)
       .order("created_at", { ascending: false }),
     supabase
       .from("classes")
-      .select("class_id, start_date, courses(name)")
+      .select("class_id, batch_code, start_date, courses(name)")
       .eq("unit_id", unitId)
-      .order("start_date", { ascending: false }),
+      .order("batch_code", { ascending: true }),
   ]);
+
+  const rows: LearnerRow[] = (learners ?? []).map((l) => {
+    const nationalId = decryptNationalId(byteaHexToBuffer(l.national_id_encrypted as unknown as string));
+    return {
+      learner_id: l.learner_id,
+      first_name: l.first_name,
+      last_name: l.last_name,
+      masked_id: maskNationalId(nationalId),
+      age: computeAge(l.birth_date),
+      phone: l.phone,
+      email: l.email,
+      enrollments: (l.enrollments ?? []).map((e) => ({
+        statusLabel: ENROLL_STATUS_LABEL[e.status] ?? e.status,
+        statusPill: ENROLL_STATUS_PILL[e.status] ?? "pending",
+        courseLabel: `${e.classes?.batch_code ? e.classes.batch_code + " · " : ""}${e.classes?.courses?.name ?? "—"} (${e.classes?.start_date ?? "—"})`,
+        class_id: e.class_id,
+        status: e.status,
+      })),
+      standards: (l.assessment_results ?? [])
+        .filter((a) => a.result === "passed")
+        .map((a) => ({
+          label: ASSESSMENT_STANDARD_LABEL[a.standard_type] ?? a.standard_type,
+          pill: "done",
+          standard_type: a.standard_type,
+        })),
+    };
+  });
 
   const classOptions = (classes ?? []).map((c) => ({
     class_id: c.class_id,
-    label: `${c.courses?.name} (${c.start_date})`,
+    label: `${c.batch_code ? c.batch_code + " · " : ""}${c.courses?.name ?? "—"} (${c.start_date})`,
   }));
+  const standardOptions = Object.entries(ASSESSMENT_STANDARD_LABEL).map(([value, label]) => ({ value, label }));
 
   return (
-    <AppShell profile={profile} active="learners" eyebrow="ข้อมูลผู้เรียน" title="ผู้เรียนของหน่วย">
+    <AppShell profile={profile} active="learners" eyebrow="ข้อมูลผู้เรียน" title="ค้นหาและรายงานผู้เรียน">
       {isStaff && (
         <p style={{ marginBottom: 14 }}>
           <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
         </p>
       )}
-      <p style={{ marginBottom: 20 }}>
-        <Link href={`/unit/import-assessments?unit_id=${unitId}`} className="btn secondary">
-          นำเข้าผลทดสอบมาตรฐานจากไฟล์ CSV
-        </Link>
+      <p className="footnote" style={{ marginBottom: 18 }}>
+        หน้านี้ใช้ค้นหาและออกรายงานผู้เรียน (สถานะการเรียน ผลการเรียน มาตรฐานที่ได้รับ อายุ) ·
+        การเพิ่มผู้เรียนและบันทึกผลทำในแต่ละชั้นเรียนที่เมนู{" "}
+        <Link href={`/unit/classes${isStaff ? `?unit_id=${unitId}` : ""}`}>จัดการชั้นเรียน</Link>
       </p>
 
-      <section className="card" style={{ marginBottom: 24, maxWidth: 480 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700 }}>เพิ่มผู้เรียนใหม่</h2>
-        <div style={{ marginTop: 14 }}>
-          <LearnerForm unitId={unitId} />
-        </div>
-      </section>
-
-      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>รายชื่อผู้เรียน</h2>
-      {(learners ?? []).length === 0 && <p className="footnote">ยังไม่มีผู้เรียน</p>}
-
-      <div style={{ display: "grid", gap: 14 }}>
-        {(learners ?? []).map((l) => {
-          const nationalId = decryptNationalId(byteaHexToBuffer(l.national_id_encrypted as unknown as string));
-          return (
-            <article key={l.learner_id} className="card">
-              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                <div>
-                  <strong>
-                    {l.first_name} {l.last_name}
-                  </strong>
-                  <p className="footnote" style={{ marginTop: 2 }}>
-                    เลขบัตร {maskNationalId(nationalId)} {l.phone && `· ${l.phone}`} {l.email && `· ${l.email}`}
-                  </p>
-                </div>
-                <RevealIdButton unitId={unitId} learnerId={l.learner_id} />
-              </div>
-
-              <div style={{ marginTop: 14 }}>
-                {l.enrollments.map((e) => (
-                  <div
-                    key={e.enrollment_id}
-                    style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}
-                  >
-                    <span className={`pill ${STATUS_PILL[e.status] ?? "pending"}`}>
-                      {STATUS_LABEL[e.status] ?? e.status}
-                    </span>
-                    <span style={{ fontSize: 14 }}>
-                      {e.classes?.courses?.name} ({e.classes?.start_date})
-                    </span>
-                    {(e.status === "applied" || e.status === "attending") && (
-                      <>
-                        <form action={markEnrollmentOutcome.bind(null, unitId, e.enrollment_id, "completed")}>
-                          <button type="submit" className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }}>
-                            สำเร็จ
-                          </button>
-                        </form>
-                        <form action={markEnrollmentOutcome.bind(null, unitId, e.enrollment_id, "failed")}>
-                          <button type="submit" className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }}>
-                            ไม่สำเร็จ
-                          </button>
-                        </form>
-                      </>
-                    )}
-                  </div>
-                ))}
-                <EnrollForm unitId={unitId} learnerId={l.learner_id} classes={classOptions} />
-              </div>
-
-              <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
-                <p className="footnote" style={{ marginBottom: 6 }}>
-                  ผลทดสอบ/คุณวุฒิมาตรฐาน
-                </p>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                  {l.assessment_results.map((a) => (
-                    <span key={a.result_id} className={`pill ${a.result === "passed" ? "done" : a.result === "failed" ? "fail" : "pending"}`}>
-                      {ASSESSMENT_STANDARD_LABEL[a.standard_type] ?? a.standard_type} —{" "}
-                      {ASSESSMENT_RESULT_LABEL[a.result] ?? a.result}
-                      {a.tested_at && ` (${a.tested_at})`}
-                    </span>
-                  ))}
-                  {l.assessment_results.length === 0 && <span className="pill muted">ยังไม่มีข้อมูล</span>}
-                </div>
-                <AssessmentForm unitId={unitId} learnerId={l.learner_id} />
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      <LearnersTable unitId={unitId} learners={rows} classes={classOptions} standards={standardOptions} />
     </AppShell>
   );
 }
