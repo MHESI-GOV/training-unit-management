@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { createClass, updateClass, type ClassFormState } from "./actions";
 import { CLASS_MODE_LABEL } from "@/lib/labels";
+import { type ConfirmedRound } from "@/lib/participation";
 
 const initialState: ClassFormState = {};
 
@@ -25,12 +26,14 @@ export function ClassForm({
   unitId,
   courses,
   instructors,
+  confirmedRounds = [],
   edit,
   onDone,
 }: {
   unitId: string;
   courses: { course_id: string; name: string }[];
   instructors: { instructor_id: string; name: string }[];
+  confirmedRounds?: ConfirmedRound[];
   edit?: ClassEdit;
   onDone?: () => void;
 }) {
@@ -46,6 +49,26 @@ export function ClassForm({
       {edit && <input type="hidden" name="class_id" value={edit.class_id} />}
 
       {edit && <p className="footnote">รหัสรุ่น: ระบบกำหนดอัตโนมัติ (แก้ไขไม่ได้)</p>}
+
+      {/* ปีงบประมาณที่ผูก — ตั้งตอนสร้างจากปีที่หน่วยยืนยันเข้าร่วม (แก้ไขไม่ได้ภายหลัง) */}
+      {!edit && confirmedRounds.length === 1 && (
+        <>
+          <input type="hidden" name="fiscal_year" value={confirmedRounds[0].fiscal_year} />
+          <p className="notice" style={{ background: "#eaf3fd", color: "#1a4e86", border: "1px solid #c5ddf5" }}>
+            รุ่นนี้จะอยู่ใน <strong>ปีงบประมาณ {confirmedRounds[0].fiscal_year}</strong> (ปีที่หน่วยยืนยันเข้าร่วม)
+          </p>
+        </>
+      )}
+      {!edit && confirmedRounds.length > 1 && (
+        <label>
+          <span className="field-label">ปีงบประมาณ (ปีที่หน่วยยืนยันเข้าร่วม) *</span>
+          <select name="fiscal_year" required defaultValue={confirmedRounds[0].fiscal_year} className="field">
+            {confirmedRounds.map((r) => (
+              <option key={r.round_id} value={r.fiscal_year}>ปีงบประมาณ {r.fiscal_year}</option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <label>
         <span className="field-label">หลักสูตร *</span>

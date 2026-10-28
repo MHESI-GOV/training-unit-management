@@ -34,3 +34,22 @@ export async function getPendingParticipation(
     notice_message: round?.notice_message ?? null,
   };
 }
+
+export type ConfirmedRound = { round_id: string; fiscal_year: number };
+
+// Fiscal years this unit has CONFIRMED participation in (unit_participation.status = 'confirmed'),
+// newest first. Creating a class requires at least one of these; a class is bound to one of them
+// (default = the latest). The round being open or closed does NOT matter — "open" was only the
+// window to confirm; once confirmed, the unit can keep opening classes for that year.
+export async function getUnitConfirmedRounds(
+  supabase: SupabaseClient<Database>,
+  unitId: string,
+): Promise<ConfirmedRound[]> {
+  const { data } = await supabase
+    .from("unit_participation")
+    .select("round_id, fiscal_year")
+    .eq("unit_id", unitId)
+    .eq("status", "confirmed")
+    .order("fiscal_year", { ascending: false });
+  return (data ?? []).map((r) => ({ round_id: r.round_id, fiscal_year: r.fiscal_year }));
+}

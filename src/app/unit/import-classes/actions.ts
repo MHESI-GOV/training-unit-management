@@ -4,6 +4,7 @@ import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { getUnitConfirmedRounds } from "@/lib/participation";
 
 export type PreviewRow = {
   rowNumber: number;
@@ -116,6 +117,13 @@ export async function commitClassImport(
   if (rows.length === 0) return { error: "ไม่มีแถวที่ผ่านการตรวจสอบให้นำเข้า" };
 
   const supabase = await createClient();
+
+  // Gate: the unit must have confirmed participation; bind every imported class to the latest such year.
+  const confirmed = await getUnitConfirmedRounds(supabase, unitId);
+  if (confirmed.length === 0) {
+    return { error: "หน่วยนี้ยังไม่ได้ยืนยันเข้าร่วมปีงบประมาณใด — ต้องยืนยันการเข้าร่วมก่อนจึงจะนำเข้าชั้นเรียนได้" };
+  }
+  const target = confirmed[0];
   let created = 0;
 
   // Compute the next per-unit batch number once, then increment locally per inserted row
@@ -137,6 +145,8 @@ export async function commitClassImport(
       end_date: row.end_date,
       seat_count: Number(row.seat_count),
       external_ref: row.external_ref || null,
+      fiscal_year: target.fiscal_year,
+      round_id: target.round_id,
     });
     if (!error) created++;
     else seq -= 1; // roll back the number if the insert failed so it isn't skipped

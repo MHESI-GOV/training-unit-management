@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { getUnitConfirmedRounds } from "@/lib/participation";
 import { AppShell } from "@/components/layout/AppShell";
 import { ClassList, type ClassRow } from "./class-list";
 
@@ -14,7 +15,7 @@ export default async function UnitClassesPage({
 
   const supabase = await createClient();
 
-  const [{ data: courses }, { data: instructors }, { data: classes }] = await Promise.all([
+  const [{ data: courses }, { data: instructors }, { data: classes }, confirmedRounds] = await Promise.all([
     supabase.from("courses").select("course_id, name").order("name"),
     supabase.from("instructors").select("instructor_id, name").eq("unit_id", unitId).order("name"),
     supabase
@@ -24,6 +25,7 @@ export default async function UnitClassesPage({
       )
       .eq("unit_id", unitId)
       .order("batch_code", { ascending: true }),
+    getUnitConfirmedRounds(supabase, unitId),
   ]);
 
   const rows: ClassRow[] = (classes ?? []).map((c) => ({
@@ -54,6 +56,7 @@ export default async function UnitClassesPage({
         courses={courses ?? []}
         instructors={(instructors ?? []).map((i) => ({ instructor_id: i.instructor_id, name: i.name ?? "" }))}
         classes={rows}
+        confirmedRounds={confirmedRounds}
       />
     </AppShell>
   );

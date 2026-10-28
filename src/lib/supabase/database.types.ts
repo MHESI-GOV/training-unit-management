@@ -192,11 +192,13 @@ export type Database = {
           created_at: string
           end_date: string
           external_ref: string | null
+          fiscal_year: number | null
           lead_instructor_id: string | null
           location: string | null
           mode: string | null
           name: string | null
           note: string | null
+          round_id: string | null
           schedule_time: string | null
           seat_count: number
           start_date: string
@@ -210,11 +212,13 @@ export type Database = {
           created_at?: string
           end_date: string
           external_ref?: string | null
+          fiscal_year?: number | null
           lead_instructor_id?: string | null
           location?: string | null
           mode?: string | null
           name?: string | null
           note?: string | null
+          round_id?: string | null
           schedule_time?: string | null
           seat_count: number
           start_date: string
@@ -228,11 +232,13 @@ export type Database = {
           created_at?: string
           end_date?: string
           external_ref?: string | null
+          fiscal_year?: number | null
           lead_instructor_id?: string | null
           location?: string | null
           mode?: string | null
           name?: string | null
           note?: string | null
+          round_id?: string | null
           schedule_time?: string | null
           seat_count?: number
           start_date?: string
@@ -253,6 +259,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "instructors"
             referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "classes_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "participation_rounds"
+            referencedColumns: ["round_id"]
           },
           {
             foreignKeyName: "classes_unit_id_fkey"

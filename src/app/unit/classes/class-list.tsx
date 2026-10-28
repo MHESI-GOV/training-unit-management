@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Popup } from "@/components/ui/Popup";
 import { FieldSpecTable } from "@/components/ui/FieldSpec";
 import { classStatusDisplay } from "@/lib/class-status";
+import { type ConfirmedRound } from "@/lib/participation";
 import { ClassForm } from "./class-form";
 import {
   previewClassImport,
@@ -38,17 +39,20 @@ export function ClassList({
   courses,
   instructors,
   classes,
+  confirmedRounds,
 }: {
   unitId: string;
   isStaff: boolean;
   courses: Course[];
   instructors: Instructor[];
   classes: ClassRow[];
+  confirmedRounds: ConfirmedRound[];
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  const canCreate = confirmedRounds.length > 0;
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -74,9 +78,16 @@ export function ClassList({
         <span className="footnote" style={{ marginRight: "auto" }}>
           {filtered.length} / {classes.length} ชั้นเรียน
         </span>
-        <button className="btn secondary" onClick={() => setCsvOpen(true)}>นำเข้าชั้นเรียน CSV</button>
-        <button className="btn primary" onClick={() => setCreateOpen(true)}>+ สร้างชั้นเรียน</button>
+        <button className="btn secondary" onClick={() => setCsvOpen(true)} disabled={!canCreate}>นำเข้าชั้นเรียน CSV</button>
+        <button className="btn primary" onClick={() => setCreateOpen(true)} disabled={!canCreate}>+ สร้างชั้นเรียน</button>
       </div>
+
+      {!canCreate && (
+        <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6", marginBottom: 16 }}>
+          หน่วยนี้ยังไม่ได้ยืนยันเข้าร่วมปีงบประมาณใด จึงยังสร้างชั้นเรียนไม่ได้ — ต้องรอ Web Master เปิดรอบ
+          แล้วกด&ldquo;ยืนยันการเข้าร่วม&rdquo;ที่เมนู <strong>ยืนยันการเข้าร่วมปีงบ</strong> ก่อน
+        </p>
+      )}
 
       {classes.length === 0 && <p className="footnote">ยังไม่มีชั้นเรียน — กด&ldquo;สร้างชั้นเรียน&rdquo;เพื่อเริ่ม</p>}
 
@@ -113,6 +124,7 @@ export function ClassList({
           unitId={unitId}
           courses={courses}
           instructors={instructors}
+          confirmedRounds={confirmedRounds}
           onDone={() => {
             setCreateOpen(false);
             router.refresh();
@@ -121,7 +133,7 @@ export function ClassList({
       </Popup>
 
       <Popup open={csvOpen} onClose={() => setCsvOpen(false)} title="นำเข้าชั้นเรียนจากไฟล์ CSV" maxWidth={680}>
-        <ClassCsv unitId={unitId} onImported={() => router.refresh()} />
+        <ClassCsv unitId={unitId} fiscalYear={confirmedRounds[0]?.fiscal_year ?? null} onImported={() => router.refresh()} />
       </Popup>
     </div>
   );
@@ -130,7 +142,7 @@ export function ClassList({
 const classPreviewInitial: ClassPreviewState = {};
 const classCommitInitial: ClassCommitState = {};
 
-function ClassCsv({ unitId, onImported }: { unitId: string; onImported: () => void }) {
+function ClassCsv({ unitId, fiscalYear, onImported }: { unitId: string; fiscalYear: number | null; onImported: () => void }) {
   const [preview, previewAction, previewPending] = useActionState(previewClassImport, classPreviewInitial);
   const [commit, commitAction, commitPending] = useActionState(commitClassImport, classCommitInitial);
 
@@ -141,6 +153,9 @@ function ClassCsv({ unitId, onImported }: { unitId: string; onImported: () => vo
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
+      {fiscalYear != null && (
+        <p className="footnote">ชั้นเรียนที่นำเข้าจะถูกผูกกับ <strong>ปีงบประมาณ {fiscalYear}</strong> (ปีล่าสุดที่หน่วยยืนยันเข้าร่วม)</p>
+      )}
       <FieldSpecTable
         specs={[
           { field: "course_name", type: "ข้อความ", required: true, note: "ต้องตรงกับชื่อหลักสูตรที่มีอยู่แล้ว" },

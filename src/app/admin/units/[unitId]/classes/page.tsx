@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUnitConfirmedRounds } from "@/lib/participation";
 import { ClassList, type ClassRow } from "@/app/unit/classes/class-list";
 
 export default async function UnitSheetClasses({
@@ -9,7 +10,7 @@ export default async function UnitSheetClasses({
   const { unitId } = await params;
   const supabase = await createClient();
 
-  const [{ data: courses }, { data: instructors }, { data: classes }] = await Promise.all([
+  const [{ data: courses }, { data: instructors }, { data: classes }, confirmedRounds] = await Promise.all([
     supabase.from("courses").select("course_id, name").order("name"),
     supabase.from("instructors").select("instructor_id, name").eq("unit_id", unitId).order("name"),
     supabase
@@ -19,6 +20,7 @@ export default async function UnitSheetClasses({
       )
       .eq("unit_id", unitId)
       .order("batch_code", { ascending: true }),
+    getUnitConfirmedRounds(supabase, unitId),
   ]);
 
   const rows: ClassRow[] = (classes ?? []).map((c) => ({
@@ -43,6 +45,7 @@ export default async function UnitSheetClasses({
       courses={courses ?? []}
       instructors={(instructors ?? []).map((i) => ({ instructor_id: i.instructor_id, name: i.name ?? "" }))}
       classes={rows}
+      confirmedRounds={confirmedRounds}
     />
   );
 }

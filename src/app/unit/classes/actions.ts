@@ -3,7 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { getUnitConfirmedRounds, type ConfirmedRound } from "@/lib/participation";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Resolve which confirmed fiscal year a new class binds to: the one the form picked (must be a year
+// the unit confirmed), else the latest confirmed year. Returns null when the unit has confirmed none.
+function resolveTargetRound(confirmed: ConfirmedRound[], requestedFy: number | null): ConfirmedRound | null {
+  if (confirmed.length === 0) return null;
+  if (requestedFy != null) return confirmed.find((r) => r.fiscal_year === requestedFy) ?? null;
+  return confirmed[0]; // newest first
+}
+
+const NO_CONFIRMED_ROUND_ERROR =
+  "หน่วยนี้ยังไม่ได้ยืนยันเข้าร่วมปีงบประมาณใด — ต้องรอ Web Master เปิดรอบและกดยืนยันการเข้าร่วมก่อนจึงจะสร้างชั้นเรียนได้";
 
 export type ClassFormState = { error?: string; success?: string };
 
@@ -67,6 +79,14 @@ export async function createClass(_prev: ClassFormState, formData: FormData): Pr
 
   const supabase = await createClient();
 
+  // Gate: the unit must have confirmed participation in some fiscal year; the class binds to it.
+  const confirmed = await getUnitConfirmedRounds(supabase, unitId);
+  const requestedFy = Number(formData.get("fiscal_year"));
+  const target = resolveTargetRound(confirmed, Number.isInteger(requestedFy) ? requestedFy : null);
+  if (!target) {
+    return { error: confirmed.length === 0 ? NO_CONFIRMED_ROUND_ERROR : "ปีงบประมาณที่เลือกไม่ถูกต้อง" };
+  }
+
   // If a lead instructor is given, verify it belongs to this unit's library.
   if (f.leadInstructorId) {
     const { data: ins } = await supabase
@@ -97,6 +117,8 @@ export async function createClass(_prev: ClassFormState, formData: FormData): Pr
         location: f.location,
         status: f.status,
         note: f.note,
+        fiscal_year: target.fiscal_year,
+        round_id: target.round_id,
       })
       .select("class_id")
       .single();
@@ -110,7 +132,7 @@ export async function createClass(_prev: ClassFormState, formData: FormData): Pr
         );
       }
       revalidatePath("/unit/classes");
-      return { success: `สร้างชั้นเรียนรหัส ${batchCode} เรียบร้อยแล้ว` };
+      return { success: `สร้างชั้นเรียนรหัส ${batchCode} (ปีงบประมาณ ${target.fiscal_year}) เรียบร้อยแล้ว` };
     }
     if (!error.message.includes("classes_unit_batch_code_key")) {
       return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
