@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { RevealIdButton } from "./reveal-id-button";
-import { ENROLL_STATUS_LABEL } from "@/lib/labels";
+import { LEARNER_STATUS_DISPLAY } from "@/lib/learner-status";
 
 export type LearnerRow = {
   learner_id: string;
@@ -97,7 +97,7 @@ export function LearnersTable({
         </select>
         <select className="field" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">ทุกสถานะการเรียน</option>
-          {Object.entries(ENROLL_STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          {Object.entries(LEARNER_STATUS_DISPLAY).map(([v, s]) => <option key={v} value={v}>{s.label}</option>)}
           <option value="none">ยังไม่ลงรุ่น</option>
         </select>
         <select className="field" value={standard} onChange={(e) => setStandard(e.target.value)}>

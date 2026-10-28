@@ -10,6 +10,14 @@ export type ClassFormState = { error?: string; success?: string };
 const MODES = new Set(["onsite", "online", "hybrid"]);
 const STATUSES = new Set(["planned", "open", "ongoing", "completed", "cancelled"]);
 
+// instructors.name is a generated column now (first_name + last_name). The quick "add instructor
+// to a class" flows accept a single name string, so split it on the first space here.
+function splitInstructorName(full: string): { first: string; last: string } {
+  const name = full.trim();
+  const sp = name.indexOf(" ");
+  return sp > 0 ? { first: name.slice(0, sp), last: name.slice(sp + 1).trim() } : { first: name, last: "" };
+}
+
 // Auto-generate the next per-unit batch code (R001, R002, …). The unique index on
 // (unit_id, batch_code) is the real guard; this just picks the next free number.
 async function nextBatchCode(supabase: SupabaseClient, unitId: string): Promise<string> {
@@ -247,9 +255,10 @@ export async function createInstructorInClass(
     instructorId = data?.instructor_id ?? null;
   }
   if (!instructorId) {
+    const { first, last } = splitInstructorName(name);
     const { data: created, error: insErr } = await supabase
       .from("instructors")
-      .insert({ name, phone, email, unit_id: unitId })
+      .insert({ first_name: first, last_name: last, phone, email, unit_id: unitId })
       .select("instructor_id")
       .single();
     if (insErr) return { error: `บันทึกวิทยากรไม่สำเร็จ: ${insErr.message}` };
@@ -277,9 +286,12 @@ export async function commitClassInstructorImport(
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const classId = String(formData.get("class_id") ?? "");
   const role = String(formData.get("role_in_class") ?? "").trim() || "วิทยากร";
-  const rows: { name: string; phone: string; email: string; status: string }[] = JSON.parse(
-    String(formData.get("rows") ?? "[]"),
-  ).filter((r: { status: string }) => r.status === "pass");
+  type CsvRow = { first_name: string; last_name: string; gender: string; affiliation: string; tester_status: string; phone: string; email: string; status: string };
+  const rows: CsvRow[] = JSON.parse(String(formData.get("rows") ?? "[]")).filter(
+    (r: { status: string }) => r.status === "pass",
+  );
+  const asGender = (v: string) => (v === "male" || v === "female" || v === "other" ? v : null);
+  const asTester = (v: string) => (v === "level_1" || v === "level_2" ? v : "none");
   if (!classId) return { error: "ไม่พบชั้นเรียน" };
   if (rows.length === 0) return { error: "ไม่มีแถวที่ผ่านการตรวจสอบให้นำเข้า" };
 
@@ -308,7 +320,16 @@ export async function commitClassInstructorImport(
     if (!instructorId) {
       const { data: ins, error } = await supabase
         .from("instructors")
-        .insert({ name: r.name, phone, email, unit_id: unitId })
+        .insert({
+          first_name: r.first_name,
+          last_name: r.last_name || "",
+          gender: asGender(r.gender),
+          affiliation: r.affiliation || null,
+          tester_status: asTester(r.tester_status),
+          phone,
+          email,
+          unit_id: unitId,
+        })
         .select("instructor_id")
         .single();
       if (error) continue;

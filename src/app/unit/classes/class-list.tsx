@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Popup } from "@/components/ui/Popup";
 import { FieldSpecTable } from "@/components/ui/FieldSpec";
-import { CLASS_STATUS_LABEL, CLASS_STATUS_PILL } from "@/lib/labels";
+import { classStatusDisplay } from "@/lib/class-status";
 import { ClassForm } from "./class-form";
 import {
   previewClassImport,
@@ -96,9 +96,10 @@ export function ClassList({
               </div>
             </div>
             <div className="class-row-meta">
-              <span className={`pill ${CLASS_STATUS_PILL[c.status] ?? "muted"}`}>
-                {CLASS_STATUS_LABEL[c.status] ?? c.status}
-              </span>
+              {(() => {
+                const s = classStatusDisplay(c.start_date, c.end_date);
+                return <span className={`pill ${s.pill}`}>{s.label}</span>;
+              })()}
               <span className="footnote">
                 ผู้เรียน {c.learner_count}/{c.seat_count} · ผู้สอน {c.instructor_count}
               </span>

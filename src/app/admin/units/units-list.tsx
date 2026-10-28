@@ -7,6 +7,7 @@ import { UNIT_TYPE_LABEL, REGION_LABEL, REGION_COLOR, REGION_ORDER } from "@/lib
 
 export type UnitCard = {
   unit_id: string;
+  code: string | null;
   name: string;
   type: string;
   region: string;
@@ -31,7 +32,7 @@ export function UnitsList({ units }: { units: UnitCard[] }) {
     return units.filter(
       (u) =>
         (region === "all" || u.region === region) &&
-        (q === "" || u.name.toLowerCase().includes(q)),
+        (q === "" || u.name.toLowerCase().includes(q) || (u.code ?? "").toLowerCase().includes(q)),
     );
   }, [units, query, region]);
 
@@ -96,6 +97,12 @@ export function UnitsList({ units }: { units: UnitCard[] }) {
                 <div className="unit-row-main">
                   <div className="unit-row-name">{u.name}</div>
                   <div className="unit-row-meta">
+                    {u.code && (
+                      <>
+                        <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{u.code}</span>
+                        {" · "}
+                      </>
+                    )}
                     {UNIT_TYPE_LABEL[u.type] ?? u.type} · {REGION_LABEL[u.region] ?? u.region}
                   </div>
                   <div className="unit-row-tags">

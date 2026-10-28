@@ -160,7 +160,11 @@ function InstructorCsvToClass({ unitId, classId, onDone }: { unitId: string; cla
     <div style={{ display: "grid", gap: 12 }}>
       <FieldSpecTable
         specs={[
-          { field: "name", type: "ข้อความ", required: true },
+          { field: "first_name", type: "ข้อความ", required: true, note: "ชื่อ" },
+          { field: "last_name", type: "ข้อความ", required: false, note: "นามสกุล" },
+          { field: "gender", type: "รหัส", required: false, note: "male / female / other" },
+          { field: "affiliation", type: "ข้อความ", required: false, note: "สังกัด" },
+          { field: "tester_status", type: "รหัส", required: false, note: "none / level_1 / level_2" },
           { field: "phone", type: "ข้อความ (ตัวเลข)", required: false },
           { field: "email", type: "ข้อความ (อีเมล)", required: false },
         ]}
@@ -182,7 +186,7 @@ function InstructorCsvToClass({ unitId, classId, onDone }: { unitId: string; cla
               <tbody>
                 {preview.rows.map((r) => (
                   <tr key={r.rowNumber}>
-                    <td>{r.rowNumber}</td><td>{r.name}</td>
+                    <td>{r.rowNumber}</td><td>{`${r.first_name} ${r.last_name}`.trim()}</td>
                     <td><span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>{r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}</span></td>
                     <td>{r.reason ?? "—"}</td>
                   </tr>

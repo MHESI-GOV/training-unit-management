@@ -1,5 +1,6 @@
 import { requireStaffProfile } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { unitCode } from "@/lib/id-codes";
 import { AppShell } from "@/components/layout/AppShell";
 import { UnitsList, type UnitCard } from "./units-list";
 
@@ -21,19 +22,22 @@ export default async function AdminUnitsPage() {
     name: string;
     type: string;
     region: string;
+    unit_seq: number | null;
     classes: { count: number }[] | null;
     learners: { count: number }[] | null;
     testing_center_statuses: { standard_type: string; status: string }[] | null;
     training_unit_images: { storage_key: string; display_order: number | null; status: string }[] | null;
+    training_unit_profiles: { province_name: string | null } | null;
   };
   const { data: unitsRaw } = await supabase
     .from("training_units")
     .select(
-      "unit_id, name, type, region, classes(count), learners(count), " +
+      "unit_id, name, type, region, unit_seq, classes(count), learners(count), " +
         "testing_center_statuses(standard_type, status), " +
-        "training_unit_images(storage_key, display_order, status)",
+        "training_unit_images(storage_key, display_order, status), " +
+        "training_unit_profiles(province_name)",
     )
-    .order("name");
+    .order("unit_seq");
   const units = (unitsRaw ?? []) as unknown as UnitRow[];
 
   const cards: UnitCard[] = await Promise.all(
@@ -59,6 +63,7 @@ export default async function AdminUnitsPage() {
 
       return {
         unit_id: u.unit_id,
+        code: unitCode({ region: u.region, provinceName: u.training_unit_profiles?.province_name ?? null, unitSeq: u.unit_seq }),
         name: u.name,
         type: u.type,
         region: u.region,

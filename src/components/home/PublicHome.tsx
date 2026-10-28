@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { ChefHat, Soup, Leaf } from "lucide-react";
-import { type Overview } from "@/lib/dashboard";
+import { type Overview, type Pyramid } from "@/lib/dashboard";
 import { OverviewSection } from "@/components/dashboard/OverviewSection";
 import { PublicNav } from "./PublicNav";
 
 export function PublicHome({
   ov,
+  pyramid,
   years,
   selectedYear,
 }: {
   ov: Overview;
+  pyramid: Pyramid;
   years: number[];
   selectedYear: string;
 }) {
@@ -36,7 +38,7 @@ export function PublicHome({
 
       {/* ภาพรวม — layout เดียวกับ dashboard ฝั่งล็อกอิน (OverviewSection) */}
       <div id="stats" style={{ maxWidth: 1200, margin: "32px auto 0", padding: "0 24px" }}>
-        <OverviewSection initialOv={ov} years={years} initialSelected={selectedYear} />
+        <OverviewSection initialOv={ov} initialPyramid={pyramid} years={years} initialSelected={selectedYear} />
       </div>
 
       <footer id="contact" className="public-footer">

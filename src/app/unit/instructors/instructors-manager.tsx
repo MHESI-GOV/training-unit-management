@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { Popup } from "@/components/ui/Popup";
 import { FieldSpecTable } from "@/components/ui/FieldSpec";
+import { GENDER_LABEL, INSTRUCTOR_TESTER_STATUS_LABEL } from "@/lib/labels";
 import {
   createInstructor,
   updateInstructor,
@@ -16,9 +17,15 @@ import {
 
 export type InstructorRow = {
   instructor_id: string;
+  first_name: string;
+  last_name: string;
   name: string;
+  gender: string | null;
+  affiliation: string | null;
+  tester_status: string;
   phone: string | null;
   email: string | null;
+  teacher_code: string | null;
   class_count: number;
 };
 
@@ -64,9 +71,13 @@ export function InstructorsManager({ unitId, instructors }: { unitId: string; in
           <table>
             <thead>
               <tr>
-                <th>ชื่อวิทยากร</th>
+                <th>รหัสผู้สอน</th>
+                <th>ชื่อ-สกุล</th>
+                <th>เพศ</th>
+                <th>สังกัด</th>
                 <th>เบอร์โทร</th>
                 <th>อีเมล</th>
+                <th>ผู้ทดสอบมาตรฐานฝีมือแรงงาน</th>
                 <th>สอนในชั้นเรียน</th>
                 <th></th>
               </tr>
@@ -74,9 +85,13 @@ export function InstructorsManager({ unitId, instructors }: { unitId: string; in
             <tbody>
               {filtered.map((i) => (
                 <tr key={i.instructor_id}>
+                  <td style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{i.teacher_code ?? "—"}</td>
                   <td><strong>{i.name}</strong></td>
+                  <td>{i.gender ? GENDER_LABEL[i.gender] ?? "—" : "—"}</td>
+                  <td>{i.affiliation ?? "—"}</td>
                   <td>{i.phone ?? "—"}</td>
                   <td>{i.email ?? "—"}</td>
+                  <td>{INSTRUCTOR_TESTER_STATUS_LABEL[i.tester_status] ?? "—"}</td>
                   <td>{i.class_count} ชั้นเรียน</td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -118,17 +133,46 @@ function InstructorForm({ unitId, edit, onDone }: { unitId: string; edit?: Instr
     <form action={action} style={{ display: "grid", gap: 12 }}>
       <input type="hidden" name="unit_id" value={unitId} />
       {edit && <input type="hidden" name="instructor_id" value={edit.instructor_id} />}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <label>
+          <span className="field-label">ชื่อ</span>
+          <input name="first_name" required defaultValue={edit?.first_name ?? ""} className="field" />
+        </label>
+        <label>
+          <span className="field-label">นามสกุล</span>
+          <input name="last_name" defaultValue={edit?.last_name ?? ""} className="field" />
+        </label>
+      </div>
       <label>
-        <span className="field-label">ชื่อวิทยากร</span>
-        <input name="name" required defaultValue={edit?.name ?? ""} className="field" />
+        <span className="field-label">เพศ</span>
+        <select name="gender" defaultValue={edit?.gender ?? ""} className="field">
+          <option value="">— ไม่ระบุ —</option>
+          {Object.entries(GENDER_LABEL).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <label>
+          <span className="field-label">เบอร์โทร</span>
+          <input name="phone" defaultValue={edit?.phone ?? ""} className="field" />
+        </label>
+        <label>
+          <span className="field-label">อีเมล</span>
+          <input name="email" type="email" defaultValue={edit?.email ?? ""} className="field" />
+        </label>
+      </div>
+      <label>
+        <span className="field-label">สังกัด</span>
+        <input name="affiliation" defaultValue={edit?.affiliation ?? ""} className="field" />
       </label>
       <label>
-        <span className="field-label">เบอร์โทร</span>
-        <input name="phone" defaultValue={edit?.phone ?? ""} className="field" />
-      </label>
-      <label>
-        <span className="field-label">อีเมล</span>
-        <input name="email" type="email" defaultValue={edit?.email ?? ""} className="field" />
+        <span className="field-label">สถานะการเป็นผู้ทดสอบมาตรฐานฝีมือแรงงาน</span>
+        <select name="tester_status" defaultValue={edit?.tester_status ?? "none"} className="field">
+          {Object.entries(INSTRUCTOR_TESTER_STATUS_LABEL).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
       </label>
       <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : edit ? "บันทึกการแก้ไข" : "เพิ่มวิทยากร"}
@@ -190,7 +234,11 @@ function InstructorCsv({ unitId }: { unitId: string }) {
     <div style={{ display: "grid", gap: 12 }}>
       <FieldSpecTable
         specs={[
-          { field: "name", type: "ข้อความ", required: true, note: "ชื่อ-นามสกุลวิทยากร" },
+          { field: "first_name", type: "ข้อความ", required: true, note: "ชื่อ" },
+          { field: "last_name", type: "ข้อความ", required: false, note: "นามสกุล" },
+          { field: "gender", type: "รหัส", required: false, note: "male / female / other" },
+          { field: "affiliation", type: "ข้อความ", required: false, note: "สังกัด" },
+          { field: "tester_status", type: "รหัส", required: false, note: "none / level_1 / level_2 (ผู้ทดสอบมาตรฐานฝีมือแรงงาน)" },
           { field: "phone", type: "ข้อความ (ตัวเลข)", required: false, note: "เบอร์โทร" },
           { field: "email", type: "ข้อความ (อีเมล)", required: false },
         ]}
@@ -211,12 +259,12 @@ function InstructorCsv({ unitId }: { unitId: string }) {
           <p>ผ่าน <strong>{preview.passCount}</strong> / ไม่ผ่าน <strong>{preview.failCount}</strong></p>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>แถว</th><th>ชื่อ</th><th>สถานะ</th><th>สาเหตุ</th></tr></thead>
+              <thead><tr><th>แถว</th><th>ชื่อ-สกุล</th><th>สถานะ</th><th>สาเหตุ</th></tr></thead>
               <tbody>
                 {preview.rows.map((r) => (
                   <tr key={r.rowNumber}>
                     <td>{r.rowNumber}</td>
-                    <td>{r.name}</td>
+                    <td>{`${r.first_name} ${r.last_name}`.trim()}</td>
                     <td><span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>{r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}</span></td>
                     <td>{r.reason ?? "—"}</td>
                   </tr>

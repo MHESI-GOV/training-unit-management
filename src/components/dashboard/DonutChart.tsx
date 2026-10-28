@@ -8,11 +8,17 @@ export function DonutChart({
   centerLabel,
   size = 180,
   stroke = 30,
+  onSliceClick,
+  activeKey,
 }: {
   slices: DonutSlice[];
   centerLabel: string;
   size?: number;
   stroke?: number;
+  // When provided, each legend row becomes a click-to-filter control; activeKey highlights the
+  // currently-selected one.
+  onSliceClick?: (key: string) => void;
+  activeKey?: string | null;
 }) {
   const total = slices.reduce((s, x) => s + x.value, 0);
   const r = (size - stroke) / 2;
@@ -69,8 +75,9 @@ export function DonutChart({
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 12, flex: "1 1 200px", minWidth: 190 }}>
         {slices.map((s) => {
           const pct = total > 0 ? Math.round((s.value / total) * 1000) / 10 : 0;
-          return (
-            <li key={s.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          const active = activeKey === s.key;
+          const content = (
+            <>
               <span
                 aria-hidden
                 style={{ width: 12, height: 12, borderRadius: 999, flexShrink: 0, background: s.color }}
@@ -80,6 +87,30 @@ export function DonutChart({
               <span className="footnote" style={{ minWidth: 48, textAlign: "right" }}>
                 {pct}%
               </span>
+            </>
+          );
+          if (!onSliceClick) {
+            return (
+              <li key={s.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {content}
+              </li>
+            );
+          }
+          return (
+            <li key={s.key}>
+              <button
+                type="button"
+                onClick={() => onSliceClick(s.key)}
+                aria-pressed={active}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
+                  border: active ? "1px solid #9ec3ee" : "1px solid transparent",
+                  background: active ? "#eaf3fd" : "transparent", cursor: "pointer",
+                  borderRadius: 8, padding: "4px 8px", color: "inherit", font: "inherit",
+                }}
+              >
+                {content}
+              </button>
             </li>
           );
         })}

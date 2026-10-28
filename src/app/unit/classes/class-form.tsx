@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { createClass, updateClass, type ClassFormState } from "./actions";
-import { CLASS_MODE_LABEL, CLASS_STATUS_LABEL } from "@/lib/labels";
+import { CLASS_MODE_LABEL } from "@/lib/labels";
 
 const initialState: ClassFormState = {};
 
@@ -105,19 +105,12 @@ export function ClassForm({
           </select>
         </label>
         <label>
-          <span className="field-label">สถานะรุ่น</span>
-          <select name="status" defaultValue={edit?.status ?? "planned"} className="field">
-            {Object.entries(CLASS_STATUS_LABEL).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
+          <span className="field-label">สถานที่/ห้องเรียน</span>
+          <input name="location" defaultValue={edit?.location ?? ""} className="field" />
         </label>
       </div>
 
-      <label>
-        <span className="field-label">สถานที่/ห้องเรียน</span>
-        <input name="location" defaultValue={edit?.location ?? ""} className="field" />
-      </label>
+      <p className="footnote">สถานะรุ่น (รับสมัคร / อยู่ระหว่างเรียน / เสร็จสิ้น) ระบบกำหนดให้อัตโนมัติตามวันเริ่ม–วันสิ้นสุด</p>
 
       <label>
         <span className="field-label">หมายเหตุ</span>

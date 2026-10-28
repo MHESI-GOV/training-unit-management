@@ -11,8 +11,12 @@ export type Overview = {
   cert_anamai_contact: number | null;
   cert_professional_q: number | null;
   cert_dsd_l1: number | null;
-  status_completed: number | null;
-  status_in_progress: number | null;
+  // Learner status, 3 states derived from the class timeline + withdrawal (see
+  // get_dashboard_overview / src/lib/learner-status.ts). Together they partition total_learners so
+  // the "สถานะการเรียน" donut reconciles with the "จำนวนผู้เรียน" headline. null = suppressed (Executive).
+  status_in_progress: number | null; // อยู่ระหว่างเรียน
+  status_finished: number | null; // เรียนเสร็จแล้ว
+  status_withdrawn: number | null; // ถอนตัว
   // Fiscal-year participation ("active units") for the most recent round. participation_fiscal_year
   // is null when no round has been opened yet; active_units/participation_total are org-level counts
   // (no PII) so they are never suppressed.
@@ -23,6 +27,14 @@ export type Overview = {
   pins: { unit_id: string; name: string; region: string; type: string; province: string | null; lat: number; lng: number }[];
   latest_units: { unit_id: string; name: string; region: string; type: string; status: string }[];
 };
+
+// Population-pyramid rows (age band × gender) from get_learner_pyramid(). Counts are suppressed
+// to 0 for small cells in the Executive / public view, same as the other learner metrics.
+export type PyramidBand = { band: string; male: number; female: number; other: number };
+export type Pyramid = PyramidBand[];
+
+// Active click-to-filter selections on the dashboard (region row / institution-type slice).
+export type DashFilters = { region: string | null; type: string | null };
 
 export const SUPPRESSED = "ข้อมูลน้อยเกินไปที่จะแสดงผลได้";
 

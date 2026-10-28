@@ -7,6 +7,16 @@ import { createClient } from "@/lib/supabase/server";
 
 export type InstructorState = { error?: string; success?: string };
 
+type Gender = "male" | "female" | "other";
+type TesterStatus = "none" | "level_1" | "level_2";
+
+function parseGender(v: string | null): Gender | null {
+  return v === "male" || v === "female" || v === "other" ? v : null;
+}
+function parseTesterStatus(v: string | null): TesterStatus {
+  return v === "level_1" || v === "level_2" ? v : "none";
+}
+
 // Find an existing library instructor in this unit matching phone+email (the per-unit dedup key).
 async function findDup(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -24,11 +34,15 @@ async function findDup(
 
 export async function createInstructor(_prev: InstructorState, formData: FormData): Promise<InstructorState> {
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
-  const name = String(formData.get("name") ?? "").trim();
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const gender = parseGender(formData.get("gender")?.toString() ?? null);
+  const affiliation = String(formData.get("affiliation") ?? "").trim() || null;
+  const testerStatus = parseTesterStatus(formData.get("tester_status")?.toString() ?? null);
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
 
-  if (!name) return { error: "กรุณากรอกชื่อวิทยากร" };
+  if (!firstName) return { error: "กรุณากรอกชื่อวิทยากร" };
 
   const supabase = await createClient();
   if (await findDup(supabase, unitId, phone, email)) {
@@ -36,7 +50,11 @@ export async function createInstructor(_prev: InstructorState, formData: FormDat
   }
 
   const { error } = await supabase.from("instructors").insert({
-    name,
+    first_name: firstName,
+    last_name: lastName,
+    gender,
+    affiliation,
+    tester_status: testerStatus,
     phone,
     email,
     unit_id: unitId,
@@ -50,11 +68,15 @@ export async function createInstructor(_prev: InstructorState, formData: FormDat
 export async function updateInstructor(_prev: InstructorState, formData: FormData): Promise<InstructorState> {
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const instructorId = String(formData.get("instructor_id") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const gender = parseGender(formData.get("gender")?.toString() ?? null);
+  const affiliation = String(formData.get("affiliation") ?? "").trim() || null;
+  const testerStatus = parseTesterStatus(formData.get("tester_status")?.toString() ?? null);
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
 
-  if (!instructorId || !name) return { error: "กรุณากรอกชื่อวิทยากร" };
+  if (!instructorId || !firstName) return { error: "กรุณากรอกชื่อวิทยากร" };
 
   const supabase = await createClient();
   const { data: own } = await supabase
@@ -67,7 +89,7 @@ export async function updateInstructor(_prev: InstructorState, formData: FormDat
 
   const { error } = await supabase
     .from("instructors")
-    .update({ name, phone, email })
+    .update({ first_name: firstName, last_name: lastName, gender, affiliation, tester_status: testerStatus, phone, email })
     .eq("instructor_id", instructorId);
   if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
 
@@ -106,7 +128,11 @@ export async function deleteInstructor(unitIdArg: string, instructorId: string) 
 // ───────────────────────── CSV import into the library ─────────────────────────
 export type InstructorPreviewRow = {
   rowNumber: number;
-  name: string;
+  first_name: string;
+  last_name: string;
+  gender: string;
+  affiliation: string;
+  tester_status: string;
   phone: string;
   email: string;
   status: "pass" | "fail";
@@ -137,16 +163,26 @@ export async function previewInstructorImport(
 
   for (let i = 0; i < parsed.data.length; i++) {
     const r = parsed.data[i];
-    const name = (r.name ?? "").trim();
+    const firstName = (r.first_name ?? "").trim();
+    const lastName = (r.last_name ?? "").trim();
+    const genderRaw = (r.gender ?? "").trim();
+    const affiliation = (r.affiliation ?? "").trim();
+    const testerRaw = (r.tester_status ?? "").trim();
     const phone = (r.phone ?? "").trim();
     const email = (r.email ?? "").trim();
     let status: "pass" | "fail" = "pass";
     let reason: string | undefined;
 
     const key = `${phone}|${email}`;
-    if (!name) {
+    if (!firstName) {
       status = "fail";
       reason = "ขาดชื่อวิทยากร";
+    } else if (genderRaw && !parseGender(genderRaw)) {
+      status = "fail";
+      reason = "gender ต้องเป็น male / female / other";
+    } else if (testerRaw && testerRaw !== "none" && !parseTesterStatus(testerRaw)) {
+      status = "fail";
+      reason = "tester_status ต้องเป็น none / level_1 / level_2";
     } else if ((phone || email) && seen.has(key)) {
       status = "fail";
       reason = "เบอร์/อีเมลซ้ำภายในไฟล์เดียวกัน";
@@ -155,7 +191,18 @@ export async function previewInstructorImport(
       reason = "มีวิทยากรนี้ในคลังของหน่วยแล้ว";
     }
     if (status === "pass" && (phone || email)) seen.add(key);
-    rows.push({ rowNumber: i + 2, name, phone, email, status, reason });
+    rows.push({
+      rowNumber: i + 2,
+      first_name: firstName,
+      last_name: lastName,
+      gender: genderRaw,
+      affiliation,
+      tester_status: testerRaw,
+      phone,
+      email,
+      status,
+      reason,
+    });
   }
 
   return {
@@ -180,7 +227,11 @@ export async function commitInstructorImport(
 
   const supabase = await createClient();
   const payload = rows.map((r) => ({
-    name: r.name,
+    first_name: r.first_name,
+    last_name: r.last_name,
+    gender: parseGender(r.gender),
+    affiliation: r.affiliation || null,
+    tester_status: parseTesterStatus(r.tester_status),
     phone: r.phone || null,
     email: r.email || null,
     unit_id: unitId,

@@ -7,7 +7,7 @@ import { UnitFilter } from "@/components/dashboard/unit-filter";
 import { ExportLearners } from "@/components/dashboard/export-learners";
 import { ExportClasses } from "@/components/dashboard/export-classes";
 import { OverviewSection } from "@/components/dashboard/OverviewSection";
-import { type Overview, resolveFiscalYear } from "@/lib/dashboard";
+import { type Overview, type Pyramid, resolveFiscalYear } from "@/lib/dashboard";
 
 export default async function Home({
   searchParams,
@@ -25,13 +25,13 @@ export default async function Home({
     const { data: yearsRaw } = await supabase.rpc("get_dashboard_fiscal_years");
     const years = (yearsRaw as number[] | null) ?? [];
     const { selected, param } = resolveFiscalYear(fy, years);
-    const { data: ovRaw, error } = await supabase.rpc("get_dashboard_overview", {
-      p_unit_id: undefined,
-      p_fiscal_year: param ?? undefined,
-    });
+    const [{ data: ovRaw, error }, { data: pyrRaw }] = await Promise.all([
+      supabase.rpc("get_dashboard_overview", { p_unit_id: undefined, p_fiscal_year: param ?? undefined }),
+      supabase.rpc("get_learner_pyramid", { p_unit_id: undefined, p_fiscal_year: param ?? undefined }),
+    ]);
     const publicOv = ovRaw as Overview | null;
     return publicOv ? (
-      <PublicHome ov={publicOv} years={years} selectedYear={selected} />
+      <PublicHome ov={publicOv} pyramid={(pyrRaw as Pyramid | null) ?? []} years={years} selectedYear={selected} />
     ) : (
       <main style={{ maxWidth: 480, margin: "4rem auto", textAlign: "center" }}>
         <p style={{ color: "var(--danger)" }}>โหลดข้อมูลไม่สำเร็จ{error ? `: ${error.message}` : ""}</p>
@@ -50,8 +50,12 @@ export default async function Home({
   const years = (yearsRaw as number[] | null) ?? [];
   const { selected: selectedYear, param: fyParam } = resolveFiscalYear(fy, years);
 
-  const [{ data: ovRaw, error }, { data: units }] = await Promise.all([
+  const [{ data: ovRaw, error }, { data: pyrRaw }, { data: units }] = await Promise.all([
     supabase.rpc("get_dashboard_overview", {
+      p_unit_id: filterUnitId ?? undefined,
+      p_fiscal_year: fyParam ?? undefined,
+    }),
+    supabase.rpc("get_learner_pyramid", {
       p_unit_id: filterUnitId ?? undefined,
       p_fiscal_year: fyParam ?? undefined,
     }),
@@ -60,6 +64,7 @@ export default async function Home({
       : Promise.resolve({ data: null }),
   ]);
   const ov = (ovRaw as Overview | null) ?? null;
+  const pyramid = (pyrRaw as Pyramid | null) ?? [];
 
   return (
     <AppShell profile={profile} active="home" eyebrow="ภาพรวมโครงการ" title="หนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย">
@@ -87,6 +92,7 @@ export default async function Home({
             <OverviewSection
               key={filterUnitId ?? "all"}
               initialOv={ov}
+              initialPyramid={pyramid}
               years={years}
               initialSelected={selectedYear}
               unitId={filterUnitId}

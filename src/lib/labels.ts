@@ -27,6 +27,19 @@ export const REGION_COLOR: Record<string, string> = {
   bangkok: "#e87ba4",
 };
 
+export const GENDER_LABEL: Record<string, string> = {
+  male: "ชาย",
+  female: "หญิง",
+  other: "อื่นๆ",
+};
+
+// สถานะการเป็นผู้ทดสอบมาตรฐานฝีมือแรงงานของวิทยากร
+export const INSTRUCTOR_TESTER_STATUS_LABEL: Record<string, string> = {
+  none: "ไม่เป็น",
+  level_1: "ระดับ 1",
+  level_2: "ระดับ 2",
+};
+
 export const ROLE_LABEL: Record<string, string> = {
   web_master: "Web Master",
   central_staff: "Central Staff",
@@ -95,6 +108,7 @@ export const ENROLL_STATUS_LABEL: Record<string, string> = {
   attending: "เข้าร่วม",
   completed: "สำเร็จ",
   failed: "ไม่สำเร็จ",
+  withdrawn: "ถอนตัว",
 };
 
 export const ENROLL_STATUS_PILL: Record<string, string> = {
@@ -102,4 +116,5 @@ export const ENROLL_STATUS_PILL: Record<string, string> = {
   attending: "study",
   completed: "done",
   failed: "fail",
+  withdrawn: "muted",
 };

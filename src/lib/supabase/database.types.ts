@@ -266,6 +266,7 @@ export type Database = {
       courses: {
         Row: {
           course_id: string
+          course_seq: number | null
           created_at: string
           description: string | null
           name: string
@@ -276,6 +277,7 @@ export type Database = {
         }
         Insert: {
           course_id?: string
+          course_seq?: number | null
           created_at?: string
           description?: string | null
           name: string
@@ -286,6 +288,7 @@ export type Database = {
         }
         Update: {
           course_id?: string
+          course_seq?: number | null
           created_at?: string
           description?: string | null
           name?: string
@@ -500,24 +503,45 @@ export type Database = {
       }
       instructors: {
         Row: {
+          affiliation: string | null
+          created_at: string
           email: string | null
+          first_name: string
+          gender: Database["public"]["Enums"]["gender_type"] | null
           instructor_id: string
-          name: string
+          instructor_seq: number | null
+          last_name: string
+          name: string | null
           phone: string | null
+          tester_status: Database["public"]["Enums"]["instructor_tester_status"]
           unit_id: string | null
         }
         Insert: {
+          affiliation?: string | null
+          created_at?: string
           email?: string | null
+          first_name: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
           instructor_id?: string
-          name: string
+          instructor_seq?: number | null
+          last_name?: string
+          name?: string | null
           phone?: string | null
+          tester_status?: Database["public"]["Enums"]["instructor_tester_status"]
           unit_id?: string | null
         }
         Update: {
+          affiliation?: string | null
+          created_at?: string
           email?: string | null
+          first_name?: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
           instructor_id?: string
-          name?: string
+          instructor_seq?: number | null
+          last_name?: string
+          name?: string | null
           phone?: string | null
+          tester_status?: Database["public"]["Enums"]["instructor_tester_status"]
           unit_id?: string | null
         }
         Relationships: [
@@ -540,10 +564,13 @@ export type Database = {
           email: string | null
           external_ref: string | null
           first_name: string
+          gender: Database["public"]["Enums"]["gender_type"] | null
           last_name: string
           learner_id: string
+          learner_seq: number | null
           national_id_encrypted: string
           national_id_hash: string
+          occupation: string | null
           phone: string | null
           province_id: string | null
           source: Database["public"]["Enums"]["learner_source"]
@@ -559,10 +586,13 @@ export type Database = {
           email?: string | null
           external_ref?: string | null
           first_name: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
           last_name: string
           learner_id?: string
+          learner_seq?: number | null
           national_id_encrypted: string
           national_id_hash: string
+          occupation?: string | null
           phone?: string | null
           province_id?: string | null
           source: Database["public"]["Enums"]["learner_source"]
@@ -578,10 +608,13 @@ export type Database = {
           email?: string | null
           external_ref?: string | null
           first_name?: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
           last_name?: string
           learner_id?: string
+          learner_seq?: number | null
           national_id_encrypted?: string
           national_id_hash?: string
+          occupation?: string | null
           phone?: string | null
           province_id?: string | null
           source?: Database["public"]["Enums"]["learner_source"]
@@ -1002,6 +1035,7 @@ export type Database = {
           status: Database["public"]["Enums"]["unit_status"]
           type: Database["public"]["Enums"]["unit_type"]
           unit_id: string
+          unit_seq: number | null
           updated_at: string
         }
         Insert: {
@@ -1013,6 +1047,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["unit_status"]
           type: Database["public"]["Enums"]["unit_type"]
           unit_id?: string
+          unit_seq?: number | null
           updated_at?: string
         }
         Update: {
@@ -1024,6 +1059,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["unit_status"]
           type?: Database["public"]["Enums"]["unit_type"]
           unit_id?: string
+          unit_seq?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1099,6 +1135,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _dashboard_scope_units: {
+        Args: {
+          p_fiscal_year: number
+          p_region: string
+          p_unit_id: string
+          p_unit_type: string
+        }
+        Returns: string[]
+      }
       check_learner_eligibility: {
         Args: { p_course_id: string; p_national_id_hash: string }
         Returns: string
@@ -1126,7 +1171,21 @@ export type Database = {
         }[]
       }
       get_dashboard_overview: {
-        Args: { p_fiscal_year?: number; p_unit_id?: string }
+        Args: {
+          p_fiscal_year?: number
+          p_region?: string
+          p_unit_id?: string
+          p_unit_type?: string
+        }
+        Returns: Json
+      }
+      get_learner_pyramid: {
+        Args: {
+          p_fiscal_year?: number
+          p_region?: string
+          p_unit_id?: string
+          p_unit_type?: string
+        }
         Returns: Json
       }
       get_participation_summary: {
@@ -1181,10 +1240,17 @@ export type Database = {
         | "anamai_food_contact"
         | "professional_qualification"
         | "other"
-      enrollment_status: "applied" | "attending" | "completed" | "failed"
+      enrollment_status:
+        | "applied"
+        | "attending"
+        | "completed"
+        | "failed"
+        | "withdrawn"
+      gender_type: "male" | "female" | "other"
       image_status: "active" | "deleted"
       image_visibility: "public" | "internal"
       import_job_status: "pending" | "processing" | "completed" | "failed"
+      instructor_tester_status: "none" | "level_1" | "level_2"
       learner_source: "unit_self_entry" | "unit_import_file"
       participation_status: "invited" | "confirmed" | "declined"
       region_type:
@@ -1344,10 +1410,18 @@ export const Constants = {
         "professional_qualification",
         "other",
       ],
-      enrollment_status: ["applied", "attending", "completed", "failed"],
+      enrollment_status: [
+        "applied",
+        "attending",
+        "completed",
+        "failed",
+        "withdrawn",
+      ],
+      gender_type: ["male", "female", "other"],
       image_status: ["active", "deleted"],
       image_visibility: ["public", "internal"],
       import_job_status: ["pending", "processing", "completed", "failed"],
+      instructor_tester_status: ["none", "level_1", "level_2"],
       learner_source: ["unit_self_entry", "unit_import_file"],
       participation_status: ["invited", "confirmed", "declined"],
       region_type: [

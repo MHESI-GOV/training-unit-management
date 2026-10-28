@@ -10,12 +10,20 @@ const COLORS: Record<string, string> = {
   other: "#1baf7a",
 };
 
-export function InstitutionDonut({ counts }: { counts: Record<string, number> }) {
+export function InstitutionDonut({
+  counts,
+  onTypeClick,
+  activeType,
+}: {
+  counts: Record<string, number>;
+  onTypeClick?: (key: string) => void;
+  activeType?: string | null;
+}) {
   const slices: DonutSlice[] = Object.keys(UNIT_TYPE_LABEL).map((key) => ({
     key,
     label: UNIT_TYPE_LABEL[key],
     value: counts[key] ?? 0,
     color: COLORS[key] ?? "#9aa6b2",
   }));
-  return <DonutChart slices={slices} centerLabel="หน่วยฝึกอบรม" />;
+  return <DonutChart slices={slices} centerLabel="หน่วยฝึกอบรม" onSliceClick={onTypeClick} activeKey={activeType} />;
 }

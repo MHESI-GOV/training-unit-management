@@ -20,6 +20,11 @@ export type LearnerFormState = { error?: string; success?: string };
 const NATIONAL_ID_RE = /^\d{13}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+type Gender = "male" | "female" | "other";
+function parseGender(v: string | null): Gender | null {
+  return v === "male" || v === "female" || v === "other" ? v : null;
+}
+
 export async function createLearner(
   _prev: LearnerFormState,
   formData: FormData,
@@ -29,6 +34,8 @@ export async function createLearner(
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
   const nationalId = String(formData.get("national_id") ?? "").trim();
+  const gender = parseGender(formData.get("gender")?.toString() ?? null);
+  const occupation = String(formData.get("occupation") ?? "").trim() || null;
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
@@ -77,6 +84,8 @@ export async function createLearner(
       last_name: lastName,
       national_id_encrypted: bufferToByteaHex(encryptNationalId(nationalId)),
       national_id_hash: hashNationalId(nationalId),
+      gender,
+      occupation,
       phone,
       email,
       address,
@@ -247,6 +256,156 @@ export async function recordAssessmentResult(
 
   revalidatePath("/unit/learners");
   return {};
+}
+
+// Edit a learner's general info (the pencil-icon action on the learner list). national_id is NOT
+// editable here — it is the system-wide eligibility key; changing it would break the dedup/anti-
+// re-enrollment guarantees, so it stays immutable (view-only, masked + reveal) after creation.
+export async function updateLearner(
+  _prev: LearnerFormState,
+  formData: FormData,
+): Promise<LearnerFormState> {
+  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const learnerId = String(formData.get("learner_id") ?? "");
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  const gender = parseGender(formData.get("gender")?.toString() ?? null);
+  const occupation = String(formData.get("occupation") ?? "").trim() || null;
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const email = String(formData.get("email") ?? "").trim() || null;
+  const address = String(formData.get("address") ?? "").trim() || null;
+  const birthDate = String(formData.get("birth_date") ?? "").trim() || null;
+
+  if (!learnerId || !firstName || !lastName) return { error: "กรุณากรอกชื่อ-นามสกุล" };
+  if (birthDate && !DATE_RE.test(birthDate)) return { error: "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว" };
+
+  const supabase = await createClient();
+  const { data: own } = await supabase
+    .from("learners")
+    .select("learner_id")
+    .eq("learner_id", learnerId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!own) return { error: "ไม่พบผู้เรียนนี้ในหน่วยของคุณ" };
+
+  const { error } = await supabase
+    .from("learners")
+    .update({ first_name: firstName, last_name: lastName, gender, occupation, phone, email, address, birth_date: birthDate })
+    .eq("learner_id", learnerId);
+  if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
+
+  revalidatePath("/unit/learners");
+  return { success: "แก้ไขข้อมูลผู้เรียนแล้ว" };
+}
+
+// Internal: ensure (or remove) a single "passed" assessment_results row for a standard. Idempotent.
+async function applyStandard(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  learnerId: string,
+  standardType: AssessmentStandard,
+  passed: boolean,
+  confirmedBy: string,
+) {
+  if (passed) {
+    const { data: existing } = await supabase
+      .from("assessment_results")
+      .select("result_id")
+      .eq("learner_id", learnerId)
+      .eq("standard_type", standardType)
+      .eq("result", "passed")
+      .maybeSingle();
+    if (!existing) {
+      await supabase.from("assessment_results").insert({
+        learner_id: learnerId,
+        standard_type: standardType,
+        result: "passed",
+        tested_at: new Date().toISOString(),
+        confirmed_by: confirmedBy,
+      });
+    }
+  } else {
+    await supabase
+      .from("assessment_results")
+      .delete()
+      .eq("learner_id", learnerId)
+      .eq("standard_type", standardType)
+      .eq("result", "passed");
+  }
+}
+
+export type ClassResultRow = {
+  enrollment_id: string;
+  learner_id: string;
+  course_pass: boolean;
+  dsd_l1: boolean;
+  food_contact: boolean;
+};
+
+// Tab-2 "ส่งผลการเรียน": apply a whole class's recorded results in ONE batch (the unit admin opens
+// edit mode, ticks the checkboxes, then submits once). Maps: ผ่านเกณฑ์หลักสูตร ⇄ enrollment
+// completed (+ certification record); each standard ⇄ a "passed" assessment_results row. Withdrawn
+// learners are skipped. Only flips the course status when it actually changes.
+export async function submitClassResults(unitIdArg: string, classId: string, rows: ClassResultRow[]) {
+  const { unitId, profile } = await resolveActionUnit(unitIdArg);
+  const supabase = await createClient();
+
+  const { data: cls } = await supabase
+    .from("classes").select("class_id").eq("class_id", classId).eq("unit_id", unitId).maybeSingle();
+  if (!cls) throw new Error("ไม่พบชั้นเรียนนี้ในหน่วยของคุณ");
+
+  const ids = rows.map((r) => r.enrollment_id);
+  const { data: current } = await supabase
+    .from("enrollments")
+    .select("enrollment_id, status, learners!inner(unit_id)")
+    .in("enrollment_id", ids)
+    .eq("learners.unit_id", unitId);
+  const statusById = new Map((current ?? []).map((e) => [e.enrollment_id, e.status as string]));
+
+  for (const r of rows) {
+    const cur = statusById.get(r.enrollment_id);
+    if (cur === undefined || cur === "withdrawn") continue; // not in this unit / withdrawn → skip
+    if (r.course_pass && cur !== "completed") {
+      await supabase.from("enrollments").update({ status: "completed" }).eq("enrollment_id", r.enrollment_id);
+      await supabase.from("certification_records").upsert(
+        { enrollment_id: r.enrollment_id, certified_at: new Date().toISOString() },
+        { onConflict: "enrollment_id", ignoreDuplicates: true },
+      );
+    } else if (!r.course_pass && cur === "completed") {
+      await supabase.from("enrollments").update({ status: "attending" }).eq("enrollment_id", r.enrollment_id);
+      await supabase.from("certification_records").delete().eq("enrollment_id", r.enrollment_id);
+    }
+    await applyStandard(supabase, r.learner_id, "dsd_l1", r.dsd_l1, profile.id);
+    await applyStandard(supabase, r.learner_id, "anamai_food_contact", r.food_contact, profile.id);
+  }
+
+  revalidatePath("/unit/learners");
+  revalidatePath(`/unit/classes/${classId}`);
+}
+
+// Tab-2 "ถอนตัว" / "ยกเลิกถอนตัว": withdraw a learner from a class (no longer occupies a seat) or
+// restore them to an active ('applied') state.
+export async function setEnrollmentWithdrawn(unitIdArg: string, enrollmentId: string, withdrawn: boolean) {
+  const { unitId } = await resolveActionUnit(unitIdArg);
+  const supabase = await createClient();
+
+  const { data: enrollment } = await supabase
+    .from("enrollments")
+    .select("enrollment_id, learners!inner(unit_id)")
+    .eq("enrollment_id", enrollmentId)
+    .eq("learners.unit_id", unitId)
+    .maybeSingle();
+  if (!enrollment) throw new Error("ไม่พบการลงทะเบียนนี้ในหน่วยของคุณ");
+
+  const { error } = await supabase
+    .from("enrollments")
+    .update({ status: withdrawn ? "withdrawn" : "applied" })
+    .eq("enrollment_id", enrollmentId);
+  if (error) throw new Error(error.message);
+
+  // Withdrawing drops any completion record (seat no longer counts, not completed).
+  if (withdrawn) await supabase.from("certification_records").delete().eq("enrollment_id", enrollmentId);
+
+  revalidatePath("/unit/learners");
 }
 
 export async function revealNationalId(unitIdArg: string, learnerId: string): Promise<string> {
