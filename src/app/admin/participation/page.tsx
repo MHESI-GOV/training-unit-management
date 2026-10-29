@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
 import { ROUND_STATUS_LABEL } from "@/lib/labels";
 import { formatFiscalYear, thaiFiscalYear } from "@/lib/fiscal-year";
+import { formatThaiDate } from "@/lib/date-format";
 import { OpenRoundDialog } from "./open-round-dialog";
 import { resendNotice, setRoundStatus } from "./actions";
 
@@ -68,7 +69,7 @@ export default async function ParticipationPage() {
                       {ROUND_STATUS_LABEL[r.status]}
                     </span>
                     {r.deadline && (
-                      <p className="footnote" style={{ marginTop: 6 }}>กำหนดยืนยันภายใน {r.deadline}</p>
+                      <p className="footnote" style={{ marginTop: 6 }}>กำหนดยืนยันภายใน {formatThaiDate(r.deadline)}</p>
                     )}
                   </div>
                   <div style={{ textAlign: "right" }}>

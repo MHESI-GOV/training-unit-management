@@ -27,10 +27,11 @@ export const REGION_COLOR: Record<string, string> = {
   bangkok: "#e87ba4",
 };
 
+// เพศมีแค่ 2 ตัวเลือก (ชาย/หญิง) — เลิกใช้ "อื่นๆ" ทั้งในฟอร์ม/นำเข้า/แดชบอร์ด
+// (ค่า 'other' ยังคงอยู่ใน enum gender_type ของ DB แต่ไม่ถูกใช้งานแล้ว)
 export const GENDER_LABEL: Record<string, string> = {
   male: "ชาย",
   female: "หญิง",
-  other: "อื่นๆ",
 };
 
 // สถานะการเป็นผู้ทดสอบมาตรฐานฝีมือแรงงานของวิทยากร

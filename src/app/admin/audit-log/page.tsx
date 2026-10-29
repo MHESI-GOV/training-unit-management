@@ -1,6 +1,7 @@
 import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
+import { formatThaiDateTime } from "@/lib/date-format";
 
 export default async function AuditLogPage() {
   const profile = await requireWebMaster();
@@ -35,7 +36,7 @@ export default async function AuditLogPage() {
           <tbody>
             {(logs ?? []).map((log) => (
               <tr key={log.log_id}>
-                <td>{new Date(log.occurred_at).toLocaleString("th-TH")}</td>
+                <td>{formatThaiDateTime(log.occurred_at)}</td>
                 <td>{log.profiles?.display_name ?? "—"}</td>
                 <td>{log.action}</td>
                 <td>{log.entity_type}</td>

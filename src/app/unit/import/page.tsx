@@ -2,6 +2,7 @@ import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
+import { formatThaiDate } from "@/lib/date-format";
 import { ImportClient } from "./import-client";
 import { LearnerForm } from "../learners/learner-form";
 
@@ -22,7 +23,7 @@ export default async function UnitImportPage({
 
   const classList = (classes ?? []).map((c) => ({
     class_id: c.class_id,
-    label: `${c.courses?.name ?? "—"} (${c.start_date})`,
+    label: `${c.courses?.name ?? "—"} (${formatThaiDate(c.start_date)})`,
   }));
 
   const selected = class_id ? classList.find((c) => c.class_id === class_id) : undefined;

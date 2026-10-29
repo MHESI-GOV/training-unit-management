@@ -1,20 +1,26 @@
 "use server";
 
-import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { readUploadedRows } from "@/lib/import-file";
 
 export type InstructorState = { error?: string; success?: string };
 
-type Gender = "male" | "female" | "other";
+type Gender = "male" | "female";
 type TesterStatus = "none" | "level_1" | "level_2";
 
 function parseGender(v: string | null): Gender | null {
-  return v === "male" || v === "female" || v === "other" ? v : null;
+  return v === "male" || v === "female" ? v : null;
 }
 function parseTesterStatus(v: string | null): TesterStatus {
   return v === "level_1" || v === "level_2" ? v : "none";
+}
+// Train-the-Trainer pass flag. Form sends "true"/"false" (select) or "on" (checkbox);
+// CSV accepts true/false/1/0/ผ่าน/ไม่ผ่าน. Anything unrecognized → not passed.
+function parsePassedTtt(v: string | null): boolean {
+  const s = (v ?? "").trim().toLowerCase();
+  return s === "true" || s === "on" || s === "1" || s === "yes" || s === "ผ่าน";
 }
 
 // Find an existing library instructor in this unit matching phone+email (the per-unit dedup key).
@@ -39,6 +45,7 @@ export async function createInstructor(_prev: InstructorState, formData: FormDat
   const gender = parseGender(formData.get("gender")?.toString() ?? null);
   const affiliation = String(formData.get("affiliation") ?? "").trim() || null;
   const testerStatus = parseTesterStatus(formData.get("tester_status")?.toString() ?? null);
+  const passedTtt = parsePassedTtt(formData.get("passed_ttt")?.toString() ?? null);
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
 
@@ -55,6 +62,7 @@ export async function createInstructor(_prev: InstructorState, formData: FormDat
     gender,
     affiliation,
     tester_status: testerStatus,
+    passed_ttt: passedTtt,
     phone,
     email,
     unit_id: unitId,
@@ -73,6 +81,7 @@ export async function updateInstructor(_prev: InstructorState, formData: FormDat
   const gender = parseGender(formData.get("gender")?.toString() ?? null);
   const affiliation = String(formData.get("affiliation") ?? "").trim() || null;
   const testerStatus = parseTesterStatus(formData.get("tester_status")?.toString() ?? null);
+  const passedTtt = parsePassedTtt(formData.get("passed_ttt")?.toString() ?? null);
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const email = String(formData.get("email") ?? "").trim() || null;
 
@@ -89,7 +98,7 @@ export async function updateInstructor(_prev: InstructorState, formData: FormDat
 
   const { error } = await supabase
     .from("instructors")
-    .update({ first_name: firstName, last_name: lastName, gender, affiliation, tester_status: testerStatus, phone, email })
+    .update({ first_name: firstName, last_name: lastName, gender, affiliation, tester_status: testerStatus, passed_ttt: passedTtt, phone, email })
     .eq("instructor_id", instructorId);
   if (error) return { error: `บันทึกไม่สำเร็จ: ${error.message}` };
 
@@ -133,6 +142,7 @@ export type InstructorPreviewRow = {
   gender: string;
   affiliation: string;
   tester_status: string;
+  passed_ttt: string;
   phone: string;
   email: string;
   status: "pass" | "fail";
@@ -152,22 +162,23 @@ export async function previewInstructorImport(
 ): Promise<InstructorPreviewState> {
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "กรุณาเลือกไฟล์ CSV" };
+  if (!(file instanceof File) || file.size === 0) return { error: "กรุณาเลือกไฟล์ CSV หรือ Excel (.xlsx)" };
 
-  const parsed = Papa.parse<Record<string, string>>(await file.text(), { header: true, skipEmptyLines: true });
-  if (parsed.errors.length > 0) return { error: `อ่านไฟล์ไม่สำเร็จ: ${parsed.errors[0].message}` };
+  const { rows: data, error: readErr } = await readUploadedRows(file);
+  if (readErr || !data) return { error: readErr ?? "อ่านไฟล์ไม่สำเร็จ" };
 
   const supabase = await createClient();
   const seen = new Set<string>();
   const rows: InstructorPreviewRow[] = [];
 
-  for (let i = 0; i < parsed.data.length; i++) {
-    const r = parsed.data[i];
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
     const firstName = (r.first_name ?? "").trim();
     const lastName = (r.last_name ?? "").trim();
     const genderRaw = (r.gender ?? "").trim();
     const affiliation = (r.affiliation ?? "").trim();
     const testerRaw = (r.tester_status ?? "").trim();
+    const passedTttRaw = (r.passed_ttt ?? "").trim();
     const phone = (r.phone ?? "").trim();
     const email = (r.email ?? "").trim();
     let status: "pass" | "fail" = "pass";
@@ -179,7 +190,7 @@ export async function previewInstructorImport(
       reason = "ขาดชื่อวิทยากร";
     } else if (genderRaw && !parseGender(genderRaw)) {
       status = "fail";
-      reason = "gender ต้องเป็น male / female / other";
+      reason = "gender ต้องเป็น male / female";
     } else if (testerRaw && testerRaw !== "none" && !parseTesterStatus(testerRaw)) {
       status = "fail";
       reason = "tester_status ต้องเป็น none / level_1 / level_2";
@@ -198,6 +209,7 @@ export async function previewInstructorImport(
       gender: genderRaw,
       affiliation,
       tester_status: testerRaw,
+      passed_ttt: passedTttRaw,
       phone,
       email,
       status,
@@ -232,6 +244,7 @@ export async function commitInstructorImport(
     gender: parseGender(r.gender),
     affiliation: r.affiliation || null,
     tester_status: parseTesterStatus(r.tester_status),
+    passed_ttt: parsePassedTtt(r.passed_ttt),
     phone: r.phone || null,
     email: r.email || null,
     unit_id: unitId,

@@ -23,6 +23,7 @@ export type InstructorRow = {
   gender: string | null;
   affiliation: string | null;
   tester_status: string;
+  passed_ttt: boolean;
   phone: string | null;
   email: string | null;
   teacher_code: string | null;
@@ -60,7 +61,7 @@ export function InstructorsManager({ unitId, instructors }: { unitId: string; in
         <span className="footnote" style={{ marginRight: "auto" }}>
           {filtered.length} / {instructors.length} คน
         </span>
-        <button className="btn secondary" onClick={() => setCsvOpen(true)}>นำเข้า CSV</button>
+        <button className="btn secondary" onClick={() => setCsvOpen(true)}>นำเข้าไฟล์</button>
         <button className="btn primary" onClick={() => setAddOpen(true)}>+ เพิ่มวิทยากร</button>
       </div>
 
@@ -78,6 +79,7 @@ export function InstructorsManager({ unitId, instructors }: { unitId: string; in
                 <th>เบอร์โทร</th>
                 <th>อีเมล</th>
                 <th>ผู้ทดสอบมาตรฐานฝีมือแรงงาน</th>
+                <th>Train the Trainer</th>
                 <th>สอนในชั้นเรียน</th>
                 <th></th>
               </tr>
@@ -92,6 +94,11 @@ export function InstructorsManager({ unitId, instructors }: { unitId: string; in
                   <td>{i.phone ?? "—"}</td>
                   <td>{i.email ?? "—"}</td>
                   <td>{INSTRUCTOR_TESTER_STATUS_LABEL[i.tester_status] ?? "—"}</td>
+                  <td>
+                    <span className={`pill ${i.passed_ttt ? "done" : "fail"}`}>
+                      {i.passed_ttt ? "ผ่าน" : "ไม่ผ่าน"}
+                    </span>
+                  </td>
                   <td>{i.class_count} ชั้นเรียน</td>
                   <td>
                     <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -174,6 +181,13 @@ function InstructorForm({ unitId, edit, onDone }: { unitId: string; edit?: Instr
           ))}
         </select>
       </label>
+      <label>
+        <span className="field-label">ผ่านการอบรม Train the Trainer</span>
+        <select name="passed_ttt" defaultValue={edit?.passed_ttt ? "true" : "false"} className="field">
+          <option value="false">ยังไม่ผ่าน</option>
+          <option value="true">ผ่าน</option>
+        </select>
+      </label>
       <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : edit ? "บันทึกการแก้ไข" : "เพิ่มวิทยากร"}
       </button>
@@ -236,19 +250,20 @@ function InstructorCsv({ unitId }: { unitId: string }) {
         specs={[
           { field: "first_name", type: "ข้อความ", required: true, note: "ชื่อ" },
           { field: "last_name", type: "ข้อความ", required: false, note: "นามสกุล" },
-          { field: "gender", type: "รหัส", required: false, note: "male / female / other" },
+          { field: "gender", type: "รหัส", required: false, note: "male / female" },
           { field: "affiliation", type: "ข้อความ", required: false, note: "สังกัด" },
           { field: "tester_status", type: "รหัส", required: false, note: "none / level_1 / level_2 (ผู้ทดสอบมาตรฐานฝีมือแรงงาน)" },
+          { field: "passed_ttt", type: "รหัส", required: false, note: "ผ่าน Train the Trainer: true/false หรือ ผ่าน/ไม่ผ่าน (ว่าง = ยังไม่ผ่าน)" },
           { field: "phone", type: "ข้อความ (ตัวเลข)", required: false, note: "เบอร์โทร" },
           { field: "email", type: "ข้อความ (อีเมล)", required: false },
         ]}
       />
-      <a href="/api/import-template/instructors" className="footnote">ดาวน์โหลดเทมเพลต CSV</a>
+      <a href="/api/import-template/instructors" className="footnote">ดาวน์โหลดเทมเพลต (.xlsx มี dropdown)</a>
 
       {!preview.rows ? (
         <form action={previewAction} style={{ display: "grid", gap: 10 }}>
           <input type="hidden" name="unit_id" value={unitId} />
-          <input name="file" type="file" accept=".csv" required className="field" />
+          <input name="file" type="file" accept=".csv,.xlsx" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>
             {previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}
           </button>

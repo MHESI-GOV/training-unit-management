@@ -20,9 +20,9 @@ export type LearnerFormState = { error?: string; success?: string };
 const NATIONAL_ID_RE = /^\d{13}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-type Gender = "male" | "female" | "other";
+type Gender = "male" | "female";
 function parseGender(v: string | null): Gender | null {
-  return v === "male" || v === "female" || v === "other" ? v : null;
+  return v === "male" || v === "female" ? v : null;
 }
 
 export async function createLearner(

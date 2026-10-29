@@ -2,6 +2,7 @@ import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppShell } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/labels";
+import { formatThaiDateTime } from "@/lib/date-format";
 import { GenerateUserDialog } from "./generate-user-dialog";
 import { AccountRow } from "./account-admin";
 import { approveEmailChange, rejectEmailChange } from "./actions";
@@ -46,7 +47,7 @@ export default async function UserManagementPage() {
                   <p className="footnote">
                     {r.current_email} → <strong>{r.requested_email}</strong>
                   </p>
-                  <p className="footnote">ส่งเมื่อ {new Date(r.requested_at).toLocaleString("th-TH")}</p>
+                  <p className="footnote">ส่งเมื่อ {formatThaiDateTime(r.requested_at)}</p>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 10 }}>
                     <form action={approveEmailChange}>
                       <input type="hidden" name="request_id" value={r.request_id} />

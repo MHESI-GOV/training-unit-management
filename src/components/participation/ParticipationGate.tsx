@@ -1,4 +1,5 @@
 import { formatFiscalYear } from "@/lib/fiscal-year";
+import { formatThaiDate } from "@/lib/date-format";
 import type { PendingParticipation } from "@/lib/participation";
 import { respondParticipation } from "@/app/unit/participation/actions";
 
@@ -37,7 +38,7 @@ export function ParticipationGate({ pending }: { pending: PendingParticipation }
           <p style={{ marginTop: 10 }}>{pending.notice_message}</p>
         )}
         {pending.deadline && (
-          <p className="footnote" style={{ marginTop: 10 }}>กำหนดยืนยันภายใน {pending.deadline}</p>
+          <p className="footnote" style={{ marginTop: 10 }}>กำหนดยืนยันภายใน {formatThaiDate(pending.deadline)}</p>
         )}
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>

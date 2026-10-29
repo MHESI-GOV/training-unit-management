@@ -1,15 +1,22 @@
-import { toCsv } from "@/lib/csv";
+import { buildXlsxTemplate } from "@/lib/xlsx-template";
 
 export async function GET() {
-  const csv = toCsv([
-    ["first_name", "last_name", "national_id", "birth_date", "phone", "email", "address"],
-    ["สมชาย", "ใจดี", "1234567890123", "1990-05-21", "0812345678", "somchai@example.com", "123 ถ.ตัวอย่าง"],
+  const buf = await buildXlsxTemplate([
+    { header: "first_name", example: "สมชาย" },
+    { header: "last_name", example: "ใจดี" },
+    { header: "national_id", example: "1234567890123" },
+    { header: "birth_date", example: "1990-05-21" },
+    { header: "gender", example: "male", options: ["male", "female"] },
+    { header: "occupation", example: "พ่อครัว/แม่ครัว" },
+    { header: "phone", example: "0812345678" },
+    { header: "email", example: "somchai@example.com" },
+    { header: "address", example: "123 ถ.ตัวอย่าง" },
   ]);
 
-  return new Response(csv, {
+  return new Response(buf as BodyInit, {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="learner_import_template.csv"',
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": 'attachment; filename="learner_import_template.xlsx"',
     },
   });
 }

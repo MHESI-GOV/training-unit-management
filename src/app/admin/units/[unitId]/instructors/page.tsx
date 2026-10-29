@@ -14,7 +14,7 @@ export default async function UnitSheetInstructors({
   const [{ data: instructors }, unit] = await Promise.all([
     supabase
       .from("instructors")
-      .select("instructor_id, first_name, last_name, name, gender, affiliation, tester_status, phone, email, instructor_seq, class_instructors(count)")
+      .select("instructor_id, first_name, last_name, name, gender, affiliation, tester_status, passed_ttt, phone, email, instructor_seq, class_instructors(count)")
       .eq("unit_id", unitId)
       .order("instructor_seq"),
     fetchUnitCode(supabase, unitId),
@@ -28,6 +28,7 @@ export default async function UnitSheetInstructors({
     gender: i.gender,
     affiliation: i.affiliation,
     tester_status: i.tester_status,
+    passed_ttt: i.passed_ttt,
     phone: i.phone,
     email: i.email,
     teacher_code: teacherCode(unit.code, i.instructor_seq),

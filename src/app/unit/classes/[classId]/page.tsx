@@ -8,6 +8,7 @@ import { fetchUnitCode } from "@/lib/unit-code";
 import { studentCode, classCode } from "@/lib/id-codes";
 import { CLASS_MODE_LABEL, ASSESSMENT_STANDARD_LABEL } from "@/lib/labels";
 import { classStatusDisplay } from "@/lib/class-status";
+import { formatThaiDate } from "@/lib/date-format";
 import { AppShell } from "@/components/layout/AppShell";
 import { ClassHeaderClient } from "./class-header";
 import { ClassInstructorsClient, type ClassInstructorRow, type LibraryInstructor } from "./class-instructors";
@@ -145,7 +146,7 @@ export default async function ClassDetailPage({
         </div>
         <dl className="detail-grid">
           <div><dt>รหัสชั้นเรียน</dt><dd style={{ fontVariantNumeric: "tabular-nums" }}>{classCode(unitCodeInfo.code, cls.batch_code) ?? cls.batch_code ?? "—"}</dd></div>
-          <div><dt>ช่วงวันที่</dt><dd>{cls.start_date} – {cls.end_date}</dd></div>
+          <div><dt>ช่วงวันที่</dt><dd>{formatThaiDate(cls.start_date)} – {formatThaiDate(cls.end_date)}</dd></div>
           <div><dt>เวลาเรียน</dt><dd>{cls.schedule_time ?? "—"}</dd></div>
           <div><dt>รูปแบบการเรียน</dt><dd>{cls.mode ? CLASS_MODE_LABEL[cls.mode] ?? cls.mode : "—"}</dd></div>
           <div><dt>จำนวนที่รองรับ</dt><dd>{learners.filter((l) => l.status !== "withdrawn").length}/{cls.seat_count} คน <span className="footnote">(ไม่รวมผู้ถอนตัว)</span></dd></div>

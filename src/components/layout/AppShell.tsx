@@ -36,7 +36,6 @@ function navForProfile(profile: Profile | null): NavItem[] {
       { href: "/unit/learners", label: "ผู้เรียน (ค้นหา/รายงาน)", icon: <UsersRound size={17} />, id: "learners" },
       { href: "/unit/instructors", label: "คลังวิทยากร", icon: <GraduationCap size={17} />, id: "instructors" },
       { href: "/unit/participation", label: "ยืนยันการเข้าร่วมปีงบ", icon: <CalendarCheck size={17} />, id: "participation" },
-      { href: "/unit/testing-center", label: "สถานะศูนย์ทดสอบมาตรฐาน", icon: <ClipboardList size={17} />, id: "testing-center" },
       { href: "/courses", label: "หลักสูตร", icon: <BookOpen size={17} />, id: "courses" },
     ];
   }
@@ -67,16 +66,31 @@ export async function AppShell({
   children,
   eyebrow,
   title,
+  unitName,
 }: {
   profile: Profile | null;
   active?: string;
   children: React.ReactNode;
   eyebrow: string;
   title: string;
+  // Name of the training unit this page is operating within, shown as a prominent bar so it is
+  // always clear which unit you are working in. If omitted, it is auto-derived from a Unit
+  // Coordinator's own unit_scope (covers every /unit/* page with no per-page wiring).
+  unitName?: string | null;
 }) {
   const navItems = navForProfile(profile);
   const email = profile ? (await getCurrentProfile()).email : null;
   const avatarUrl = profile ? await getAvatarUrl(profile.avatar_path) : null;
+
+  let currentUnitName: string | null = unitName ?? null;
+  if (!currentUnitName && profile?.role === "unit_coordinator" && profile.unit_scope) {
+    const { data: unit } = await (await createClient())
+      .from("training_units")
+      .select("name")
+      .eq("unit_id", profile.unit_scope)
+      .maybeSingle();
+    currentUnitName = unit?.name ?? null;
+  }
 
   // Force the fiscal-year participation popup before any other function: once Web Master opens a
   // round, a Unit Coordinator with an unanswered invite is gated on EVERY page until they respond.
@@ -114,9 +128,18 @@ export async function AppShell({
       <div className="content-col">
         <header className="topbar">
           <div className="topbar-row">
-            <div>
-              {eyebrow ? <p className="topbar-label">{eyebrow}</p> : null}
-              <strong className="topbar-title">{title}</strong>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+              {currentUnitName && (
+                <Building2 size={22} style={{ flex: "0 0 auto", color: "var(--accent, #1d4f82)" }} />
+              )}
+              <div style={{ minWidth: 0 }}>
+                {(currentUnitName ? "หน่วยฝึกอบรมปัจจุบัน" : eyebrow) ? (
+                  <p className="topbar-label">{currentUnitName ? "หน่วยฝึกอบรมปัจจุบัน" : eyebrow}</p>
+                ) : null}
+                <strong className="topbar-title" title={currentUnitName ?? undefined}>
+                  {currentUnitName ?? title}
+                </strong>
+              </div>
             </div>
             {profile ? (
               <ProfileMenu
@@ -129,6 +152,12 @@ export async function AppShell({
               <LoginTrigger />
             )}
           </div>
+          {currentUnitName && (
+            <div className="topbar-unit">
+              <span className="topbar-unit-label">เมนูที่กำลังใช้งาน</span>
+              <strong className="topbar-unit-name">{title}</strong>
+            </div>
+          )}
         </header>
         <main className="page">{children}</main>
       </div>

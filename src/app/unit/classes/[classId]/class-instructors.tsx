@@ -67,7 +67,7 @@ export function ClassInstructorsClient({
         <div className="sheet-tabs" style={{ marginBottom: 14 }}>
           <button className={`sheet-tab ${tab === "library" ? "active" : ""}`} onClick={() => setTab("library")}>เลือกจากคลัง</button>
           <button className={`sheet-tab ${tab === "new" ? "active" : ""}`} onClick={() => setTab("new")}>เพิ่มคนใหม่</button>
-          <button className={`sheet-tab ${tab === "csv" ? "active" : ""}`} onClick={() => setTab("csv")}>นำเข้า CSV</button>
+          <button className={`sheet-tab ${tab === "csv" ? "active" : ""}`} onClick={() => setTab("csv")}>นำเข้าไฟล์</button>
         </div>
         {tab === "library" && (
           <FromLibrary unitId={unitId} classId={classId} library={library} onDone={() => { setOpen(false); router.refresh(); }} />
@@ -162,18 +162,18 @@ function InstructorCsvToClass({ unitId, classId, onDone }: { unitId: string; cla
         specs={[
           { field: "first_name", type: "ข้อความ", required: true, note: "ชื่อ" },
           { field: "last_name", type: "ข้อความ", required: false, note: "นามสกุล" },
-          { field: "gender", type: "รหัส", required: false, note: "male / female / other" },
+          { field: "gender", type: "รหัส", required: false, note: "male / female" },
           { field: "affiliation", type: "ข้อความ", required: false, note: "สังกัด" },
           { field: "tester_status", type: "รหัส", required: false, note: "none / level_1 / level_2" },
           { field: "phone", type: "ข้อความ (ตัวเลข)", required: false },
           { field: "email", type: "ข้อความ (อีเมล)", required: false },
         ]}
       />
-      <a href="/api/import-template/instructors" className="footnote">ดาวน์โหลดเทมเพลต CSV</a>
+      <a href="/api/import-template/instructors" className="footnote">ดาวน์โหลดเทมเพลต (.xlsx มี dropdown)</a>
       {!preview.rows ? (
         <form action={previewAction} style={{ display: "grid", gap: 10 }}>
           <input type="hidden" name="unit_id" value={unitId} />
-          <input name="file" type="file" accept=".csv" required className="field" />
+          <input name="file" type="file" accept=".csv,.xlsx" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>{previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}</button>
           {preview.error && <p className="notice error">{preview.error}</p>}
         </form>

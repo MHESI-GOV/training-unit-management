@@ -10,6 +10,7 @@ export function DonutChart({
   stroke = 30,
   onSliceClick,
   activeKey,
+  legendPosition = "side",
 }: {
   slices: DonutSlice[];
   centerLabel: string;
@@ -19,7 +20,10 @@ export function DonutChart({
   // currently-selected one.
   onSliceClick?: (key: string) => void;
   activeKey?: string | null;
+  // "side" (default) = legend to the right of the donut; "below" = legend stacked under it (centred).
+  legendPosition?: "side" | "below";
 }) {
+  const below = legendPosition === "below";
   const total = slices.reduce((s, x) => s + x.value, 0);
   const r = (size - stroke) / 2;
   const cx = size / 2;
@@ -36,7 +40,13 @@ export function DonutChart({
   });
 
   return (
-    <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+    <div
+      style={
+        below
+          ? { display: "flex", flexDirection: "column", gap: 18, alignItems: "center" }
+          : { display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }
+      }
+    >
       <svg
         width={size}
         height={size}
@@ -72,7 +82,13 @@ export function DonutChart({
         </text>
       </svg>
 
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 12, flex: "1 1 200px", minWidth: 190 }}>
+      <ul
+        style={
+          below
+            ? { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 10, width: "100%", maxWidth: 340 }
+            : { listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 12, flex: "1 1 200px", minWidth: 190 }
+        }
+      >
         {slices.map((s) => {
           const pct = total > 0 ? Math.round((s.value / total) * 1000) / 10 : 0;
           const active = activeKey === s.key;

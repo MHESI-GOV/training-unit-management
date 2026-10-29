@@ -6,6 +6,7 @@ import { Pencil } from "lucide-react";
 import { Popup } from "@/components/ui/Popup";
 import { FieldSpecTable } from "@/components/ui/FieldSpec";
 import { GENDER_LABEL } from "@/lib/labels";
+import { formatThaiDate } from "@/lib/date-format";
 import { RevealIdButton } from "../../learners/reveal-id-button";
 import { LearnerForm, type LearnerEdit } from "../../learners/learner-form";
 import { submitClassResults, setEnrollmentWithdrawn, type ClassResultRow } from "../../learners/actions";
@@ -134,7 +135,7 @@ export function ClassLearnersClient({
                       <RevealIdButton unitId={unitId} learnerId={l.learner_id} />
                     </div>
                   </td>
-                  <td style={{ whiteSpace: "nowrap" }}>{l.birth_date ?? "—"}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatThaiDate(l.birth_date)}</td>
                   <td>{l.age === null ? "—" : `${l.age} ปี`}</td>
                   <td>{l.email ?? "—"}</td>
                   <td style={{ maxWidth: 220 }}>{l.address ?? "—"}</td>
@@ -227,7 +228,7 @@ export function ClassLearnersClient({
       <Popup open={addOpen} onClose={() => setAddOpen(false)} title={`เพิ่มผู้เรียนลงชั้นเรียน ${classLabel}`} maxWidth={620}>
         <div className="sheet-tabs" style={{ marginBottom: 14 }}>
           <button className={`sheet-tab ${addTab === "single" ? "active" : ""}`} onClick={() => setAddTab("single")}>เพิ่มทีละคน</button>
-          <button className={`sheet-tab ${addTab === "csv" ? "active" : ""}`} onClick={() => setAddTab("csv")}>นำเข้า CSV</button>
+          <button className={`sheet-tab ${addTab === "csv" ? "active" : ""}`} onClick={() => setAddTab("csv")}>นำเข้าไฟล์</button>
         </div>
         {addTab === "single" ? (
           <LearnerForm unitId={unitId} classId={classId} />
@@ -238,7 +239,7 @@ export function ClassLearnersClient({
                 { field: "first_name", type: "ข้อความ", required: true },
                 { field: "last_name", type: "ข้อความ", required: true },
                 { field: "national_id", type: "ตัวเลข 13 หลัก", required: true, note: "ไม่ซ้ำทั้งระบบ" },
-                { field: "birth_date", type: "วันที่ YYYY-MM-DD", required: false, note: "ใช้คำนวณอายุ" },
+                { field: "birth_date", type: "วันที่ YYYY-MM-DD (ค.ศ.)", required: false, note: "ใช้คำนวณอายุ" },
                 { field: "phone", type: "ข้อความ", required: false },
                 { field: "email", type: "ข้อความ (อีเมล)", required: false },
                 { field: "address", type: "ข้อความ", required: false },
@@ -332,15 +333,15 @@ function AssessmentCsv({ unitId, onDone }: { unitId: string; onDone: () => void 
           { field: "national_id", type: "ตัวเลข 13 หลัก", required: true, note: "ต้องมีผู้เรียนนี้ในหน่วยแล้ว" },
           { field: "standard_type", type: "รหัส", required: true, note: "dsd_l1 / anamai_food_handler / anamai_food_contact / professional_qualification / other" },
           { field: "result", type: "รหัส", required: true, note: "passed / failed / pending" },
-          { field: "tested_at", type: "วันที่ YYYY-MM-DD", required: false },
+          { field: "tested_at", type: "วันที่ YYYY-MM-DD (ค.ศ.)", required: false },
           { field: "evidence_ref", type: "ข้อความ", required: false },
         ]}
       />
-      <a href="/api/import-template/assessments" className="footnote">ดาวน์โหลดเทมเพลต CSV</a>
+      <a href="/api/import-template/assessments" className="footnote">ดาวน์โหลดเทมเพลต (.xlsx มี dropdown)</a>
       {!preview.rows ? (
         <form action={previewAction} style={{ display: "grid", gap: 10 }}>
           <input type="hidden" name="unit_id" value={unitId} />
-          <input name="file" type="file" accept=".csv" required className="field" />
+          <input name="file" type="file" accept=".csv,.xlsx" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>{previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}</button>
           {preview.error && <p className="notice error">{preview.error}</p>}
         </form>

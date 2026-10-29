@@ -1,6 +1,7 @@
 import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
+import { formatThaiDateTime } from "@/lib/date-format";
 import { CheckNowButton } from "./check-now-button";
 import { DeleteOrphanButton } from "./delete-orphan-button";
 
@@ -30,7 +31,7 @@ export default async function StorageAuditPage() {
       {report && (
         <div className="card" style={{ marginTop: 16 }}>
           <p>
-            ตรวจสอบล่าสุด: {new Date(report.checked_at).toLocaleString("th-TH")} — พบไฟล์กำพร้า{" "}
+            ตรวจสอบล่าสุด: {formatThaiDateTime(report.checked_at)} — พบไฟล์กำพร้า{" "}
             <strong>{report.orphan_count}</strong> ไฟล์
           </p>
 

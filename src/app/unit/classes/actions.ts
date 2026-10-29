@@ -312,7 +312,7 @@ export async function commitClassInstructorImport(
   const rows: CsvRow[] = JSON.parse(String(formData.get("rows") ?? "[]")).filter(
     (r: { status: string }) => r.status === "pass",
   );
-  const asGender = (v: string) => (v === "male" || v === "female" || v === "other" ? v : null);
+  const asGender = (v: string) => (v === "male" || v === "female" ? v : null);
   const asTester = (v: string) => (v === "level_1" || v === "level_2" ? v : "none");
   if (!classId) return { error: "ไม่พบชั้นเรียน" };
   if (rows.length === 0) return { error: "ไม่มีแถวที่ผ่านการตรวจสอบให้นำเข้า" };

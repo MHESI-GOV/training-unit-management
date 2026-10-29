@@ -1,9 +1,9 @@
 "use server";
 
-import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { readUploadedRows } from "@/lib/import-file";
 import { hashNationalId } from "@/lib/crypto/national-id";
 import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
 import type { Database } from "@/lib/supabase/database.types";
@@ -44,20 +44,17 @@ export async function previewAssessmentImport(
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "กรุณาเลือกไฟล์ CSV" };
+    return { error: "กรุณาเลือกไฟล์ CSV หรือ Excel (.xlsx)" };
   }
 
-  const text = await file.text();
-  const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
-  if (parsed.errors.length > 0) {
-    return { error: `อ่านไฟล์ไม่สำเร็จ: ${parsed.errors[0].message}` };
-  }
+  const { rows: data, error: readErr } = await readUploadedRows(file);
+  if (readErr || !data) return { error: readErr ?? "อ่านไฟล์ไม่สำเร็จ" };
 
   const supabase = await createClient();
   const rows: PreviewRow[] = [];
 
-  for (let i = 0; i < parsed.data.length; i++) {
-    const r = parsed.data[i];
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
     const rowNumber = i + 2;
     const nationalId = (r.national_id ?? "").trim();
     const standardType = (r.standard_type ?? "").trim();

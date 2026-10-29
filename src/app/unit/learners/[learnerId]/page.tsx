@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
 import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
 import { formatAge } from "@/lib/age";
+import { formatThaiDate } from "@/lib/date-format";
 import { learnerStatusDisplay } from "@/lib/learner-status";
 import { AppShell } from "@/components/layout/AppShell";
 import { RevealIdButton } from "../reveal-id-button";
@@ -51,7 +52,7 @@ export default async function LearnerDetailPage({
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>ข้อมูลส่วนตัว</h2>
         <dl className="detail-grid">
           <div><dt>อายุ</dt><dd>{formatAge(learner.birth_date)}</dd></div>
-          <div><dt>วันเกิด</dt><dd>{learner.birth_date ?? "—"}</dd></div>
+          <div><dt>วันเกิด</dt><dd>{formatThaiDate(learner.birth_date)}</dd></div>
           <div><dt>เบอร์โทร</dt><dd>{learner.phone ?? "—"}</dd></div>
           <div><dt>อีเมล</dt><dd>{learner.email ?? "—"}</dd></div>
           <div style={{ gridColumn: "1 / -1" }}><dt>ที่อยู่</dt><dd>{learner.address ?? "—"}</dd></div>
@@ -72,7 +73,7 @@ export default async function LearnerDetailPage({
               <div key={e.enrollment_id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span className={`pill ${ls.pill}`}>{ls.label}</span>
                 <span style={{ fontSize: 14 }}>
-                  {e.classes?.batch_code ? `${e.classes.batch_code} · ` : ""}{e.classes?.courses?.name} ({e.classes?.start_date})
+                  {e.classes?.batch_code ? `${e.classes.batch_code} · ` : ""}{e.classes?.courses?.name} ({formatThaiDate(e.classes?.start_date)})
                 </span>
               </div>
             );
@@ -89,7 +90,7 @@ export default async function LearnerDetailPage({
               className={`pill ${a.result === "passed" ? "done" : a.result === "failed" ? "fail" : "pending"}`}
             >
               {ASSESSMENT_STANDARD_LABEL[a.standard_type] ?? a.standard_type} — {ASSESSMENT_RESULT_LABEL[a.result] ?? a.result}
-              {a.tested_at && ` (${a.tested_at})`}
+              {a.tested_at && ` (${formatThaiDate(a.tested_at)})`}
             </span>
           ))}
           {(learner.assessment_results ?? []).length === 0 && <span className="pill muted">ยังไม่มีข้อมูล</span>}

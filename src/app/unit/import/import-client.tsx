@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { previewImport, commitImport, type PreviewState, type CommitState } from "./actions";
 import { StepIndicator } from "@/components/ui/StepIndicator";
+import { formatThaiDate } from "@/lib/date-format";
 
 const previewInitial: PreviewState = {};
 const commitInitial: CommitState = {};
@@ -47,9 +48,9 @@ export function ImportClient({
         <form action={previewAction} style={{ display: "grid", gap: 12 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <a href="/api/import-template/learners" className="footnote">
-            ดาวน์โหลดเทมเพลต CSV (มีคอลัมน์ birth_date สำหรับคำนวณอายุ)
+            ดาวน์โหลดเทมเพลต (.xlsx มี dropdown — ครบทุกคอลัมน์: ชื่อ-สกุล, เลขบัตร, วันเกิด, เพศ, อาชีพ, เบอร์, อีเมล, ที่อยู่)
           </a>
-          <input name="file" type="file" accept=".csv" required className="field" />
+          <input name="file" type="file" accept=".csv,.xlsx" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>
             {previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}
           </button>
@@ -74,6 +75,8 @@ export function ImportClient({
               <th>ชื่อ-นามสกุล</th>
               <th>เลขบัตร</th>
               <th>วันเกิด</th>
+              <th>เพศ</th>
+              <th>อาชีพ</th>
               <th>สถานะ</th>
               <th>สาเหตุ</th>
             </tr>
@@ -86,7 +89,9 @@ export function ImportClient({
                   {r.first_name} {r.last_name}
                 </td>
                 <td>{r.national_id}</td>
-                <td>{r.birth_date || "—"}</td>
+                <td>{formatThaiDate(r.birth_date)}</td>
+                <td>{r.gender || "—"}</td>
+                <td>{r.occupation || "—"}</td>
                 <td>
                   <span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>
                     {r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}

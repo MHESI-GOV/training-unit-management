@@ -46,9 +46,9 @@ export function ImportClient({ unitId }: { unitId: string }) {
         <form action={previewAction} style={{ display: "grid", gap: 12 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <a href="/api/import-template/assessments" className="footnote">
-            ดาวน์โหลดเทมเพลต CSV
+            ดาวน์โหลดเทมเพลต (.xlsx มี dropdown)
           </a>
-          <input name="file" type="file" accept=".csv" required className="field" />
+          <input name="file" type="file" accept=".csv,.xlsx" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>
             {previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}
           </button>

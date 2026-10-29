@@ -6,6 +6,9 @@ export type Overview = {
   total_units: number;
   units_by_region: Record<string, number>;
   units_by_type: Record<string, number>;
+  // หน่วยที่เป็น/ไม่เป็น "ศูนย์ทดสอบมาตรฐานฝีมือแรงงาน สาขาอาหาร" (จาก training_unit_profiles.is_food_testing_center).
+  // keys: "yes" | "no". Org-level unit counts (no PII) so never suppressed.
+  units_by_testing_center: Record<string, number>;
   total_learners: number | null;
   learners_by_region: Record<string, number | null>;
   cert_anamai_contact: number | null;
@@ -33,8 +36,9 @@ export type Overview = {
 export type PyramidBand = { band: string; male: number; female: number; other: number };
 export type Pyramid = PyramidBand[];
 
-// Active click-to-filter selections on the dashboard (region row / institution-type slice).
-export type DashFilters = { region: string | null; type: string | null };
+// Active click-to-filter selections on the dashboard (region row / institution-type slice /
+// testing-center slice). testing_center is "yes" | "no" | null.
+export type DashFilters = { region: string | null; type: string | null; testing_center: string | null };
 
 export const SUPPRESSED = "ข้อมูลน้อยเกินไปที่จะแสดงผลได้";
 

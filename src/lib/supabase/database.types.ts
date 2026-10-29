@@ -525,6 +525,7 @@ export type Database = {
           instructor_seq: number | null
           last_name: string
           name: string | null
+          passed_ttt: boolean
           phone: string | null
           tester_status: Database["public"]["Enums"]["instructor_tester_status"]
           unit_id: string | null
@@ -539,6 +540,7 @@ export type Database = {
           instructor_seq?: number | null
           last_name?: string
           name?: string | null
+          passed_ttt?: boolean
           phone?: string | null
           tester_status?: Database["public"]["Enums"]["instructor_tester_status"]
           unit_id?: string | null
@@ -553,6 +555,7 @@ export type Database = {
           instructor_seq?: number | null
           last_name?: string
           name?: string | null
+          passed_ttt?: boolean
           phone?: string | null
           tester_status?: Database["public"]["Enums"]["instructor_tester_status"]
           unit_id?: string | null
@@ -1152,6 +1155,7 @@ export type Database = {
         Args: {
           p_fiscal_year: number
           p_region: string
+          p_testing_center?: string
           p_unit_id: string
           p_unit_type: string
         }
@@ -1187,6 +1191,7 @@ export type Database = {
         Args: {
           p_fiscal_year?: number
           p_region?: string
+          p_testing_center?: string
           p_unit_id?: string
           p_unit_type?: string
         }
@@ -1196,9 +1201,14 @@ export type Database = {
         Args: {
           p_fiscal_year?: number
           p_region?: string
+          p_testing_center?: string
           p_unit_id?: string
           p_unit_type?: string
         }
+        Returns: Json
+      }
+      get_unit_map_cards: {
+        Args: never
         Returns: Json
       }
       get_participation_summary: {

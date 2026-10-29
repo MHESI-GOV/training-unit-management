@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
 import { PARTICIPATION_STATUS_LABEL, ROUND_STATUS_LABEL } from "@/lib/labels";
 import { formatFiscalYear } from "@/lib/fiscal-year";
+import { formatThaiDate, formatThaiDateTime } from "@/lib/date-format";
 import { respondParticipation } from "./actions";
 
 const STATUS_PILL: Record<string, string> = {
@@ -57,14 +58,14 @@ export default async function UnitParticipationPage() {
                     </span>
                   )}
                   {round?.deadline && roundOpen && (
-                    <p className="footnote" style={{ marginTop: 6 }}>กรุณายืนยันภายใน {round.deadline}</p>
+                    <p className="footnote" style={{ marginTop: 6 }}>กรุณายืนยันภายใน {formatThaiDate(round.deadline)}</p>
                   )}
                   {round?.notice_message && (
                     <p className="footnote" style={{ marginTop: 6 }}>{round.notice_message}</p>
                   )}
                   {row.responded_at && (
                     <p className="footnote" style={{ marginTop: 6 }}>
-                      ตอบเมื่อ {new Date(row.responded_at).toLocaleString("th-TH")}
+                      ตอบเมื่อ {formatThaiDateTime(row.responded_at)}
                     </p>
                   )}
                 </div>

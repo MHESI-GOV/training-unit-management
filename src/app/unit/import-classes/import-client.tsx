@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { previewClassImport, commitClassImport, type PreviewState, type CommitState } from "./actions";
 import { StepIndicator } from "@/components/ui/StepIndicator";
+import { formatThaiDate } from "@/lib/date-format";
 
 const previewInitial: PreviewState = {};
 const commitInitial: CommitState = {};
@@ -34,9 +35,9 @@ export function ImportClient({ unitId }: { unitId: string }) {
         <form action={previewAction} style={{ display: "grid", gap: 12 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <a href="/api/import-template/classes" className="footnote">
-            ดาวน์โหลดเทมเพลต CSV
+            ดาวน์โหลดเทมเพลต (.xlsx มี dropdown)
           </a>
-          <input name="file" type="file" accept=".csv" required className="field" />
+          <input name="file" type="file" accept=".csv,.xlsx" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>
             {previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}
           </button>
@@ -59,8 +60,12 @@ export function ImportClient({ unitId }: { unitId: string }) {
             <tr>
               <th>แถว</th>
               <th>หลักสูตร</th>
+              <th>ชื่อรุ่น</th>
               <th>วันที่</th>
+              <th>เวลาเรียน</th>
               <th>ที่นั่ง</th>
+              <th>รูปแบบ</th>
+              <th>สถานที่</th>
               <th>สถานะ</th>
               <th>สาเหตุ</th>
             </tr>
@@ -70,10 +75,14 @@ export function ImportClient({ unitId }: { unitId: string }) {
               <tr key={r.rowNumber}>
                 <td>{r.rowNumber}</td>
                 <td>{r.course_name}</td>
+                <td>{r.name || "—"}</td>
                 <td>
-                  {r.start_date} – {r.end_date}
+                  {formatThaiDate(r.start_date)} – {formatThaiDate(r.end_date)}
                 </td>
+                <td>{r.schedule_time || "—"}</td>
                 <td>{r.seat_count}</td>
+                <td>{r.mode || "—"}</td>
+                <td>{r.location || "—"}</td>
                 <td>
                   <span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>
                     {r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Popup } from "@/components/ui/Popup";
 import { FieldSpecTable } from "@/components/ui/FieldSpec";
 import { classStatusDisplay } from "@/lib/class-status";
+import { formatThaiDate } from "@/lib/date-format";
 import { type ConfirmedRound } from "@/lib/participation";
 import { ClassForm } from "./class-form";
 import {
@@ -101,7 +102,7 @@ export function ClassList({
                 {c.name ? ` · ${c.name}` : ""}
               </strong>
               <div className="footnote" style={{ marginTop: 3 }}>
-                {c.start_date} – {c.end_date}
+                {formatThaiDate(c.start_date)} – {formatThaiDate(c.end_date)}
                 {c.schedule_time ? ` · ${c.schedule_time}` : ""}
                 {c.lead_instructor_name ? ` · หัวหน้าผู้สอน: ${c.lead_instructor_name}` : ""}
               </div>
@@ -159,18 +160,23 @@ function ClassCsv({ unitId, fiscalYear, onImported }: { unitId: string; fiscalYe
       <FieldSpecTable
         specs={[
           { field: "course_name", type: "ข้อความ", required: true, note: "ต้องตรงกับชื่อหลักสูตรที่มีอยู่แล้ว" },
-          { field: "start_date", type: "วันที่ YYYY-MM-DD", required: true },
-          { field: "end_date", type: "วันที่ YYYY-MM-DD", required: true, note: "ต้องไม่น้อยกว่าวันเริ่ม" },
+          { field: "name", type: "ข้อความ", required: false, note: "ชื่อรุ่น เช่น รุ่นที่ 1/2569" },
+          { field: "start_date", type: "วันที่ YYYY-MM-DD (ค.ศ.)", required: true },
+          { field: "end_date", type: "วันที่ YYYY-MM-DD (ค.ศ.)", required: true, note: "ต้องไม่น้อยกว่าวันเริ่ม" },
+          { field: "schedule_time", type: "ข้อความ", required: false, note: "เวลาเรียน เช่น 09:00–16:00 จ.–ศ." },
           { field: "seat_count", type: "จำนวนเต็มบวก", required: true },
+          { field: "mode", type: "รหัส", required: false, note: "onsite / online / hybrid" },
+          { field: "location", type: "ข้อความ", required: false, note: "สถานที่/ห้องเรียน" },
+          { field: "note", type: "ข้อความ", required: false, note: "หมายเหตุ" },
           { field: "external_ref", type: "ข้อความ", required: false, note: "รหัสอ้างอิงเดิม (ถ้ามี)" },
         ]}
       />
-      <a href="/api/import-template/classes" className="footnote">ดาวน์โหลดเทมเพลต CSV</a>
+      <a href="/api/import-template/classes" className="footnote">ดาวน์โหลดเทมเพลต (.xlsx มี dropdown)</a>
 
       {!preview.rows ? (
         <form action={previewAction} style={{ display: "grid", gap: 10 }}>
           <input type="hidden" name="unit_id" value={unitId} />
-          <input name="file" type="file" accept=".csv" required className="field" />
+          <input name="file" type="file" accept=".csv,.xlsx" required className="field" />
           <button type="submit" className="btn primary" disabled={previewPending}>
             {previewPending ? "กำลังตรวจสอบ..." : "ตรวจสอบไฟล์"}
           </button>
@@ -187,7 +193,7 @@ function ClassCsv({ unitId, fiscalYear, onImported }: { unitId: string; fiscalYe
                   <tr key={r.rowNumber}>
                     <td>{r.rowNumber}</td>
                     <td>{r.course_name}</td>
-                    <td>{r.start_date}–{r.end_date}</td>
+                    <td>{formatThaiDate(r.start_date)}–{formatThaiDate(r.end_date)}</td>
                     <td><span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>{r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}</span></td>
                     <td>{r.reason ?? "—"}</td>
                   </tr>

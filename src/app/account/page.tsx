@@ -4,6 +4,7 @@ import { getAvatarUrl } from "@/lib/avatar";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/labels";
+import { formatThaiDateTime } from "@/lib/date-format";
 import { ChangePasswordForm, EmailChangeForm } from "./account-forms";
 import { AvatarUploader } from "./avatar-uploader";
 import { Collapsible } from "./collapsible";
@@ -66,7 +67,7 @@ export default async function AccountPage() {
             <div style={{ display: "grid", gap: 12 }}>
               <p className="pill pending">รออนุมัติ: {pending.requested_email}</p>
               <p className="footnote">
-                ส่งคำขอเมื่อ {new Date(pending.requested_at).toLocaleString("th-TH")} — รอผู้ดูแลระบบสูงสุดอนุมัติ
+                ส่งคำขอเมื่อ {formatThaiDateTime(pending.requested_at)} — รอผู้ดูแลระบบสูงสุดอนุมัติ
               </p>
               <form action={cancelEmailRequest}>
                 <input type="hidden" name="request_id" value={pending.request_id} />

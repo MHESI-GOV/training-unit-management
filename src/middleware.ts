@@ -6,13 +6,14 @@ const PUBLIC_PATHS = ["/login"];
 // Exact match only -- "/" must not use startsWith, since every path starts with "/".
 const PUBLIC_EXACT_PATHS = ["/"];
 const MFA_PATHS = ["/mfa/enroll", "/mfa/verify"];
-// Vercel Cron calls this with no browser session and no cookies at all -- it authenticates
-// itself via the CRON_SECRET bearer token checked inside the route handler, not via the
-// Supabase session this middleware otherwise requires everywhere else.
-const CRON_PATHS = ["/api/cron/"];
+// Endpoints that must bypass the session/MFA gate entirely:
+//  - /api/cron/*       : Vercel Cron (no cookies; authenticates via CRON_SECRET in the handler).
+//  - /api/unit-photo/* : public map hover-card photos (anon must load them; the handler only
+//                        serves unit facility photos by unit_id, see its comment).
+const BYPASS_PREFIXES = ["/api/cron/", "/api/unit-photo/"];
 
 export async function middleware(request: NextRequest) {
-  if (CRON_PATHS.some((path) => request.nextUrl.pathname.startsWith(path))) {
+  if (BYPASS_PREFIXES.some((path) => request.nextUrl.pathname.startsWith(path))) {
     return NextResponse.next({ request });
   }
 

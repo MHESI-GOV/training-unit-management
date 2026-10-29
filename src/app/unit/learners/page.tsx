@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
 import { ASSESSMENT_STANDARD_LABEL } from "@/lib/labels";
 import { computeAge } from "@/lib/age";
+import { formatThaiDate } from "@/lib/date-format";
 import { computeLearnerStatus, learnerStatusDisplay } from "@/lib/learner-status";
 import { AppShell } from "@/components/layout/AppShell";
 import { LearnersTable, type LearnerRow } from "./learners-table";
@@ -49,7 +50,7 @@ export default async function UnitLearnersPage({
         return {
           statusLabel: ls.label,
           statusPill: ls.pill,
-          courseLabel: `${e.classes?.batch_code ? e.classes.batch_code + " · " : ""}${e.classes?.courses?.name ?? "—"} (${e.classes?.start_date ?? "—"})`,
+          courseLabel: `${e.classes?.batch_code ? e.classes.batch_code + " · " : ""}${e.classes?.courses?.name ?? "—"} (${formatThaiDate(e.classes?.start_date)})`,
           class_id: e.class_id,
           status: computeLearnerStatus(e.status, endDate), // computed 3-state code (for filtering)
         };
@@ -66,7 +67,7 @@ export default async function UnitLearnersPage({
 
   const classOptions = (classes ?? []).map((c) => ({
     class_id: c.class_id,
-    label: `${c.batch_code ? c.batch_code + " · " : ""}${c.courses?.name ?? "—"} (${c.start_date})`,
+    label: `${c.batch_code ? c.batch_code + " · " : ""}${c.courses?.name ?? "—"} (${formatThaiDate(c.start_date)})`,
   }));
   const standardOptions = Object.entries(ASSESSMENT_STANDARD_LABEL).map(([value, label]) => ({ value, label }));
 

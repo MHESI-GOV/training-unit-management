@@ -1,22 +1,29 @@
 "use server";
 
-import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { readUploadedRows } from "@/lib/import-file";
 import { getUnitConfirmedRounds } from "@/lib/participation";
 
 export type PreviewRow = {
   rowNumber: number;
   course_name: string;
   course_id?: string;
+  name: string;
   start_date: string;
   end_date: string;
+  schedule_time: string;
   seat_count: string;
+  mode: string;
+  location: string;
+  note: string;
   external_ref: string;
   status: "pass" | "fail";
   reason?: string;
 };
+
+const MODES = ["onsite", "online", "hybrid"];
 
 export type PreviewState = {
   error?: string;
@@ -36,14 +43,11 @@ export async function previewClassImport(
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "กรุณาเลือกไฟล์ CSV" };
+    return { error: "กรุณาเลือกไฟล์ CSV หรือ Excel (.xlsx)" };
   }
 
-  const text = await file.text();
-  const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
-  if (parsed.errors.length > 0) {
-    return { error: `อ่านไฟล์ไม่สำเร็จ: ${parsed.errors[0].message}` };
-  }
+  const { rows: data, error: readErr } = await readUploadedRows(file);
+  if (readErr || !data) return { error: readErr ?? "อ่านไฟล์ไม่สำเร็จ" };
 
   const supabase = await createClient();
   const { data: courses } = await supabase.from("courses").select("course_id, name");
@@ -51,13 +55,18 @@ export async function previewClassImport(
 
   const rows: PreviewRow[] = [];
 
-  for (let i = 0; i < parsed.data.length; i++) {
-    const r = parsed.data[i];
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
     const rowNumber = i + 2;
     const courseName = (r.course_name ?? "").trim();
+    const name = (r.name ?? "").trim();
     const startDate = (r.start_date ?? "").trim();
     const endDate = (r.end_date ?? "").trim();
+    const scheduleTime = (r.schedule_time ?? "").trim();
     const seatCountRaw = (r.seat_count ?? "").trim();
+    const mode = (r.mode ?? "").trim().toLowerCase();
+    const location = (r.location ?? "").trim();
+    const note = (r.note ?? "").trim();
     const externalRef = (r.external_ref ?? "").trim();
     const seatCount = Number(seatCountRaw);
 
@@ -70,13 +79,16 @@ export async function previewClassImport(
       reason = "ไม่พบหลักสูตรนี้ — สร้างที่หน้าหลักสูตรก่อน";
     } else if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
       status = "fail";
-      reason = "รูปแบบวันที่ต้องเป็น YYYY-MM-DD";
+      reason = "รูปแบบวันที่ต้องเป็น YYYY-MM-DD (ค.ศ.)";
     } else if (startDate > endDate) {
       status = "fail";
       reason = "วันเริ่มต้องไม่มากกว่าวันสิ้นสุด";
     } else if (!Number.isFinite(seatCount) || seatCount <= 0) {
       status = "fail";
       reason = "จำนวนที่นั่งต้องเป็นเลขจำนวนเต็มบวก";
+    } else if (mode && !MODES.includes(mode)) {
+      status = "fail";
+      reason = "รูปแบบการเรียนต้องเป็น onsite / online / hybrid";
     } else {
       courseId = courseByName.get(courseName);
     }
@@ -85,9 +97,14 @@ export async function previewClassImport(
       rowNumber,
       course_name: courseName,
       course_id: courseId,
+      name,
       start_date: startDate,
       end_date: endDate,
+      schedule_time: scheduleTime,
       seat_count: seatCountRaw,
+      mode,
+      location,
+      note,
       external_ref: externalRef,
       status,
       reason,
@@ -141,9 +158,14 @@ export async function commitClassImport(
       course_id: row.course_id!,
       unit_id: unitId,
       batch_code: `R${String(seq).padStart(3, "0")}`,
+      name: row.name || null,
       start_date: row.start_date,
       end_date: row.end_date,
+      schedule_time: row.schedule_time || null,
       seat_count: Number(row.seat_count),
+      mode: row.mode || null,
+      location: row.location || null,
+      note: row.note || null,
       external_ref: row.external_ref || null,
       fiscal_year: target.fiscal_year,
       round_id: target.round_id,

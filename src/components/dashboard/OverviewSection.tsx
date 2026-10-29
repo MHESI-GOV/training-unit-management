@@ -30,7 +30,7 @@ export function OverviewSection({
   const [ov, setOv] = useState<Overview>(initialOv);
   const [pyramid, setPyramid] = useState<Pyramid>(initialPyramid);
   const [selected, setSelected] = useState(initialSelected);
-  const [filters, setFilters] = useState<DashFilters>({ region: null, type: null });
+  const [filters, setFilters] = useState<DashFilters>({ region: null, type: null, testing_center: null });
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,6 +44,7 @@ export function OverviewSection({
         p_fiscal_year: year === "all" ? undefined : Number(year),
         p_region: f.region ?? undefined,
         p_unit_type: f.type ?? undefined,
+        p_testing_center: f.testing_center ?? undefined,
       };
       const [{ data: ovData }, { data: pyrData }] = await Promise.all([
         supabase.rpc("get_dashboard_overview", args),
@@ -65,19 +66,19 @@ export function OverviewSection({
   }
 
   // Toggle a filter dimension: picking the active value again clears it.
-  function onFilter(dim: "region" | "type", value: string) {
+  function onFilter(dim: "region" | "type" | "testing_center", value: string) {
     const next: DashFilters = { ...filters, [dim]: filters[dim] === value ? null : value };
     setFilters(next);
     refetch(selected, next);
   }
 
-  function clearFilter(dim: "region" | "type") {
+  function clearFilter(dim: "region" | "type" | "testing_center") {
     const next = { ...filters, [dim]: null };
     setFilters(next);
     refetch(selected, next);
   }
 
-  const hasFilter = filters.region || filters.type;
+  const hasFilter = filters.region || filters.type || filters.testing_center;
 
   return (
     <div>
@@ -91,6 +92,12 @@ export function OverviewSection({
             )}
             {filters.type && (
               <FilterChip label={`ประเภท: ${UNIT_TYPE_LABEL[filters.type] ?? filters.type}`} onClear={() => clearFilter("type")} />
+            )}
+            {filters.testing_center && (
+              <FilterChip
+                label={`ศูนย์ทดสอบฯ สาขาอาหาร: ${filters.testing_center === "yes" ? "เป็น" : "ไม่เป็น"}`}
+                onClear={() => clearFilter("testing_center")}
+              />
             )}
           </div>
         )}

@@ -1,9 +1,9 @@
 "use server";
 
-import Papa from "papaparse";
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { readUploadedRows } from "@/lib/import-file";
 import { encryptNationalId, hashNationalId, bufferToByteaHex } from "@/lib/crypto/national-id";
 
 export type PreviewRow = {
@@ -12,12 +12,21 @@ export type PreviewRow = {
   last_name: string;
   national_id: string;
   birth_date: string;
+  gender: string;
+  occupation: string;
   phone: string;
   email: string;
   address: string;
   status: "pass" | "fail";
   reason?: string;
 };
+
+function parseGender(v: string): "male" | "female" | null {
+  const s = v.trim().toLowerCase();
+  if (s === "male" || s === "ชาย") return "male";
+  if (s === "female" || s === "หญิง") return "female";
+  return null;
+}
 
 export type PreviewState = {
   error?: string;
@@ -38,27 +47,25 @@ export async function previewImport(
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "กรุณาเลือกไฟล์ CSV" };
+    return { error: "กรุณาเลือกไฟล์ CSV หรือ Excel (.xlsx)" };
   }
 
-  const text = await file.text();
-  const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
-
-  if (parsed.errors.length > 0) {
-    return { error: `อ่านไฟล์ไม่สำเร็จ: ${parsed.errors[0].message}` };
-  }
+  const { rows: data, error: readErr } = await readUploadedRows(file);
+  if (readErr || !data) return { error: readErr ?? "อ่านไฟล์ไม่สำเร็จ" };
 
   const supabase = await createClient();
   const seenInFile = new Set<string>();
   const rows: PreviewRow[] = [];
 
-  for (let i = 0; i < parsed.data.length; i++) {
-    const r = parsed.data[i];
+  for (let i = 0; i < data.length; i++) {
+    const r = data[i];
     const rowNumber = i + 2; // +1 for header row, +1 for 1-indexing
     const first_name = (r.first_name ?? "").trim();
     const last_name = (r.last_name ?? "").trim();
     const national_id = (r.national_id ?? "").trim();
     const birth_date = (r.birth_date ?? "").trim();
+    const gender = (r.gender ?? "").trim();
+    const occupation = (r.occupation ?? "").trim();
     const phone = (r.phone ?? "").trim();
     const email = (r.email ?? "").trim();
     const address = (r.address ?? "").trim();
@@ -74,7 +81,10 @@ export async function previewImport(
       reason = "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก";
     } else if (birth_date && !DATE_RE.test(birth_date)) {
       status = "fail";
-      reason = "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว";
+      reason = "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว (ค.ศ.)";
+    } else if (gender && !parseGender(gender)) {
+      status = "fail";
+      reason = "เพศต้องเป็น male/female หรือ ชาย/หญิง";
     } else if (seenInFile.has(national_id)) {
       status = "fail";
       reason = "เลขบัตรประชาชนซ้ำภายในไฟล์เดียวกัน";
@@ -93,7 +103,7 @@ export async function previewImport(
 
     if (status === "pass") seenInFile.add(national_id);
 
-    rows.push({ rowNumber, first_name, last_name, national_id, birth_date, phone, email, address, status, reason });
+    rows.push({ rowNumber, first_name, last_name, national_id, birth_date, gender, occupation, phone, email, address, status, reason });
   }
 
   return {
@@ -161,6 +171,8 @@ export async function commitImport(
         email: row.email || null,
         address: row.address || null,
         birth_date: row.birth_date || null,
+        gender: parseGender(row.gender),
+        occupation: row.occupation || null,
         source: "unit_import_file",
         created_by: profile.id,
         unit_id: unitId,

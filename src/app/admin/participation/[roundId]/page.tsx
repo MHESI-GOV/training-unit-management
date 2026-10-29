@@ -12,6 +12,7 @@ import {
 } from "@/lib/labels";
 import { Download } from "lucide-react";
 import { formatFiscalYear } from "@/lib/fiscal-year";
+import { formatThaiDate, formatThaiDateTime } from "@/lib/date-format";
 import { resendNotice, setRoundStatus } from "../actions";
 
 const STATUS_PILL: Record<string, string> = {
@@ -70,7 +71,7 @@ export default async function RoundDetailPage({
                 {ROUND_STATUS_LABEL[round.status]}
               </span>
               {round.deadline && (
-                <p className="footnote" style={{ marginTop: 6 }}>กำหนดยืนยันภายใน {round.deadline}</p>
+                <p className="footnote" style={{ marginTop: 6 }}>กำหนดยืนยันภายใน {formatThaiDate(round.deadline)}</p>
               )}
               {round.notice_message && (
                 <p className="footnote" style={{ marginTop: 6 }}>ข้อความแจ้ง: {round.notice_message}</p>
@@ -134,7 +135,7 @@ export default async function RoundDetailPage({
                       </span>
                     </td>
                     <td style={{ padding: "8px 10px" }} className="footnote">
-                      {row.responded_at ? new Date(row.responded_at).toLocaleString("th-TH") : "—"}
+                      {formatThaiDateTime(row.responded_at)}
                     </td>
                   </tr>
                 );

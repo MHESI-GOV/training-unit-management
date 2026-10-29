@@ -103,7 +103,7 @@ export function OverviewCards({
   ov: Overview;
   pyramid: Pyramid;
   filters: DashFilters;
-  onFilter: (dim: "region" | "type", value: string) => void;
+  onFilter: (dim: "region" | "type" | "testing_center", value: string) => void;
 }) {
   const onRegion = (r: string) => onFilter("region", r);
   return (
@@ -146,13 +146,29 @@ export function OverviewCards({
             ].filter((s) => s.value > 0)}
           />
         </section>
+
       </div>
 
-      {/* แถวที่ 4: พีระมิดประชากรผู้เรียน */}
-      <section className="card">
-        <div className="stat-label" style={{ marginBottom: 16, fontWeight: 600 }}>พีระมิดประชากรผู้เรียน (อายุ × เพศ)</div>
-        <PyramidChart data={pyramid} />
-      </section>
+      {/* แถวที่ 4: Donut ศูนย์ทดสอบ + พีระมิดประชากรผู้เรียน — container เท่ากัน, ชื่ออยู่บน, legend ใต้ชาร์ต */}
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "stretch" }}>
+        <section className="card" style={{ flex: "1 1 0", minWidth: 320, display: "flex", flexDirection: "column" }}>
+          <div className="stat-label" style={{ marginBottom: 16, fontWeight: 600 }}>ศูนย์ทดสอบมาตรฐานฝีมือแรงงาน สาขาอาหาร (คลิกเพื่อกรอง)</div>
+          <DonutChart
+            centerLabel="หน่วยฝึกอบรม"
+            legendPosition="below"
+            activeKey={filters.testing_center}
+            onSliceClick={(k) => onFilter("testing_center", k)}
+            slices={[
+              { key: "yes", label: "เป็นศูนย์ทดสอบ", value: ov.units_by_testing_center?.yes ?? 0, color: "#1baf7a" },
+              { key: "no", label: "ไม่เป็นศูนย์ทดสอบ", value: ov.units_by_testing_center?.no ?? 0, color: "#9aa3af" },
+            ].filter((s) => s.value > 0)}
+          />
+        </section>
+        <section className="card" style={{ flex: "1 1 0", minWidth: 320, display: "flex", flexDirection: "column" }}>
+          <div className="stat-label" style={{ marginBottom: 16, fontWeight: 600 }}>พีระมิดประชากรผู้เรียน (อายุ × เพศ)</div>
+          <PyramidChart data={pyramid} />
+        </section>
+      </div>
 
       {/* แถวที่ 5: แผนที่ + หน่วยฝึกอบรมล่าสุด */}
       <MapSection pins={ov.pins} latestUnits={ov.latest_units} />
