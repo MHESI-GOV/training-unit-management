@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { previewImport, commitImport, type PreviewState, type CommitState } from "./actions";
 import { StepIndicator } from "@/components/ui/StepIndicator";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatThaiDate } from "@/lib/date-format";
 
 const previewInitial: PreviewState = {};
@@ -19,7 +20,11 @@ export function ImportClient({
 }) {
   const [previewState, previewAction, previewPending] = useActionState(previewImport, previewInitial);
   const [commitState, commitAction, commitPending] = useActionState(commitImport, commitInitial);
-  const [confirmArmed, setConfirmArmed] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (commitState.error) setConfirmOpen(false);
+  }, [commitState.error]);
 
   const step = commitState.created !== undefined ? 2 : previewState.rows ? 1 : 0;
   const steps = ["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"];
@@ -105,28 +110,27 @@ export function ImportClient({
       </div>
 
       {previewState.passCount! > 0 && (
-        <form action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 420, marginTop: 20 }}>
+        <form ref={formRef} action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 420, marginTop: 20 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <input type="hidden" name="class_id" value={classId} />
           <input type="hidden" name="file_name" value={previewState.fileName} />
           <input type="hidden" name="rows" value={JSON.stringify(previewState.rows)} />
-          {!confirmArmed ? (
-            <button type="button" className="btn primary" onClick={() => setConfirmArmed(true)}>
-              บันทึก {previewState.passCount} คน ลงรุ่น {classLabel}
-            </button>
-          ) : (
-            <>
-              <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6" }}>
-                ยืนยันอีกครั้ง — จะสร้างผู้เรียน {previewState.passCount} คน และลงรุ่น {classLabel} ทันที
-              </p>
-              <button type="submit" className="btn primary" disabled={commitPending}>
-                {commitPending ? "กำลังนำเข้า..." : "ยืนยันนำเข้า"}
-              </button>
-            </>
-          )}
+          <button type="button" className="btn primary" onClick={() => setConfirmOpen(true)}>
+            บันทึก {previewState.passCount} คน ลงรุ่น {classLabel}
+          </button>
         </form>
       )}
-      {commitState.error && <p className="notice error">{commitState.error}</p>}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        pending={commitPending}
+        title="ยืนยันการนำเข้าผู้เรียน"
+        confirmLabel="ยืนยันนำเข้า"
+        message={<>จะสร้างผู้เรียน <strong>{previewState.passCount}</strong> คน และลงรุ่น <strong>{classLabel}</strong> ทันที</>}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => formRef.current?.requestSubmit()}
+      />
+      {commitState.error && <p className="notice error" style={{ marginTop: 10 }}>{commitState.error}</p>}
     </div>
   );
 }

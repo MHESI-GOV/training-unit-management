@@ -1,13 +1,9 @@
 import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
-import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
-import { ASSESSMENT_STANDARD_LABEL } from "@/lib/labels";
-import { computeAge } from "@/lib/age";
-import { formatThaiDate } from "@/lib/date-format";
-import { computeLearnerStatus, learnerStatusDisplay } from "@/lib/learner-status";
 import { AppShell } from "@/components/layout/AppShell";
-import { LearnersTable, type LearnerRow } from "./learners-table";
+import { LearnersTable } from "./learners-table";
+import { loadUnitLearners } from "./load-learners";
 
 export default async function UnitLearnersPage({
   searchParams,
@@ -18,61 +14,19 @@ export default async function UnitLearnersPage({
   const { unitId, isStaff, profile } = await resolvePageUnit(unit_id);
 
   const supabase = await createClient();
-
-  const [{ data: learners }, { data: classes }] = await Promise.all([
-    supabase
-      .from("learners")
-      .select(
-        "learner_id, first_name, last_name, birth_date, national_id_encrypted, phone, email, enrollments(status, class_id, classes(batch_code, start_date, end_date, courses(name))), assessment_results(standard_type, result)",
-      )
-      .eq("unit_id", unitId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("classes")
-      .select("class_id, batch_code, start_date, courses(name)")
-      .eq("unit_id", unitId)
-      .order("batch_code", { ascending: true }),
+  const [data, { data: unit }] = await Promise.all([
+    loadUnitLearners(unitId),
+    supabase.from("training_units").select("name").eq("unit_id", unitId).maybeSingle(),
   ]);
 
-  const rows: LearnerRow[] = (learners ?? []).map((l) => {
-    const nationalId = decryptNationalId(byteaHexToBuffer(l.national_id_encrypted as unknown as string));
-    return {
-      learner_id: l.learner_id,
-      first_name: l.first_name,
-      last_name: l.last_name,
-      masked_id: maskNationalId(nationalId),
-      age: computeAge(l.birth_date),
-      phone: l.phone,
-      email: l.email,
-      enrollments: (l.enrollments ?? []).map((e) => {
-        const endDate = e.classes?.end_date ?? null;
-        const ls = learnerStatusDisplay(e.status, endDate);
-        return {
-          statusLabel: ls.label,
-          statusPill: ls.pill,
-          courseLabel: `${e.classes?.batch_code ? e.classes.batch_code + " · " : ""}${e.classes?.courses?.name ?? "—"} (${formatThaiDate(e.classes?.start_date)})`,
-          class_id: e.class_id,
-          status: computeLearnerStatus(e.status, endDate), // computed 3-state code (for filtering)
-        };
-      }),
-      standards: (l.assessment_results ?? [])
-        .filter((a) => a.result === "passed")
-        .map((a) => ({
-          label: ASSESSMENT_STANDARD_LABEL[a.standard_type] ?? a.standard_type,
-          pill: "done",
-          standard_type: a.standard_type,
-        })),
-    };
-  });
-
-  const classOptions = (classes ?? []).map((c) => ({
-    class_id: c.class_id,
-    label: `${c.batch_code ? c.batch_code + " · " : ""}${c.courses?.name ?? "—"} (${formatThaiDate(c.start_date)})`,
-  }));
-  const standardOptions = Object.entries(ASSESSMENT_STANDARD_LABEL).map(([value, label]) => ({ value, label }));
-
   return (
-    <AppShell profile={profile} active="learners" eyebrow="ข้อมูลผู้เรียน" title="ค้นหาและรายงานผู้เรียน">
+    <AppShell
+      profile={profile}
+      active="learners"
+      eyebrow="ข้อมูลผู้เรียน"
+      title="ค้นหาและรายงานผู้เรียน"
+      unitName={unit?.name ?? null}
+    >
       {isStaff && (
         <p style={{ marginBottom: 14 }}>
           <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
@@ -84,7 +38,14 @@ export default async function UnitLearnersPage({
         <Link href={`/unit/classes${isStaff ? `?unit_id=${unitId}` : ""}`}>จัดการชั้นเรียน</Link>
       </p>
 
-      <LearnersTable unitId={unitId} learners={rows} classes={classOptions} standards={standardOptions} />
+      <LearnersTable
+        unitId={unitId}
+        isStaff={isStaff}
+        learners={data.rows}
+        classes={data.classOptions}
+        standards={data.standardOptions}
+        fiscalYears={data.fiscalYearOptions}
+      />
     </AppShell>
   );
 }

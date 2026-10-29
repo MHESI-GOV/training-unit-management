@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { previewClassImport, commitClassImport, type PreviewState, type CommitState } from "./actions";
 import { StepIndicator } from "@/components/ui/StepIndicator";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatThaiDate } from "@/lib/date-format";
 
 const previewInitial: PreviewState = {};
@@ -11,7 +12,11 @@ const commitInitial: CommitState = {};
 export function ImportClient({ unitId }: { unitId: string }) {
   const [previewState, previewAction, previewPending] = useActionState(previewClassImport, previewInitial);
   const [commitState, commitAction, commitPending] = useActionState(commitClassImport, commitInitial);
-  const [confirmArmed, setConfirmArmed] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (commitState.error) setConfirmOpen(false);
+  }, [commitState.error]);
 
   const steps = ["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"];
   const step = commitState.created !== undefined ? 2 : previewState.rows ? 1 : 0;
@@ -96,25 +101,24 @@ export function ImportClient({ unitId }: { unitId: string }) {
       </div>
 
       {previewState.passCount! > 0 && (
-        <form action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 360, marginTop: 20 }}>
+        <form ref={formRef} action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 360, marginTop: 20 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <input type="hidden" name="rows" value={JSON.stringify(previewState.rows)} />
-          {!confirmArmed ? (
-            <button type="button" className="btn primary" onClick={() => setConfirmArmed(true)}>
-              นำเข้า {previewState.passCount} รายการ
-            </button>
-          ) : (
-            <>
-              <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6" }}>
-                ยืนยันอีกครั้ง — การนำเข้าจะสร้างรุ่นฝึกอบรม {previewState.passCount} รุ่นทันที
-              </p>
-              <button type="submit" className="btn primary" disabled={commitPending}>
-                {commitPending ? "กำลังนำเข้า..." : "ยืนยันนำเข้า"}
-              </button>
-            </>
-          )}
+          <button type="button" className="btn primary" onClick={() => setConfirmOpen(true)}>
+            นำเข้า {previewState.passCount} รายการ
+          </button>
         </form>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        pending={commitPending}
+        title="ยืนยันการนำเข้ารุ่นฝึกอบรม"
+        confirmLabel="ยืนยันนำเข้า"
+        message={<>จะสร้างรุ่นฝึกอบรม <strong>{previewState.passCount}</strong> รุ่นทันที</>}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => formRef.current?.requestSubmit()}
+      />
       {commitState.error && <p className="notice error">{commitState.error}</p>}
     </div>
   );

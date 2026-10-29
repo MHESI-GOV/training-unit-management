@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, Users, UserRound } from "lucide-react";
+import { LayoutDashboard, Building2, Users, UsersRound, UserRound } from "lucide-react";
 
 export function SheetTabs({ unitId }: { unitId: string }) {
   const path = usePathname();
@@ -11,6 +11,7 @@ export function SheetTabs({ unitId }: { unitId: string }) {
     { href: base, label: "แดชบอร์ด", icon: <LayoutDashboard size={16} /> },
     { href: `${base}/profile`, label: "โปรไฟล์หน่วยฝึก", icon: <Building2 size={16} /> },
     { href: `${base}/classes`, label: "รุ่นฝึกอบรม", icon: <Users size={16} /> },
+    { href: `${base}/learners`, label: "ผู้เรียน", icon: <UsersRound size={16} /> },
     { href: `${base}/instructors`, label: "ผู้สอน", icon: <UserRound size={16} /> },
   ];
 

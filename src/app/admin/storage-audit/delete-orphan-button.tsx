@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { deleteOrphanFile } from "./actions";
 
 export function DeleteOrphanButton({
@@ -10,43 +11,42 @@ export function DeleteOrphanButton({
   reportId: string;
   storageKey: string;
 }) {
-  const [armed, setArmed] = useState(false);
+  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
 
   if (done) return <span className="pill done">ลบแล้ว</span>;
 
-  if (!armed) {
-    return (
-      <button type="button" className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setArmed(true)}>
-        ลบไฟล์นี้
-      </button>
-    );
-  }
-
   return (
     <>
-      <span className="pill pending">ยืนยันลบไฟล์นี้ถาวร?</span>
-      <button
-        type="button"
-        className="btn danger"
-        style={{ padding: "4px 10px", fontSize: 13 }}
-        disabled={pending}
-        onClick={async () => {
+      <button type="button" className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setOpen(true)}>
+        ลบไฟล์นี้
+      </button>
+      <ConfirmDialog
+        open={open}
+        danger
+        pending={pending}
+        title="ยืนยันการลบไฟล์"
+        confirmLabel="ยืนยันลบ"
+        message={
+          <>
+            ลบไฟล์นี้อย่างถาวร?
+            <br />
+            <span className="footnote" style={{ wordBreak: "break-all" }}>{storageKey}</span>
+          </>
+        }
+        onCancel={() => setOpen(false)}
+        onConfirm={async () => {
           setPending(true);
           try {
             await deleteOrphanFile(reportId, storageKey);
             setDone(true);
+            setOpen(false);
           } finally {
             setPending(false);
           }
         }}
-      >
-        {pending ? "กำลังลบ..." : "ยืนยันลบ"}
-      </button>
-      <button type="button" className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setArmed(false)}>
-        ยกเลิก
-      </button>
+      />
     </>
   );
 }

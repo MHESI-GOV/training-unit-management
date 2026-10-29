@@ -10,6 +10,7 @@ import {
   byteaHexToBuffer,
   decryptNationalId,
 } from "@/lib/crypto/national-id";
+import { learnerStatusDisplay } from "@/lib/learner-status";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AssessmentStandard = Database["public"]["Enums"]["assessment_standard"];
@@ -421,4 +422,73 @@ export async function revealNationalId(unitIdArg: string, learnerId: string): Pr
   if (!learner) throw new Error("ไม่พบผู้เรียนนี้ในหน่วยของคุณ");
 
   return decryptNationalId(byteaHexToBuffer(learner.national_id_encrypted as unknown as string));
+}
+
+// Exact-match lookup by full 13-digit national ID. Matches via the deterministic SHA-256 hash
+// (the national IDs themselves stay encrypted; partial/substring search is impossible by design).
+// Scope is enforced entirely by RLS on `learners`: a Unit Coordinator only finds people in their
+// own unit; Web Master / Central Staff find them across all units (national_id_hash is UNIQUE
+// system-wide, so there is at most one match). No plaintext/hash of other learners ever reaches
+// the client — the query runs server-side with the caller's session.
+export type LearnerLookupResult = {
+  learner_id: string;
+  unit_id: string;
+  unit_name: string | null;
+  full_name: string;
+  enrollments: {
+    batch_code: string | null;
+    fiscal_year: number | null;
+    course: string | null;
+    statusLabel: string;
+    statusPill: string;
+  }[];
+};
+export type LearnerLookupState = { result?: LearnerLookupResult; notFound?: boolean; error?: string };
+
+export async function findLearnerByNationalId(nationalId: string): Promise<LearnerLookupState> {
+  const id = nationalId.trim();
+  if (!NATIONAL_ID_RE.test(id)) return { error: "กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก" };
+
+  const supabase = await createClient();
+
+  // Role only tailors the not-found wording (the actual scoping is RLS, not this check).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: prof } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const isStaff = prof?.role === "web_master" || prof?.role === "central_staff";
+
+  const { data: learner, error } = await supabase
+    .from("learners")
+    .select(
+      "learner_id, first_name, last_name, unit_id, training_units(name), enrollments(status, classes(batch_code, fiscal_year, end_date, courses(name)))",
+    )
+    .eq("national_id_hash", hashNationalId(id))
+    .maybeSingle();
+
+  if (error) return { error: `ค้นหาไม่สำเร็จ: ${error.message}` };
+  if (!learner) {
+    return { notFound: true, error: isStaff ? "ไม่พบผู้เรียนที่มีเลขบัตรนี้ในระบบ" : "ไม่พบผู้เรียนที่มีเลขบัตรนี้ในหน่วยของคุณ" };
+  }
+
+  return {
+    result: {
+      learner_id: learner.learner_id,
+      unit_id: learner.unit_id,
+      unit_name: learner.training_units?.name ?? null,
+      full_name: `${learner.first_name} ${learner.last_name}`,
+      enrollments: (learner.enrollments ?? []).map((e) => {
+        const s = learnerStatusDisplay(e.status, e.classes?.end_date ?? null);
+        return {
+          batch_code: e.classes?.batch_code ?? null,
+          fiscal_year: e.classes?.fiscal_year ?? null,
+          course: e.classes?.courses?.name ?? null,
+          statusLabel: s.label,
+          statusPill: s.pill,
+        };
+      }),
+    },
+  };
 }

@@ -43,6 +43,7 @@ function navForProfile(profile: Profile | null): NavItem[] {
   if (profile.role === "web_master" || profile.role === "central_staff") {
     const items: NavItem[] = [
       { href: "/admin/units", label: "หน่วยฝึกอบรมทั้งหมด", icon: <Building2 size={17} />, id: "units" },
+      { href: "/admin/learners", label: "ฐานข้อมูลผู้เรียน", icon: <UsersRound size={17} />, id: "all-learners" },
       { href: "/courses", label: "หลักสูตร", icon: <BookOpen size={17} />, id: "courses" },
     ];
     if (profile.role === "web_master") {

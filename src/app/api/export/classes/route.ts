@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
+import { CLASS_MODE_LABEL } from "@/lib/labels";
+import { classStatusDisplay } from "@/lib/class-status";
+import { formatThaiDate } from "@/lib/date-format";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -25,7 +28,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("classes")
     .select(
-      "start_date, end_date, seat_count, external_ref, training_units(name), courses(name), class_instructors(role_in_class, instructors(name, phone, email))",
+      "batch_code, name, start_date, end_date, fiscal_year, schedule_time, mode, location, seat_count, note, external_ref, training_units(name), courses(name), enrollments(status), class_instructors(role_in_class, instructors(name, phone, email))",
     );
   if (unitId) query = query.eq("unit_id", unitId);
 
@@ -35,12 +38,21 @@ export async function GET(request: Request) {
   const rows: (string | number | null)[][] = [
     [
       "หน่วยฝึกอบรม",
+      "รหัสรุ่น",
+      "ชื่อรุ่น",
       "หลักสูตร",
+      "ปีงบประมาณ",
       "วันเริ่มต้น",
       "วันสิ้นสุด",
+      "เวลาเรียน",
+      "รูปแบบการเรียน",
+      "สถานที่",
       "จำนวนที่นั่ง",
-      "รหัสอ้างอิงเดิม",
+      "จำนวนผู้เรียน",
+      "สถานะ",
       "วิทยากร",
+      "หมายเหตุ",
+      "รหัสอ้างอิงเดิม",
     ],
   ];
   for (const c of classes ?? []) {
@@ -49,12 +61,21 @@ export async function GET(request: Request) {
       .join("; ");
     rows.push([
       c.training_units?.name ?? "",
+      c.batch_code ?? "",
+      c.name ?? "",
       c.courses?.name ?? "",
-      c.start_date,
-      c.end_date,
+      c.fiscal_year ?? "",
+      formatThaiDate(c.start_date, ""),
+      formatThaiDate(c.end_date, ""),
+      c.schedule_time ?? "",
+      c.mode ? CLASS_MODE_LABEL[c.mode] ?? c.mode : "",
+      c.location ?? "",
       c.seat_count,
-      c.external_ref,
+      (c.enrollments ?? []).length,
+      classStatusDisplay(c.start_date, c.end_date).label,
       instructorList,
+      c.note ?? "",
+      c.external_ref,
     ]);
   }
 

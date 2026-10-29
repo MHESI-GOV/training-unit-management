@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { Popup } from "@/components/ui/Popup";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FieldSpecTable } from "@/components/ui/FieldSpec";
 import { GENDER_LABEL, INSTRUCTOR_TESTER_STATUS_LABEL } from "@/lib/labels";
 import {
@@ -197,41 +198,37 @@ function InstructorForm({ unitId, edit, onDone }: { unitId: string; edit?: Instr
 }
 
 function DeleteButton({ unitId, instructor }: { unitId: string; instructor: InstructorRow }) {
-  const [armed, setArmed] = useState(false);
+  const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
 
-  if (!armed) {
-    return (
-      <button className="btn secondary" style={{ padding: "4px 10px", fontSize: 13, color: "var(--danger)" }} onClick={() => setArmed(true)}>
-        ลบ
-      </button>
-    );
-  }
   return (
     <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-      <button
-        className="btn secondary"
-        style={{ padding: "4px 10px", fontSize: 13, color: "var(--danger)" }}
-        disabled={pending}
-        onClick={() =>
+      <button className="btn secondary" style={{ padding: "4px 10px", fontSize: 13, color: "var(--danger)" }} onClick={() => { setErr(null); setOpen(true); }}>
+        ลบ
+      </button>
+      {err && <span style={{ color: "var(--danger)", fontSize: 12 }}>{err}</span>}
+      <ConfirmDialog
+        open={open}
+        danger
+        pending={pending}
+        title="ยืนยันการลบวิทยากร"
+        confirmLabel="ยืนยันลบ"
+        message={<>ลบวิทยากร <strong>{instructor.name}</strong> ออกจากคลังของหน่วย?</>}
+        onCancel={() => setOpen(false)}
+        onConfirm={() =>
           start(async () => {
             setErr(null);
             try {
               await deleteInstructor(unitId, instructor.instructor_id);
+              setOpen(false);
             } catch (e) {
               setErr(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-              setArmed(false);
+              setOpen(false);
             }
           })
         }
-      >
-        {pending ? "กำลังลบ..." : "ยืนยันลบ"}
-      </button>
-      <button className="btn secondary" style={{ padding: "4px 10px", fontSize: 13 }} onClick={() => setArmed(false)}>
-        ยกเลิก
-      </button>
-      {err && <span style={{ color: "var(--danger)", fontSize: 12 }}>{err}</span>}
+      />
     </span>
   );
 }
