@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { AuthCard } from "@/components/layout/AuthCard";
 import { CancelBackButton } from "@/components/layout/CancelBackButton";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 // The whole login -> (Web Master only) MFA sequence runs ENTIRELY client-side against Supabase,
 // inside this one popup, and only does a single hard navigation to "/" at the very end.
@@ -157,7 +158,7 @@ export function LoginModalFlow() {
         </label>
         <label>
           <span className="field-label">รหัสผ่าน</span>
-          <input name="password" type="password" required className="field" />
+          <PasswordField name="password" required autoComplete="current-password" />
         </label>
         <div style={{ display: "flex", gap: 10 }}>
           <button type="submit" className="btn primary" style={{ flex: 1 }} disabled={pending}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { PasswordField } from "@/components/ui/PasswordField";
 import {
   changePassword,
   requestEmailChange,
@@ -18,15 +19,15 @@ export function ChangePasswordForm() {
     <form action={action} style={{ display: "grid", gap: 12 }}>
       <label>
         <span className="field-label">รหัสผ่านปัจจุบัน</span>
-        <input name="current_password" type="password" required className="field" autoComplete="current-password" />
+        <PasswordField name="current_password" required autoComplete="current-password" />
       </label>
       <label>
         <span className="field-label">รหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</span>
-        <input name="new_password" type="password" required minLength={8} className="field" autoComplete="new-password" />
+        <PasswordField name="new_password" required minLength={8} autoComplete="new-password" />
       </label>
       <label>
         <span className="field-label">ยืนยันรหัสผ่านใหม่</span>
-        <input name="confirm_password" type="password" required minLength={8} className="field" autoComplete="new-password" />
+        <PasswordField name="confirm_password" required minLength={8} autoComplete="new-password" />
       </label>
       <div>
         <button type="submit" className="btn primary" disabled={pending}>

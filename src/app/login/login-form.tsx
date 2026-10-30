@@ -1,4 +1,5 @@
 import { signIn } from "./actions";
+import { PasswordField } from "@/components/ui/PasswordField";
 
 export function LoginForm({
   error,
@@ -17,7 +18,7 @@ export function LoginForm({
         </label>
         <label>
           <span className="field-label">รหัสผ่าน</span>
-          <input name="password" type="password" required className="field" />
+          <PasswordField name="password" required autoComplete="current-password" />
         </label>
         <div style={{ display: "flex", gap: 10 }}>
           <button type="submit" className="btn primary" style={{ flex: 1 }}>

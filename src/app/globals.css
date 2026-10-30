@@ -340,6 +340,40 @@ main.page {
   color: var(--ink);
 }
 
+/* Password field with an eye reveal/hide toggle (see components/ui/PasswordField.tsx). */
+.password-wrap {
+  position: relative;
+  display: block;
+}
+.password-wrap .field {
+  padding-right: 42px;
+}
+.password-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.password-eye:hover {
+  color: var(--blue);
+  background: var(--paper);
+}
+.password-eye:focus-visible {
+  outline: 2px solid #bcd7f3;
+  outline-offset: 1px;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
