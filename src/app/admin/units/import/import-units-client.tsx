@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { previewUnitImport, commitUnitImport, type PreviewState, type CommitState } from "./actions";
 import { StepIndicator } from "@/components/ui/StepIndicator";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -30,12 +31,12 @@ export function ImportUnitsClient() {
           {commitState.failed ? ` (ล้มเหลว ${commitState.failed} แถว)` : ""}
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <a href="/admin/units" className="btn primary">
+          <Link href="/admin/units" className="btn primary">
             ไปหน้าหน่วยฝึกอบรม
-          </a>
-          <a href="/admin/units/import" className="btn secondary">
+          </Link>
+          <Link href="/admin/units/import" className="btn secondary">
             นำเข้าไฟล์อื่น
-          </a>
+          </Link>
         </div>
       </div>
     );

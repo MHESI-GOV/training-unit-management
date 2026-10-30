@@ -8,7 +8,7 @@ import { FieldSpecTable } from "@/components/ui/FieldSpec";
 import { GENDER_LABEL } from "@/lib/labels";
 import { formatThaiDate } from "@/lib/date-format";
 import { RevealIdButton } from "../../learners/reveal-id-button";
-import { LearnerForm, type LearnerEdit } from "../../learners/learner-form";
+import { LearnerForm } from "../../learners/learner-form";
 import { submitClassResults, setEnrollmentWithdrawn, type ClassResultRow } from "../../learners/actions";
 import { ImportClient } from "../../import/import-client";
 import {
