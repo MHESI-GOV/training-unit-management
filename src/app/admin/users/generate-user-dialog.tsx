@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { GenerateUserForm } from "./generate-user-form";
+import { GenerateUserForm, type AssignableUnit } from "./generate-user-form";
 
 // "+ สร้างบัญชีใหม่" opens the Generate User form in a popup instead of showing it inline. The
 // modal stays open after a successful create so the on-screen temp password (when email isn't
-// configured) remains visible until the Web Master dismisses it.
-export function GenerateUserDialog() {
+// configured) remains visible until the Web Master dismisses it. `units` = units without a
+// coordinator, offered when role = Unit Coordinator (round 12).
+export function GenerateUserDialog({ units = [] }: { units?: AssignableUnit[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -40,7 +41,7 @@ export function GenerateUserDialog() {
               </button>
             </div>
             <div style={{ marginTop: 14 }}>
-              <GenerateUserForm />
+              <GenerateUserForm units={units} />
             </div>
           </div>
         </div>

@@ -40,6 +40,12 @@ export async function generateUser(
   }
   const validatedRole = role as (typeof VALID_ROLES)[number];
 
+  // Round 12: a new Unit Coordinator account may be bound to an EXISTING unit right away (for the
+  // 72 units staff pre-created) instead of waiting for self-onboarding. Only meaningful for
+  // unit_coordinator; ignored for the other roles.
+  const unitScope =
+    validatedRole === "unit_coordinator" ? String(formData.get("unit_id") ?? "").trim() || null : null;
+
   const admin = createAdminClient();
   const temporaryPassword = randomBytes(18).toString("base64url");
 
@@ -56,7 +62,7 @@ export async function generateUser(
   const { error: profileErr } = await admin.from("profiles").insert({
     id: userRes.user.id,
     role: validatedRole,
-    unit_scope: null, // role=unit_coordinator starts unscoped until they submit "กรอกข้อมูลหน่วยฝึกอบรม"
+    unit_scope: unitScope, // null = coordinator self-onboards; a unit_id = bound to an existing unit
     display_name: displayName,
     must_change_password: true,
     created_by: webMaster.id,
@@ -64,6 +70,10 @@ export async function generateUser(
 
   if (profileErr) {
     await admin.auth.admin.deleteUser(userRes.user.id);
+    // 23505 = the unit already has a coordinator (profiles_unit_coordinator_unit_scope_uniq).
+    if (profileErr.code === "23505" && unitScope) {
+      return { error: "หน่วยนี้มีผู้ดูแลอยู่แล้ว กรุณาเลือกหน่วยอื่นหรือปล่อยว่าง" };
+    }
     return { error: `สร้างโปรไฟล์ไม่สำเร็จ: ${profileErr.message}` };
   }
 
@@ -91,6 +101,50 @@ export async function generateUser(
       emailSent: emailResult.sent,
     },
   };
+}
+
+// Round 12: bind an ALREADY-EXISTING, unscoped Unit Coordinator account to a unit (WM-only).
+// Companion to generateUser's optional unit binding — used when the account was created earlier
+// without a unit. The unique index profiles_unit_coordinator_unit_scope_uniq guarantees one
+// coordinator per unit; a readable error is returned if the unit is already taken.
+export type AssignCoordState = { error?: string; success?: string };
+
+export async function assignCoordinatorToUnit(
+  _prev: AssignCoordState,
+  formData: FormData,
+): Promise<AssignCoordState> {
+  const wm = await requireWebMaster();
+  const userId = String(formData.get("user_id") ?? "");
+  const unitId = String(formData.get("unit_id") ?? "").trim();
+  if (!userId || !unitId) return { error: "กรุณาเลือกบัญชีและหน่วยฝึก" };
+
+  const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role, unit_scope")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!target) return { error: "ไม่พบบัญชี" };
+  if (target.role !== "unit_coordinator") return { error: "บัญชีนี้ไม่ใช่ Unit Coordinator" };
+  if (target.unit_scope) return { error: "บัญชีนี้ดูแลหน่วยอื่นอยู่แล้ว" };
+
+  const { error } = await admin.from("profiles").update({ unit_scope: unitId }).eq("id", userId);
+  if (error) {
+    if (error.code === "23505") return { error: "หน่วยนี้มีผู้ดูแลอยู่แล้ว" };
+    return { error: `มอบหมายไม่สำเร็จ: ${error.message}` };
+  }
+
+  await admin.from("audit_log").insert({
+    actor_user_id: wm.id,
+    action: "assign_coordinator_unit",
+    entity_type: "profile",
+    record_id: userId,
+    changed_fields: ["unit_scope"],
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/units/${unitId}`);
+  return { success: "มอบหมายผู้ดูแลให้หน่วยแล้ว" };
 }
 
 // Disable (ban) or re-enable a login account. User Management is meant to disable accounts, never

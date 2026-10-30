@@ -2,8 +2,10 @@ import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppShell } from "@/components/layout/AppShell";
 import { ROLE_LABEL } from "@/lib/labels";
+import { unitCode } from "@/lib/id-codes";
 import { formatThaiDateTime } from "@/lib/date-format";
 import { GenerateUserDialog } from "./generate-user-dialog";
+import type { AssignableUnit } from "./generate-user-form";
 import { AccountRow } from "./account-admin";
 import { approveEmailChange, rejectEmailChange } from "./actions";
 
@@ -11,7 +13,7 @@ export default async function UserManagementPage() {
   const profile = await requireWebMaster();
   const admin = createAdminClient();
 
-  const [{ data: profiles }, { data: authList }, { data: pending }] = await Promise.all([
+  const [{ data: profiles }, { data: authList }, { data: pending }, { data: allUnits }] = await Promise.all([
     admin.from("profiles").select("id, role, unit_scope, display_name"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
     admin
@@ -19,7 +21,28 @@ export default async function UserManagementPage() {
       .select("request_id, user_id, current_email, requested_email, requested_at")
       .eq("status", "pending")
       .order("requested_at", { ascending: true }),
+    admin
+      .from("training_units")
+      .select("unit_id, name, region, unit_seq, training_unit_profiles(province_name)")
+      .order("unit_seq"),
   ]);
+
+  // Units with no coordinator yet — offered in Generate User when role = Unit Coordinator.
+  const takenUnitIds = new Set(
+    (profiles ?? [])
+      .filter((p) => p.role === "unit_coordinator" && p.unit_scope)
+      .map((p) => p.unit_scope as string),
+  );
+  const unassignedUnits: AssignableUnit[] = (allUnits ?? [])
+    .filter((u) => !takenUnitIds.has(u.unit_id))
+    .map((u) => {
+      const code = unitCode({
+        region: u.region,
+        provinceName: (u.training_unit_profiles as { province_name: string | null } | null)?.province_name ?? null,
+        unitSeq: u.unit_seq,
+      });
+      return { unit_id: u.unit_id, label: code ? `${code} · ${u.name}` : u.name };
+    });
 
   const emailById = new Map((authList?.users ?? []).map((u) => [u.id, u.email ?? "-"]));
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name ?? "-"]));
@@ -73,7 +96,7 @@ export default async function UserManagementPage() {
                 จัดการบัญชีผู้ใช้ — เปลี่ยนอีเมล / รีเซ็ตรหัสผ่าน / ปิด-เปิดใช้งาน (ไม่มีการลบถาวร เพื่อคงข้อมูลและประวัติ)
               </p>
             </div>
-            <GenerateUserDialog />
+            <GenerateUserDialog units={unassignedUnits} />
           </div>
 
           <div style={{ marginTop: 16, overflowX: "auto" }}>

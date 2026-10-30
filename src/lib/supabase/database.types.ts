@@ -1165,6 +1165,15 @@ export type Database = {
         Args: { p_course_id: string; p_national_id_hash: string }
         Returns: string
       }
+      create_training_unit_as_staff: {
+        Args: {
+          p_external_ref?: string
+          p_name: string
+          p_region: Database["public"]["Enums"]["region_type"]
+          p_type: Database["public"]["Enums"]["unit_type"]
+        }
+        Returns: string
+      }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -1207,10 +1216,6 @@ export type Database = {
         }
         Returns: Json
       }
-      get_unit_map_cards: {
-        Args: never
-        Returns: Json
-      }
       get_participation_summary: {
         Args: { p_fiscal_year: number }
         Returns: {
@@ -1220,6 +1225,7 @@ export type Database = {
           total: number
         }[]
       }
+      get_unit_map_cards: { Args: never; Returns: Json }
       open_participation_round: {
         Args: { p_deadline?: string; p_fiscal_year: number; p_notice?: string }
         Returns: string

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { unitCode } from "@/lib/id-codes";
 import { AppShell } from "@/components/layout/AppShell";
 import { UnitsList, type UnitCard } from "./units-list";
+import { CreateUnitToolbar } from "./create-unit-dialog";
 
 // The three standards shown as testing-center tags (max 3), with short labels for the card.
 const TESTING_TAGS: { type: string; label: string }[] = [
@@ -77,6 +78,7 @@ export default async function AdminUnitsPage() {
 
   return (
     <AppShell profile={profile} active="units" eyebrow="หน่วยในระบบ" title="หน่วยฝึกอบรมทั้งหมด">
+      <CreateUnitToolbar />
       {cards.length === 0 ? (
         <p className="footnote">ยังไม่มีหน่วยฝึกอบรมในระบบ</p>
       ) : (

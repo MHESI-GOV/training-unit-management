@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { generateUser, type GenerateUserState } from "./actions";
 
 const ROLE_OPTIONS = [
@@ -11,8 +11,25 @@ const ROLE_OPTIONS = [
 
 const initialState: GenerateUserState = {};
 
-export function GenerateUserForm() {
+export type AssignableUnit = { unit_id: string; label: string };
+
+// `units` = units that currently have NO coordinator. When role = Unit Coordinator, the Web Master
+// can optionally bind the new account to one of these existing units (round 12); leaving it blank
+// keeps the old self-onboarding behavior. `defaultRole`/`defaultUnitId` let the unit data-sheet
+// open this prefilled for "assign a coordinator to THIS unit".
+export function GenerateUserForm({
+  units = [],
+  defaultRole = "central_staff",
+  defaultUnitId = "",
+  lockUnit = false,
+}: {
+  units?: AssignableUnit[];
+  defaultRole?: string;
+  defaultUnitId?: string;
+  lockUnit?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(generateUser, initialState);
+  const [role, setRole] = useState(defaultRole);
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -27,7 +44,13 @@ export function GenerateUserForm() {
         </label>
         <label>
           <span className="field-label">บทบาท</span>
-          <select name="role" required className="field">
+          <select
+            name="role"
+            required
+            className="field"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
             {ROLE_OPTIONS.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
@@ -35,6 +58,24 @@ export function GenerateUserForm() {
             ))}
           </select>
         </label>
+
+        {role === "unit_coordinator" &&
+          (lockUnit && defaultUnitId ? (
+            <input type="hidden" name="unit_id" value={defaultUnitId} />
+          ) : (
+            <label>
+              <span className="field-label">มอบหมายให้หน่วย (ที่ยังไม่มีผู้ดูแล)</span>
+              <select name="unit_id" defaultValue={defaultUnitId} className="field">
+                <option value="">— ไม่ผูกตอนนี้ (ให้ผู้ดูแลสร้างหน่วยเอง) —</option>
+                {units.map((u) => (
+                  <option key={u.unit_id} value={u.unit_id}>
+                    {u.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+
         <button type="submit" className="btn primary" disabled={pending}>
           {pending ? "กำลังสร้าง..." : "สร้างบัญชี"}
         </button>
