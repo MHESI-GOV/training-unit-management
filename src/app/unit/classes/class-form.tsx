@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { createClass, updateClass, type ClassFormState } from "./actions";
 import { CLASS_MODE_LABEL } from "@/lib/labels";
-import { type ConfirmedRound } from "@/lib/participation";
+import { type ConfirmedRound, currentThaiFiscalYear } from "@/lib/participation";
 
 const initialState: ClassFormState = {};
 
@@ -24,6 +24,7 @@ export type ClassEdit = {
 
 export function ClassForm({
   unitId,
+  isStaff = false,
   courses,
   instructors,
   confirmedRounds = [],
@@ -31,6 +32,7 @@ export function ClassForm({
   onDone,
 }: {
   unitId: string;
+  isStaff?: boolean;
   courses: { course_id: string; name: string }[];
   instructors: { instructor_id: string; name: string }[];
   confirmedRounds?: ConfirmedRound[];
@@ -51,7 +53,26 @@ export function ClassForm({
       {edit && <p className="footnote">รหัสรุ่น: ระบบกำหนดอัตโนมัติ (แก้ไขไม่ได้)</p>}
 
       {/* ปีงบประมาณที่ผูก — ตั้งตอนสร้างจากปีที่หน่วยยืนยันเข้าร่วม (แก้ไขไม่ได้ภายหลัง) */}
-      {!edit && confirmedRounds.length === 1 && (
+      {/* Staff: กรอกปีงบได้อิสระ ระบบบันทึกการเข้าร่วมให้หน่วยอัตโนมัติ (ไม่ต้องยืนยันการเข้าร่วมก่อน) */}
+      {!edit && isStaff ? (
+        <label>
+          <span className="field-label">ปีงบประมาณ (พ.ศ.) *</span>
+          <input
+            name="fiscal_year"
+            type="number"
+            required
+            min={2500}
+            max={2700}
+            defaultValue={confirmedRounds[0]?.fiscal_year ?? currentThaiFiscalYear()}
+            className="field"
+            style={{ maxWidth: 160 }}
+          />
+          <span className="footnote" style={{ display: "block", marginTop: 4 }}>
+            รุ่นนี้จะผูกกับปีงบประมาณนี้ และระบบจะบันทึกการเข้าร่วมปีงบนี้ให้หน่วยอัตโนมัติ
+          </span>
+        </label>
+      ) : null}
+      {!edit && !isStaff && confirmedRounds.length === 1 && (
         <>
           <input type="hidden" name="fiscal_year" value={confirmedRounds[0].fiscal_year} />
           <p className="notice" style={{ background: "#eaf3fd", color: "#1a4e86", border: "1px solid #c5ddf5" }}>
@@ -59,7 +80,7 @@ export function ClassForm({
           </p>
         </>
       )}
-      {!edit && confirmedRounds.length > 1 && (
+      {!edit && !isStaff && confirmedRounds.length > 1 && (
         <label>
           <span className="field-label">ปีงบประมาณ (ปีที่หน่วยยืนยันเข้าร่วม) *</span>
           <select name="fiscal_year" required defaultValue={confirmedRounds[0].fiscal_year} className="field">

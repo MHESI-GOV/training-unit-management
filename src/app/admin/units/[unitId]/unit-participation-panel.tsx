@@ -29,7 +29,7 @@ export function UnitParticipationPanel({
             </span>
           ))
         ) : (
-          <span className="footnote">ยังไม่มีปีงบที่ยืนยันเข้าร่วม — หน่วยจะยังสร้างชั้นเรียนไม่ได้จนกว่าจะบันทึก</span>
+          <span className="footnote">ยังไม่มีปีงบที่ยืนยันเข้าร่วม — เจ้าหน้าที่สร้างชั้นเรียนได้เลยโดยระบุปีงบในหน้าสร้างชั้นเรียน (ระบบจะบันทึกการเข้าร่วมให้อัตโนมัติ) หรือจะบันทึกไว้ล่วงหน้าที่นี่ก็ได้</span>
         )}
       </p>
       <form action={action} style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", marginTop: 12 }}>

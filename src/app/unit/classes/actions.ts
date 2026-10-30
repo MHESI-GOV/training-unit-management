@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
-import { getUnitConfirmedRounds, type ConfirmedRound } from "@/lib/participation";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getUnitConfirmedRounds, ensureUnitParticipation, type ConfirmedRound } from "@/lib/participation";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+const STAFF_ROLES = new Set(["web_master", "central_staff"]);
 
 // Resolve which confirmed fiscal year a new class binds to: the one the form picked (must be a year
 // the unit confirmed), else the latest confirmed year. Returns null when the unit has confirmed none.
@@ -72,19 +75,37 @@ function validateClass(f: ReturnType<typeof readClassFields>): string | null {
 }
 
 export async function createClass(_prev: ClassFormState, formData: FormData): Promise<ClassFormState> {
-  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const { profile, unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const isStaff = STAFF_ROLES.has(profile.role);
   const f = readClassFields(formData);
   const err = validateClass(f);
   if (err) return { error: err };
 
   const supabase = await createClient();
 
-  // Gate: the unit must have confirmed participation in some fiscal year; the class binds to it.
+  // Gate: a class binds to a confirmed participation year. Unit Coordinators must have a confirmed
+  // round first (Web Master opens + they confirm). Staff (WM/Central Staff) can open classes for
+  // historical/ongoing units directly: they supply the fiscal year and the gate is satisfied
+  // automatically — the unit's participation for that year is recorded behind the scenes.
   const confirmed = await getUnitConfirmedRounds(supabase, unitId);
-  const requestedFy = Number(formData.get("fiscal_year"));
-  const target = resolveTargetRound(confirmed, Number.isInteger(requestedFy) ? requestedFy : null);
+  const requestedFyRaw = Number(formData.get("fiscal_year"));
+  const requestedFy = Number.isInteger(requestedFyRaw) ? requestedFyRaw : null;
+  let target = resolveTargetRound(confirmed, requestedFy);
   if (!target) {
-    return { error: confirmed.length === 0 ? NO_CONFIRMED_ROUND_ERROR : "ปีงบประมาณที่เลือกไม่ถูกต้อง" };
+    if (isStaff && requestedFy != null && requestedFy >= 2500 && requestedFy <= 2700) {
+      const admin = createAdminClient();
+      target = await ensureUnitParticipation(admin, unitId, requestedFy, profile.id);
+      if (!target) return { error: "บันทึกการเข้าร่วมปีงบประมาณให้หน่วยไม่สำเร็จ กรุณาลองอีกครั้ง" };
+      await admin.from("audit_log").insert({
+        actor_user_id: profile.id,
+        action: "staff_auto_confirm_participation",
+        entity_type: "unit_participation",
+        record_id: `${target.round_id}:${unitId}`,
+        changed_fields: [String(requestedFy)],
+      });
+    } else {
+      return { error: confirmed.length === 0 ? NO_CONFIRMED_ROUND_ERROR : "ปีงบประมาณที่เลือกไม่ถูกต้อง" };
+    }
   }
 
   // If a lead instructor is given, verify it belongs to this unit's library.

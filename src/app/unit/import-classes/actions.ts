@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { readUploadedRows } from "@/lib/import-file";
-import { getUnitConfirmedRounds } from "@/lib/participation";
+import { getUnitConfirmedRounds, ensureUnitParticipation } from "@/lib/participation";
+
+const STAFF_ROLES = new Set(["web_master", "central_staff"]);
 
 export type PreviewRow = {
   rowNumber: number;
@@ -125,7 +128,8 @@ export async function commitClassImport(
   _prev: CommitState,
   formData: FormData,
 ): Promise<CommitState> {
-  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const { profile, unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const isStaff = STAFF_ROLES.has(profile.role);
 
   const rowsJson = String(formData.get("rows") ?? "[]");
   const rows: PreviewRow[] = JSON.parse(rowsJson).filter(
@@ -135,12 +139,28 @@ export async function commitClassImport(
 
   const supabase = await createClient();
 
-  // Gate: the unit must have confirmed participation; bind every imported class to the latest such year.
+  // Gate (same as createClass): every imported class binds to a confirmed participation year.
+  // Coordinators must have one already; staff supply a fiscal year and it's recorded automatically.
   const confirmed = await getUnitConfirmedRounds(supabase, unitId);
-  if (confirmed.length === 0) {
-    return { error: "หน่วยนี้ยังไม่ได้ยืนยันเข้าร่วมปีงบประมาณใด — ต้องยืนยันการเข้าร่วมก่อนจึงจะนำเข้าชั้นเรียนได้" };
+  const requestedFyRaw = Number(formData.get("fiscal_year"));
+  const requestedFy = Number.isInteger(requestedFyRaw) ? requestedFyRaw : null;
+  let target = requestedFy != null ? confirmed.find((r) => r.fiscal_year === requestedFy) ?? null : confirmed[0] ?? null;
+  if (!target) {
+    if (isStaff && requestedFy != null && requestedFy >= 2500 && requestedFy <= 2700) {
+      const admin = createAdminClient();
+      target = await ensureUnitParticipation(admin, unitId, requestedFy, profile.id);
+      if (!target) return { error: "บันทึกการเข้าร่วมปีงบประมาณให้หน่วยไม่สำเร็จ กรุณาลองอีกครั้ง" };
+      await admin.from("audit_log").insert({
+        actor_user_id: profile.id,
+        action: "staff_auto_confirm_participation",
+        entity_type: "unit_participation",
+        record_id: `${target.round_id}:${unitId}`,
+        changed_fields: [String(requestedFy)],
+      });
+    } else {
+      return { error: "หน่วยนี้ยังไม่ได้ยืนยันเข้าร่วมปีงบประมาณใด — ต้องยืนยันการเข้าร่วมก่อนจึงจะนำเข้าชั้นเรียนได้" };
+    }
   }
-  const target = confirmed[0];
   let created = 0;
 
   // Compute the next per-unit batch number once, then increment locally per inserted row
