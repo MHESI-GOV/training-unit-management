@@ -23,3 +23,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+        env:
+          # Placeholders so pages that create a Supabase client during prerender can build.
+          # Not real credentials; Vercel builds use the project's own env vars.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
