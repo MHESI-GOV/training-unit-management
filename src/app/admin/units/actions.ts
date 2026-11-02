@@ -122,13 +122,13 @@ export async function adminConfirmParticipation(
   return { success: `บันทึกการเข้าร่วมปีงบประมาณ ${fiscalYear} แล้ว` };
 }
 
-// WM-only correction for a participation year recorded by mistake. Blocked while classes are bound
+// Staff correction for a participation year recorded by mistake. Blocked while classes are bound
 // to that unit + year: removing the row would drop their learners out of that year's dashboard figures.
 export async function adminDeleteParticipation(
   _prev: ConfirmParticipationState,
   formData: FormData,
 ): Promise<ConfirmParticipationState> {
-  const wm = await requireWebMaster();
+  const staff = await requireStaffProfile();
   const unitId = String(formData.get("unit_id") ?? "").trim();
   const fiscalYear = Number(formData.get("fiscal_year"));
   if (!unitId || !Number.isInteger(fiscalYear)) return { error: "ไม่พบรายการที่จะลบ" };
@@ -145,7 +145,7 @@ export async function adminDeleteParticipation(
     return { error: `ลบปีงบ ${fiscalYear} ไม่ได้ เพราะมี ${classCount} ชั้นเรียนผูกกับปีงบนี้อยู่ แก้ปีงบได้ที่ปุ่มแก้ไขชั้นเรียนของแต่ละชั้นเรียน` };
   }
 
-  const { removed, error: delErr } = await removeUnitParticipation(admin, unitId, fiscalYear, wm.id, "admin_delete_participation");
+  const { removed, error: delErr } = await removeUnitParticipation(admin, unitId, fiscalYear, staff.id, "admin_delete_participation");
   if (delErr) return { error: `ลบการเข้าร่วมไม่สำเร็จ: ${delErr}` };
   if (!removed) return { error: "ไม่พบรายการเข้าร่วมของปีงบนี้" };
 

@@ -55,7 +55,7 @@ export function ClassForm({
 
       {edit && <p className="footnote">รหัสรุ่น: ระบบกำหนดอัตโนมัติ (แก้ไขไม่ได้)</p>}
 
-      {/* ปีงบประมาณที่ผูก — ตั้งตอนสร้างจากปีที่หน่วยยืนยันเข้าร่วม (แก้ภายหลังได้เฉพาะ Web Master) */}
+      {/* ปีงบประมาณที่ผูก — ตั้งตอนสร้างจากปีที่หน่วยยืนยันเข้าร่วม (แก้ภายหลังได้เฉพาะ Web Master / Central Staff) */}
       {edit && canEditFiscalYear && (
         <label>
           <span className="field-label">ปีงบประมาณ (พ.ศ.)</span>

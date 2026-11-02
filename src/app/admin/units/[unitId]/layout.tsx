@@ -28,21 +28,21 @@ export default async function UnitSheetLayout({
     .maybeSingle();
   if (!unit) notFound();
 
-  // Coordinator + participation management is Web-Master-only (account + round writes are a WM
-  // carve-out). Central Staff can still fill all the unit's data via the tabs below.
+  // Assigning coordinators and recording participation are Web-Master-only (account + round writes
+  // are a WM carve-out). Central Staff can fill the unit's data via the tabs below and can delete a
+  // mistaken participation year.
   const isWebMaster = profile.role === "web_master";
   let coordinatorName: string | null = null;
   let coordinatorEmail: string | null = null;
   let unscoped: UnscopedCoordinator[] = [];
-  let confirmedYears: number[] = [];
+  const confirmedYears = (await getUnitConfirmedRounds(supabase, unitId)).map((r) => r.fiscal_year);
 
   if (isWebMaster) {
     const admin = createAdminClient();
-    const [{ data: coordProfiles }, confirmed] = await Promise.all([
-      admin.from("profiles").select("id, display_name, unit_scope").eq("role", "unit_coordinator"),
-      getUnitConfirmedRounds(supabase, unitId),
-    ]);
-    confirmedYears = confirmed.map((r) => r.fiscal_year);
+    const { data: coordProfiles } = await admin
+      .from("profiles")
+      .select("id, display_name, unit_scope")
+      .eq("role", "unit_coordinator");
 
     const current = (coordProfiles ?? []).find((p) => p.unit_scope === unitId);
     const unassigned = (coordProfiles ?? []).filter((p) => !p.unit_scope);
@@ -66,20 +66,19 @@ export default async function UnitSheetLayout({
         <Link href="/admin/units">← กลับไปหน่วยฝึกอบรมทั้งหมด</Link>
       </p>
       {isWebMaster && (
-        <>
-          <UnitCoordinatorPanel
-            unitId={unitId}
-            coordinatorName={coordinatorName}
-            coordinatorEmail={coordinatorEmail}
-            unscoped={unscoped}
-          />
-          <UnitParticipationPanel
-            unitId={unitId}
-            confirmedYears={confirmedYears}
-            defaultFiscalYear={thaiFiscalYear()}
-          />
-        </>
+        <UnitCoordinatorPanel
+          unitId={unitId}
+          coordinatorName={coordinatorName}
+          coordinatorEmail={coordinatorEmail}
+          unscoped={unscoped}
+        />
       )}
+      <UnitParticipationPanel
+        unitId={unitId}
+        confirmedYears={confirmedYears}
+        canRecord={isWebMaster}
+        defaultFiscalYear={thaiFiscalYear()}
+      />
       <SheetTabs unitId={unitId} />
       {children}
     </AppShell>

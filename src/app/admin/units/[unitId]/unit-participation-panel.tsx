@@ -7,15 +7,17 @@ import { adminConfirmParticipation, adminDeleteParticipation, type ConfirmPartic
 
 const initial: ConfirmParticipationState = {};
 
-// WM-only panel: record a unit's participation for a fiscal year (BE). Needed for historical units
-// so the class-creation gate (confirmed participation) passes. Shows years already confirmed.
+// Shows the years a unit confirmed. Staff can delete a mistaken year; only Web Master can record one
+// (needed for historical units so the class-creation gate passes).
 export function UnitParticipationPanel({
   unitId,
   confirmedYears,
+  canRecord,
   defaultFiscalYear,
 }: {
   unitId: string;
   confirmedYears: number[];
+  canRecord: boolean;
   defaultFiscalYear: number;
 }) {
   // One result line for all three actions, so an older message never sits beside a newer one.
@@ -57,9 +59,10 @@ export function UnitParticipationPanel({
             </span>
           ))
         ) : (
-          <span className="footnote">ยังไม่มีปีงบที่ยืนยันเข้าร่วม — เจ้าหน้าที่สร้างชั้นเรียนได้เลยโดยระบุปีงบในหน้าสร้างชั้นเรียน (ระบบจะบันทึกการเข้าร่วมให้อัตโนมัติ) หรือจะบันทึกไว้ล่วงหน้าที่นี่ก็ได้</span>
+          <span className="footnote">ยังไม่มีปีงบที่ยืนยันเข้าร่วม — เจ้าหน้าที่สร้างชั้นเรียนได้เลยโดยระบุปีงบในหน้าสร้างชั้นเรียน (ระบบจะบันทึกการเข้าร่วมให้อัตโนมัติ){canRecord ? " หรือจะบันทึกไว้ล่วงหน้าที่นี่ก็ได้" : ""}</span>
         )}
       </p>
+      {canRecord && (
       <form action={action} style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap", marginTop: 12 }}>
         <input type="hidden" name="unit_id" value={unitId} />
         <label>
@@ -79,6 +82,7 @@ export function UnitParticipationPanel({
           {pending ? "กำลังบันทึก..." : "บันทึกการเข้าร่วม"}
         </button>
       </form>
+      )}
 
       <form ref={deleteFormRef} action={deleteAction}>
         <input type="hidden" name="unit_id" value={unitId} />

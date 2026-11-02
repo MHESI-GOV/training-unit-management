@@ -167,7 +167,7 @@ export async function createClass(_prev: ClassFormState, formData: FormData): Pr
   return { error: "สร้างรหัสรุ่นไม่สำเร็จ กรุณาลองอีกครั้ง" };
 }
 
-// WM-only correction for a class bound to the wrong fiscal year. Records the unit's participation in
+// Staff-only correction for a class bound to the wrong fiscal year. Records the unit's participation in
 // the target year if needed. If the move leaves the old year with no classes, its participation row
 // is removed too, but only when staff recorded it: a coordinator's own confirmation is their answer
 // to the round, and it is what lets them open classes, so it is never removed automatically.
@@ -259,7 +259,7 @@ export async function updateClass(_prev: ClassFormState, formData: FormData): Pr
   const targetYear = fiscalYearRaw ? Number(fiscalYearRaw) : cls.fiscal_year;
   const yearChanged = targetYear !== cls.fiscal_year;
   if (yearChanged) {
-    if (profile.role !== "web_master") return { error: "เฉพาะ Web Master เท่านั้นที่แก้ปีงบประมาณของชั้นเรียนได้" };
+    if (!STAFF_ROLES.has(profile.role)) return { error: "เฉพาะเจ้าหน้าที่ส่วนกลางเท่านั้นที่แก้ปีงบประมาณของชั้นเรียนได้" };
     if (!Number.isInteger(targetYear) || targetYear! < 2500 || targetYear! > 2700) {
       return { error: "กรุณาระบุปีงบประมาณ (พ.ศ.) ให้ถูกต้อง" };
     }
