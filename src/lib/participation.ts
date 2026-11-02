@@ -42,20 +42,18 @@ export function currentThaiFiscalYear(d: Date = new Date()): number {
   return d.getFullYear() + 543 + (d.getMonth() + 1 >= 10 ? 1 : 0);
 }
 
-// The round Web Master opened most recently. New staff-created classes bind to it. Only a round
-// actually opened through the participation menu counts: it is open now, or was closed by Web Master
-// (closed_at set). Rounds auto-created closed by ensureUnitParticipation/adminConfirmParticipation
-// never have closed_at, so a mistyped year can't become the default.
-export async function getLatestOpenedRound(supabase: SupabaseClient<Database>): Promise<ConfirmedRound | null> {
+// Rounds Web Master has opened, most recently opened first. Staff pick one of these for a new class.
+// Only a round actually opened through the participation menu counts: it is open now, or was closed
+// by Web Master (closed_at set). Rounds auto-created closed by ensureUnitParticipation/
+// adminConfirmParticipation never have closed_at, so a mistyped year can't be offered.
+export async function getOpenedRounds(supabase: SupabaseClient<Database>): Promise<ConfirmedRound[]> {
   const { data } = await supabase
     .from("participation_rounds")
     .select("round_id, fiscal_year")
     .or("status.eq.open,closed_at.not.is.null")
     .order("opened_at", { ascending: false })
-    .order("fiscal_year", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data;
+    .order("fiscal_year", { ascending: false });
+  return data ?? [];
 }
 
 // Staff-only "open the gate" helper: guarantee this unit has a CONFIRMED participation row for the

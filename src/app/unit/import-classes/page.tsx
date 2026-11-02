@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
+import { createClient } from "@/lib/supabase/server";
+import { getOpenedRounds } from "@/lib/participation";
 import { AppShell } from "@/components/layout/AppShell";
 import { ImportClient } from "./import-client";
 
@@ -10,6 +12,7 @@ export default async function ImportClassesPage({
 }) {
   const { unit_id } = await searchParams;
   const { unitId, isStaff, profile } = await resolvePageUnit(unit_id);
+  const openedRounds = isStaff ? await getOpenedRounds(await createClient()) : [];
 
   return (
     <AppShell profile={profile} active="import-classes" eyebrow="นำเข้าข้อมูล" title="นำเข้ารุ่นฝึกอบรมจากไฟล์ CSV">
@@ -21,7 +24,7 @@ export default async function ImportClassesPage({
       <p className="footnote" style={{ marginBottom: 20 }}>
         จับคู่ด้วยชื่อหลักสูตร — หลักสูตรต้องมีอยู่แล้วที่ <Link href="/courses">หน้าหลักสูตร</Link> ก่อน
       </p>
-      <ImportClient unitId={unitId} />
+      <ImportClient unitId={unitId} isStaff={isStaff} openedRounds={openedRounds} />
     </AppShell>
   );
 }

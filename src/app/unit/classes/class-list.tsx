@@ -9,6 +9,7 @@ import { classStatusDisplay } from "@/lib/class-status";
 import { formatThaiDate } from "@/lib/date-format";
 import type { ConfirmedRound } from "@/lib/participation";
 import { ClassForm } from "./class-form";
+import { OpenedRoundSelect } from "./opened-round-select";
 import {
   previewClassImport,
   commitClassImport,
@@ -42,7 +43,7 @@ export function ClassList({
   instructors,
   classes,
   confirmedRounds,
-  latestOpenedRound,
+  openedRounds,
 }: {
   unitId: string;
   isStaff: boolean;
@@ -50,15 +51,15 @@ export function ClassList({
   instructors: Instructor[];
   classes: ClassRow[];
   confirmedRounds: ConfirmedRound[];
-  latestOpenedRound: ConfirmedRound | null;
+  openedRounds: ConfirmedRound[];
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
-  // Staff (WM/Central Staff) open classes in the round Web Master opened most recently, and the unit's
-  // participation is recorded automatically. Unit Coordinators still need a confirmed round first.
-  const canCreate = isStaff ? latestOpenedRound !== null : confirmedRounds.length > 0;
+  // Staff (WM/Central Staff) open classes in a round Web Master has opened, and the unit's participation
+  // is recorded automatically. Unit Coordinators still need a confirmed round first.
+  const canCreate = isStaff ? openedRounds.length > 0 : confirmedRounds.length > 0;
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -138,7 +139,7 @@ export function ClassList({
           courses={courses}
           instructors={instructors}
           confirmedRounds={confirmedRounds}
-          latestOpenedRound={latestOpenedRound}
+          openedRounds={openedRounds}
           onDone={() => {
             setCreateOpen(false);
             router.refresh();
@@ -150,7 +151,8 @@ export function ClassList({
         <ClassCsv
           unitId={unitId}
           isStaff={isStaff}
-          fiscalYear={isStaff ? latestOpenedRound?.fiscal_year ?? null : confirmedRounds[0]?.fiscal_year ?? null}
+          fiscalYear={confirmedRounds[0]?.fiscal_year ?? null}
+          openedRounds={openedRounds}
           onImported={() => router.refresh()}
         />
       </Popup>
@@ -161,7 +163,7 @@ export function ClassList({
 const classPreviewInitial: ClassPreviewState = {};
 const classCommitInitial: ClassCommitState = {};
 
-function ClassCsv({ unitId, isStaff, fiscalYear, onImported }: { unitId: string; isStaff: boolean; fiscalYear: number | null; onImported: () => void }) {
+function ClassCsv({ unitId, isStaff, fiscalYear, openedRounds, onImported }: { unitId: string; isStaff: boolean; fiscalYear: number | null; openedRounds: ConfirmedRound[]; onImported: () => void }) {
   const [preview, previewAction, previewPending] = useActionState(previewClassImport, classPreviewInitial);
   const [commit, commitAction, commitPending] = useActionState(commitClassImport, classCommitInitial);
 
@@ -172,10 +174,9 @@ function ClassCsv({ unitId, isStaff, fiscalYear, onImported }: { unitId: string;
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      {fiscalYear != null && (
+      {!isStaff && fiscalYear != null && (
         <p className="footnote">
-          ชั้นเรียนที่นำเข้าจะถูกผูกกับ <strong>ปีงบประมาณ {fiscalYear}</strong>{" "}
-          {isStaff ? "(รอบล่าสุดที่ Web Master เปิด) ระบบจะบันทึกการเข้าร่วมปีงบนี้ให้หน่วยอัตโนมัติ" : "(ปีล่าสุดที่หน่วยยืนยันเข้าร่วม)"}
+          ชั้นเรียนที่นำเข้าจะถูกผูกกับ <strong>ปีงบประมาณ {fiscalYear}</strong> (ปีล่าสุดที่หน่วยยืนยันเข้าร่วม)
         </p>
       )}
       <FieldSpecTable
@@ -223,9 +224,10 @@ function ClassCsv({ unitId, isStaff, fiscalYear, onImported }: { unitId: string;
             </table>
           </div>
           {preview.passCount! > 0 && (
-            <form action={commitAction}>
+            <form action={commitAction} style={{ display: "grid", gap: 10 }}>
               <input type="hidden" name="unit_id" value={unitId} />
               <input type="hidden" name="rows" value={JSON.stringify(preview.rows)} />
+              {isStaff && <OpenedRoundSelect rounds={openedRounds} />}
               <button type="submit" className="btn primary" disabled={commitPending}>
                 {commitPending ? "กำลังนำเข้า..." : `นำเข้า ${preview.passCount} ชั้นเรียน`}
               </button>

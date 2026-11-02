@@ -5,7 +5,7 @@ import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readUploadedRows } from "@/lib/import-file";
-import { getUnitConfirmedRounds, ensureUnitParticipation, getLatestOpenedRound, type ConfirmedRound } from "@/lib/participation";
+import { getUnitConfirmedRounds, ensureUnitParticipation, getOpenedRounds, type ConfirmedRound } from "@/lib/participation";
 
 const STAFF_ROLES = new Set(["web_master", "central_staff"]);
 
@@ -140,24 +140,26 @@ export async function commitClassImport(
   const supabase = await createClient();
 
   // Gate (same as createClass): every imported class binds to a confirmed participation year.
-  // Coordinators must have one already; staff always use the round Web Master opened most recently,
-  // and the unit's participation for that year is recorded automatically.
+  // Coordinators must have one already; staff pick from the rounds Web Master has opened, and the
+  // unit's participation for that year is recorded automatically.
   const confirmed = await getUnitConfirmedRounds(supabase, unitId);
   let target: ConfirmedRound | null;
   if (isStaff) {
-    const latest = await getLatestOpenedRound(supabase);
-    if (!latest) return { error: "ยังไม่มีรอบที่ Web Master เปิด — ต้องเปิดรอบยืนยันการเข้าร่วมก่อนจึงจะนำเข้าชั้นเรียนได้" };
-    target = confirmed.find((r) => r.fiscal_year === latest.fiscal_year) ?? null;
+    const opened = await getOpenedRounds(supabase);
+    if (opened.length === 0) return { error: "ยังไม่มีรอบที่ Web Master เปิด — ต้องเปิดรอบยืนยันการเข้าร่วมก่อนจึงจะนำเข้าชั้นเรียนได้" };
+    const picked = opened.find((r) => r.fiscal_year === Number(formData.get("fiscal_year")));
+    if (!picked) return { error: "กรุณาเลือกปีงบประมาณจากรอบที่ Web Master เปิด" };
+    target = confirmed.find((r) => r.fiscal_year === picked.fiscal_year) ?? null;
     if (!target) {
       const admin = createAdminClient();
-      target = await ensureUnitParticipation(admin, unitId, latest.fiscal_year, profile.id);
+      target = await ensureUnitParticipation(admin, unitId, picked.fiscal_year, profile.id);
       if (!target) return { error: "บันทึกการเข้าร่วมปีงบประมาณให้หน่วยไม่สำเร็จ กรุณาลองอีกครั้ง" };
       await admin.from("audit_log").insert({
         actor_user_id: profile.id,
         action: "staff_auto_confirm_participation",
         entity_type: "unit_participation",
         record_id: `${target.round_id}:${unitId}`,
-        changed_fields: [String(latest.fiscal_year)],
+        changed_fields: [String(picked.fiscal_year)],
       });
     }
   } else {

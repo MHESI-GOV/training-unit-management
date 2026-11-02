@@ -5,11 +5,21 @@ import { previewClassImport, commitClassImport, type PreviewState, type CommitSt
 import { StepIndicator } from "@/components/ui/StepIndicator";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatThaiDate } from "@/lib/date-format";
+import type { ConfirmedRound } from "@/lib/participation";
+import { OpenedRoundSelect } from "../classes/opened-round-select";
 
 const previewInitial: PreviewState = {};
 const commitInitial: CommitState = {};
 
-export function ImportClient({ unitId }: { unitId: string }) {
+export function ImportClient({
+  unitId,
+  isStaff,
+  openedRounds,
+}: {
+  unitId: string;
+  isStaff: boolean;
+  openedRounds: ConfirmedRound[];
+}) {
   const [previewState, previewAction, previewPending] = useActionState(previewClassImport, previewInitial);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitState, commitAction, commitPending] = useActionState(
@@ -108,6 +118,7 @@ export function ImportClient({ unitId }: { unitId: string }) {
         <form ref={formRef} action={commitAction} style={{ display: "grid", gap: 10, maxWidth: 360, marginTop: 20 }}>
           <input type="hidden" name="unit_id" value={unitId} />
           <input type="hidden" name="rows" value={JSON.stringify(previewState.rows)} />
+          {isStaff && <OpenedRoundSelect rounds={openedRounds} />}
           <button type="button" className="btn primary" onClick={() => setConfirmOpen(true)}>
             นำเข้า {previewState.passCount} รายการ
           </button>

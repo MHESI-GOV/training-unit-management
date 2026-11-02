@@ -4,6 +4,7 @@ import { useActionState, useEffect } from "react";
 import { createClass, updateClass, type ClassFormState } from "./actions";
 import { CLASS_MODE_LABEL } from "@/lib/labels";
 import type { ConfirmedRound } from "@/lib/participation";
+import { OpenedRoundSelect } from "./opened-round-select";
 
 const initialState: ClassFormState = {};
 
@@ -30,7 +31,7 @@ export function ClassForm({
   courses,
   instructors,
   confirmedRounds = [],
-  latestOpenedRound = null,
+  openedRounds = [],
   edit,
   onDone,
 }: {
@@ -40,7 +41,7 @@ export function ClassForm({
   courses: { course_id: string; name: string }[];
   instructors: { instructor_id: string; name: string }[];
   confirmedRounds?: ConfirmedRound[];
-  latestOpenedRound?: ConfirmedRound | null;
+  openedRounds?: ConfirmedRound[];
   edit?: ClassEdit;
   onDone?: () => void;
 }) {
@@ -76,13 +77,8 @@ export function ClassForm({
           </span>
         </label>
       )}
-      {/* Staff: ผูกกับรอบล่าสุดที่ Web Master เปิดเสมอ ระบบบันทึกการเข้าร่วมให้หน่วยอัตโนมัติ */}
-      {!edit && isStaff && latestOpenedRound && (
-        <p className="notice" style={{ background: "#eaf3fd", color: "#1a4e86", border: "1px solid #c5ddf5" }}>
-          รุ่นนี้จะอยู่ใน <strong>ปีงบประมาณ {latestOpenedRound.fiscal_year}</strong> (รอบล่าสุดที่ Web Master เปิด)
-          ระบบจะบันทึกการเข้าร่วมปีงบนี้ให้หน่วยอัตโนมัติ
-        </p>
-      )}
+      {/* Staff: เลือกจากรอบที่ Web Master เคยเปิด ระบบบันทึกการเข้าร่วมให้หน่วยอัตโนมัติ */}
+      {!edit && isStaff && <OpenedRoundSelect rounds={openedRounds} />}
       {!edit && !isStaff && confirmedRounds.length === 1 && (
         <>
           <input type="hidden" name="fiscal_year" value={confirmedRounds[0].fiscal_year} />
