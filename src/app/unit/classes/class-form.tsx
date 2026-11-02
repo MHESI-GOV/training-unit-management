@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { createClass, updateClass, type ClassFormState } from "./actions";
 import { CLASS_MODE_LABEL } from "@/lib/labels";
-import { type ConfirmedRound, currentThaiFiscalYear } from "@/lib/participation";
+import type { ConfirmedRound } from "@/lib/participation";
 
 const initialState: ClassFormState = {};
 
@@ -30,6 +30,7 @@ export function ClassForm({
   courses,
   instructors,
   confirmedRounds = [],
+  latestOpenedRound = null,
   edit,
   onDone,
 }: {
@@ -39,6 +40,7 @@ export function ClassForm({
   courses: { course_id: string; name: string }[];
   instructors: { instructor_id: string; name: string }[];
   confirmedRounds?: ConfirmedRound[];
+  latestOpenedRound?: ConfirmedRound | null;
   edit?: ClassEdit;
   onDone?: () => void;
 }) {
@@ -74,25 +76,13 @@ export function ClassForm({
           </span>
         </label>
       )}
-      {/* Staff: กรอกปีงบได้อิสระ ระบบบันทึกการเข้าร่วมให้หน่วยอัตโนมัติ (ไม่ต้องยืนยันการเข้าร่วมก่อน) */}
-      {!edit && isStaff ? (
-        <label>
-          <span className="field-label">ปีงบประมาณ (พ.ศ.) *</span>
-          <input
-            name="fiscal_year"
-            type="number"
-            required
-            min={2500}
-            max={2700}
-            defaultValue={confirmedRounds[0]?.fiscal_year ?? currentThaiFiscalYear()}
-            className="field"
-            style={{ maxWidth: 160 }}
-          />
-          <span className="footnote" style={{ display: "block", marginTop: 4 }}>
-            รุ่นนี้จะผูกกับปีงบประมาณนี้ และระบบจะบันทึกการเข้าร่วมปีงบนี้ให้หน่วยอัตโนมัติ
-          </span>
-        </label>
-      ) : null}
+      {/* Staff: ผูกกับรอบล่าสุดที่ Web Master เปิดเสมอ ระบบบันทึกการเข้าร่วมให้หน่วยอัตโนมัติ */}
+      {!edit && isStaff && latestOpenedRound && (
+        <p className="notice" style={{ background: "#eaf3fd", color: "#1a4e86", border: "1px solid #c5ddf5" }}>
+          รุ่นนี้จะอยู่ใน <strong>ปีงบประมาณ {latestOpenedRound.fiscal_year}</strong> (รอบล่าสุดที่ Web Master เปิด)
+          ระบบจะบันทึกการเข้าร่วมปีงบนี้ให้หน่วยอัตโนมัติ
+        </p>
+      )}
       {!edit && !isStaff && confirmedRounds.length === 1 && (
         <>
           <input type="hidden" name="fiscal_year" value={confirmedRounds[0].fiscal_year} />

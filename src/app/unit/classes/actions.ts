@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getUnitConfirmedRounds,
   ensureUnitParticipation,
+  getLatestOpenedRound,
   removeUnitParticipation,
   type ConfirmedRound,
 } from "@/lib/participation";
@@ -24,6 +25,8 @@ function resolveTargetRound(confirmed: ConfirmedRound[], requestedFy: number | n
 
 const NO_CONFIRMED_ROUND_ERROR =
   "หน่วยนี้ยังไม่ได้ยืนยันเข้าร่วมปีงบประมาณใด — ต้องรอ Web Master เปิดรอบและกดยืนยันการเข้าร่วมก่อนจึงจะสร้างชั้นเรียนได้";
+
+const NO_OPENED_ROUND_ERROR = "ยังไม่มีรอบที่ Web Master เปิด — ต้องเปิดรอบยืนยันการเข้าร่วมก่อนจึงจะสร้างชั้นเรียนได้";
 
 export type ClassFormState = { error?: string; success?: string };
 
@@ -89,26 +92,32 @@ export async function createClass(_prev: ClassFormState, formData: FormData): Pr
   const supabase = await createClient();
 
   // Gate: a class binds to a confirmed participation year. Unit Coordinators must have a confirmed
-  // round first (Web Master opens + they confirm). Staff (WM/Central Staff) can open classes for
-  // historical/ongoing units directly: they supply the fiscal year and the gate is satisfied
-  // automatically — the unit's participation for that year is recorded behind the scenes.
+  // round first (Web Master opens + they confirm). Staff (WM/Central Staff) can open classes for any
+  // unit, always in the round Web Master opened most recently (the form's value is ignored), and the
+  // unit's participation for that year is recorded automatically.
   const confirmed = await getUnitConfirmedRounds(supabase, unitId);
-  const requestedFyRaw = Number(formData.get("fiscal_year"));
-  const requestedFy = Number.isInteger(requestedFyRaw) ? requestedFyRaw : null;
-  let target = resolveTargetRound(confirmed, requestedFy);
-  if (!target) {
-    if (isStaff && requestedFy != null && requestedFy >= 2500 && requestedFy <= 2700) {
+  let target: ConfirmedRound | null;
+  if (isStaff) {
+    const latest = await getLatestOpenedRound(supabase);
+    if (!latest) return { error: NO_OPENED_ROUND_ERROR };
+    target = confirmed.find((r) => r.fiscal_year === latest.fiscal_year) ?? null;
+    if (!target) {
       const admin = createAdminClient();
-      target = await ensureUnitParticipation(admin, unitId, requestedFy, profile.id);
+      target = await ensureUnitParticipation(admin, unitId, latest.fiscal_year, profile.id);
       if (!target) return { error: "บันทึกการเข้าร่วมปีงบประมาณให้หน่วยไม่สำเร็จ กรุณาลองอีกครั้ง" };
       await admin.from("audit_log").insert({
         actor_user_id: profile.id,
         action: "staff_auto_confirm_participation",
         entity_type: "unit_participation",
         record_id: `${target.round_id}:${unitId}`,
-        changed_fields: [String(requestedFy)],
+        changed_fields: [String(latest.fiscal_year)],
       });
-    } else {
+    }
+  } else {
+    const requestedFyRaw = Number(formData.get("fiscal_year"));
+    const requestedFy = Number.isInteger(requestedFyRaw) ? requestedFyRaw : null;
+    target = resolveTargetRound(confirmed, requestedFy);
+    if (!target) {
       return { error: confirmed.length === 0 ? NO_CONFIRMED_ROUND_ERROR : "ปีงบประมาณที่เลือกไม่ถูกต้อง" };
     }
   }

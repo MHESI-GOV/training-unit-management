@@ -7,7 +7,7 @@ import { Popup } from "@/components/ui/Popup";
 import { FieldSpecTable } from "@/components/ui/FieldSpec";
 import { classStatusDisplay } from "@/lib/class-status";
 import { formatThaiDate } from "@/lib/date-format";
-import { type ConfirmedRound, currentThaiFiscalYear } from "@/lib/participation";
+import type { ConfirmedRound } from "@/lib/participation";
 import { ClassForm } from "./class-form";
 import {
   previewClassImport,
@@ -42,6 +42,7 @@ export function ClassList({
   instructors,
   classes,
   confirmedRounds,
+  latestOpenedRound,
 }: {
   unitId: string;
   isStaff: boolean;
@@ -49,14 +50,15 @@ export function ClassList({
   instructors: Instructor[];
   classes: ClassRow[];
   confirmedRounds: ConfirmedRound[];
+  latestOpenedRound: ConfirmedRound | null;
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
-  // Staff (WM/Central Staff) may open classes directly — they supply the fiscal year and the unit's
+  // Staff (WM/Central Staff) open classes in the round Web Master opened most recently, and the unit's
   // participation is recorded automatically. Unit Coordinators still need a confirmed round first.
-  const canCreate = isStaff || confirmedRounds.length > 0;
+  const canCreate = isStaff ? latestOpenedRound !== null : confirmedRounds.length > 0;
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -85,6 +87,12 @@ export function ClassList({
         <button className="btn secondary" onClick={() => setCsvOpen(true)} disabled={!canCreate}>นำเข้าชั้นเรียน CSV</button>
         <button className="btn primary" onClick={() => setCreateOpen(true)} disabled={!canCreate}>+ สร้างชั้นเรียน</button>
       </div>
+
+      {!canCreate && isStaff && (
+        <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6", marginBottom: 16 }}>
+          ยังไม่มีรอบที่ Web Master เปิด จึงยังสร้างชั้นเรียนไม่ได้ — ต้องเปิดรอบที่เมนู <strong>รอบยืนยันการเข้าร่วม</strong> ก่อน
+        </p>
+      )}
 
       {!canCreate && !isStaff && (
         <p className="notice" style={{ background: "#fff3da", color: "#76520c", border: "1px solid #f0d9a6", marginBottom: 16 }}>
@@ -130,6 +138,7 @@ export function ClassList({
           courses={courses}
           instructors={instructors}
           confirmedRounds={confirmedRounds}
+          latestOpenedRound={latestOpenedRound}
           onDone={() => {
             setCreateOpen(false);
             router.refresh();
@@ -141,7 +150,7 @@ export function ClassList({
         <ClassCsv
           unitId={unitId}
           isStaff={isStaff}
-          fiscalYear={confirmedRounds[0]?.fiscal_year ?? null}
+          fiscalYear={isStaff ? latestOpenedRound?.fiscal_year ?? null : confirmedRounds[0]?.fiscal_year ?? null}
           onImported={() => router.refresh()}
         />
       </Popup>
@@ -155,7 +164,6 @@ const classCommitInitial: ClassCommitState = {};
 function ClassCsv({ unitId, isStaff, fiscalYear, onImported }: { unitId: string; isStaff: boolean; fiscalYear: number | null; onImported: () => void }) {
   const [preview, previewAction, previewPending] = useActionState(previewClassImport, classPreviewInitial);
   const [commit, commitAction, commitPending] = useActionState(commitClassImport, classCommitInitial);
-  const [fy, setFy] = useState<number>(fiscalYear ?? currentThaiFiscalYear());
 
   if (commit.created !== undefined) {
     onImported();
@@ -164,25 +172,12 @@ function ClassCsv({ unitId, isStaff, fiscalYear, onImported }: { unitId: string;
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      {isStaff ? (
-        <label>
-          <span className="field-label">ปีงบประมาณที่จะผูกชั้นเรียนที่นำเข้า (พ.ศ.) *</span>
-          <input
-            type="number"
-            min={2500}
-            max={2700}
-            value={fy}
-            onChange={(e) => setFy(Number(e.target.value))}
-            className="field"
-            style={{ maxWidth: 160 }}
-          />
-          <span className="footnote" style={{ display: "block", marginTop: 4 }}>
-            ระบบจะบันทึกการเข้าร่วมปีงบนี้ให้หน่วยอัตโนมัติ (ไม่ต้องยืนยันการเข้าร่วมก่อน)
-          </span>
-        </label>
-      ) : fiscalYear != null ? (
-        <p className="footnote">ชั้นเรียนที่นำเข้าจะถูกผูกกับ <strong>ปีงบประมาณ {fiscalYear}</strong> (ปีล่าสุดที่หน่วยยืนยันเข้าร่วม)</p>
-      ) : null}
+      {fiscalYear != null && (
+        <p className="footnote">
+          ชั้นเรียนที่นำเข้าจะถูกผูกกับ <strong>ปีงบประมาณ {fiscalYear}</strong>{" "}
+          {isStaff ? "(รอบล่าสุดที่ Web Master เปิด) ระบบจะบันทึกการเข้าร่วมปีงบนี้ให้หน่วยอัตโนมัติ" : "(ปีล่าสุดที่หน่วยยืนยันเข้าร่วม)"}
+        </p>
+      )}
       <FieldSpecTable
         specs={[
           { field: "course_name", type: "ข้อความ", required: true, note: "ต้องตรงกับชื่อหลักสูตรที่มีอยู่แล้ว" },
@@ -230,7 +225,6 @@ function ClassCsv({ unitId, isStaff, fiscalYear, onImported }: { unitId: string;
           {preview.passCount! > 0 && (
             <form action={commitAction}>
               <input type="hidden" name="unit_id" value={unitId} />
-              {isStaff && <input type="hidden" name="fiscal_year" value={fy} />}
               <input type="hidden" name="rows" value={JSON.stringify(preview.rows)} />
               <button type="submit" className="btn primary" disabled={commitPending}>
                 {commitPending ? "กำลังนำเข้า..." : `นำเข้า ${preview.passCount} ชั้นเรียน`}
