@@ -87,6 +87,55 @@ export async function ensureUnitParticipation(
   return { round_id: roundId, fiscal_year: fiscalYear };
 }
 
+// Remove this unit's participation row for a fiscal year and audit it. An auto-created closed round
+// left with no units and no classes is removed too, so the year disappears from the dashboard's
+// fiscal-year list. Must be called with a service-role (admin) client. Callers decide whether the
+// removal is allowed (e.g. no classes still bound to the year).
+export async function removeUnitParticipation(
+  admin: SupabaseClient<Database>,
+  unitId: string,
+  fiscalYear: number,
+  actorId: string,
+  auditAction: string,
+): Promise<{ removed: boolean; error?: string }> {
+  const { data: deleted, error } = await admin
+    .from("unit_participation")
+    .delete()
+    .eq("unit_id", unitId)
+    .eq("fiscal_year", fiscalYear)
+    .select("round_id, status");
+  if (error) return { removed: false, error: error.message };
+  const row = deleted?.[0];
+  if (!row) return { removed: false };
+
+  await admin.from("audit_log").insert({
+    actor_user_id: actorId,
+    action: auditAction,
+    entity_type: "unit_participation",
+    record_id: `${row.round_id}:${unitId}`,
+    changed_fields: [String(fiscalYear), row.status],
+  });
+
+  const [{ data: round }, { count: unitsLeft }, { count: roundClasses }] = await Promise.all([
+    admin.from("participation_rounds").select("status, notice_message").eq("round_id", row.round_id).maybeSingle(),
+    admin.from("unit_participation").select("participation_id", { count: "exact", head: true }).eq("round_id", row.round_id),
+    admin.from("classes").select("class_id", { count: "exact", head: true }).eq("round_id", row.round_id),
+  ]);
+  if (round?.status === "closed" && !round.notice_message && unitsLeft === 0 && roundClasses === 0) {
+    const { error: roundErr } = await admin.from("participation_rounds").delete().eq("round_id", row.round_id);
+    if (!roundErr) {
+      await admin.from("audit_log").insert({
+        actor_user_id: actorId,
+        action: "admin_delete_empty_participation_round",
+        entity_type: "participation_round",
+        record_id: row.round_id,
+        changed_fields: [String(fiscalYear)],
+      });
+    }
+  }
+  return { removed: true };
+}
+
 // Fiscal years this unit has CONFIRMED participation in (unit_participation.status = 'confirmed'),
 // newest first. Creating a class requires at least one of these; a class is bound to one of them
 // (default = the latest). The round being open or closed does NOT matter — "open" was only the

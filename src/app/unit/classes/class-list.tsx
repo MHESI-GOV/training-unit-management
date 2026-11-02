@@ -24,6 +24,7 @@ export type ClassRow = {
   status: string;
   start_date: string;
   end_date: string;
+  fiscal_year: number | null;
   schedule_time: string | null;
   seat_count: number;
   learner_count: number;
@@ -104,7 +105,7 @@ export function ClassList({
                 {c.name ? ` · ${c.name}` : ""}
               </strong>
               <div className="footnote" style={{ marginTop: 3 }}>
-                {formatThaiDate(c.start_date)} – {formatThaiDate(c.end_date)}
+                ปีงบ {c.fiscal_year ?? "—"} · {formatThaiDate(c.start_date)} – {formatThaiDate(c.end_date)}
                 {c.schedule_time ? ` · ${c.schedule_time}` : ""}
                 {c.lead_instructor_name ? ` · หัวหน้าผู้สอน: ${c.lead_instructor_name}` : ""}
               </div>

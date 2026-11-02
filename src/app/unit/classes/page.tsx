@@ -21,7 +21,7 @@ export default async function UnitClassesPage({
     supabase
       .from("classes")
       .select(
-        "class_id, batch_code, name, status, start_date, end_date, schedule_time, seat_count, courses(name), lead:instructors!classes_lead_instructor_id_fkey(name), enrollments(status), class_instructors(count)",
+        "class_id, batch_code, name, status, start_date, end_date, fiscal_year, schedule_time, seat_count, courses(name), lead:instructors!classes_lead_instructor_id_fkey(name), enrollments(status), class_instructors(count)",
       )
       .eq("unit_id", unitId)
       .order("batch_code", { ascending: true }),
@@ -36,6 +36,7 @@ export default async function UnitClassesPage({
     status: c.status,
     start_date: c.start_date,
     end_date: c.end_date,
+    fiscal_year: c.fiscal_year,
     schedule_time: c.schedule_time,
     seat_count: c.seat_count,
     learner_count: ((c.enrollments as unknown as { status: string }[] | null) ?? []).filter((e) => e.status !== "withdrawn").length,

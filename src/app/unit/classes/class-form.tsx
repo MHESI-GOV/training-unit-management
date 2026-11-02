@@ -13,6 +13,7 @@ export type ClassEdit = {
   name: string | null;
   start_date: string;
   end_date: string;
+  fiscal_year: number | null;
   seat_count: number;
   schedule_time: string | null;
   lead_instructor_id: string | null;
@@ -25,6 +26,7 @@ export type ClassEdit = {
 export function ClassForm({
   unitId,
   isStaff = false,
+  canEditFiscalYear = false,
   courses,
   instructors,
   confirmedRounds = [],
@@ -33,6 +35,7 @@ export function ClassForm({
 }: {
   unitId: string;
   isStaff?: boolean;
+  canEditFiscalYear?: boolean;
   courses: { course_id: string; name: string }[];
   instructors: { instructor_id: string; name: string }[];
   confirmedRounds?: ConfirmedRound[];
@@ -52,7 +55,25 @@ export function ClassForm({
 
       {edit && <p className="footnote">รหัสรุ่น: ระบบกำหนดอัตโนมัติ (แก้ไขไม่ได้)</p>}
 
-      {/* ปีงบประมาณที่ผูก — ตั้งตอนสร้างจากปีที่หน่วยยืนยันเข้าร่วม (แก้ไขไม่ได้ภายหลัง) */}
+      {/* ปีงบประมาณที่ผูก — ตั้งตอนสร้างจากปีที่หน่วยยืนยันเข้าร่วม (แก้ภายหลังได้เฉพาะ Web Master) */}
+      {edit && canEditFiscalYear && (
+        <label>
+          <span className="field-label">ปีงบประมาณ (พ.ศ.)</span>
+          <input
+            name="fiscal_year"
+            type="number"
+            min={2500}
+            max={2700}
+            defaultValue={edit.fiscal_year ?? ""}
+            className="field"
+            style={{ maxWidth: 160 }}
+          />
+          <span className="footnote" style={{ display: "block", marginTop: 4 }}>
+            ถ้าเปลี่ยนปี ระบบจะบันทึกการเข้าร่วมปีใหม่ให้หน่วย และนับผู้เรียนของชั้นเรียนนี้ในปีใหม่บนแดชบอร์ด
+            ถ้าปีเดิมไม่เหลือชั้นเรียนและเจ้าหน้าที่เป็นผู้บันทึกการเข้าร่วม ระบบจะลบปีเดิมให้อัตโนมัติ
+          </span>
+        </label>
+      )}
       {/* Staff: กรอกปีงบได้อิสระ ระบบบันทึกการเข้าร่วมให้หน่วยอัตโนมัติ (ไม่ต้องยืนยันการเข้าร่วมก่อน) */}
       {!edit && isStaff ? (
         <label>

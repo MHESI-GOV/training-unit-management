@@ -6,6 +6,7 @@ import { requireStaffProfile } from "@/lib/auth/resolve-unit";
 import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { removeUnitParticipation } from "@/lib/participation";
 import { UNIT_TYPE_LABEL, REGION_LABEL } from "@/lib/labels";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -119,4 +120,36 @@ export async function adminConfirmParticipation(
 
   revalidatePath(`/admin/units/${unitId}`);
   return { success: `บันทึกการเข้าร่วมปีงบประมาณ ${fiscalYear} แล้ว` };
+}
+
+// WM-only correction for a participation year recorded by mistake. Blocked while classes are bound
+// to that unit + year: removing the row would drop their learners out of that year's dashboard figures.
+export async function adminDeleteParticipation(
+  _prev: ConfirmParticipationState,
+  formData: FormData,
+): Promise<ConfirmParticipationState> {
+  const wm = await requireWebMaster();
+  const unitId = String(formData.get("unit_id") ?? "").trim();
+  const fiscalYear = Number(formData.get("fiscal_year"));
+  if (!unitId || !Number.isInteger(fiscalYear)) return { error: "ไม่พบรายการที่จะลบ" };
+
+  const admin = createAdminClient();
+
+  const { count: classCount, error: classErr } = await admin
+    .from("classes")
+    .select("class_id", { count: "exact", head: true })
+    .eq("unit_id", unitId)
+    .eq("fiscal_year", fiscalYear);
+  if (classErr) return { error: `ตรวจสอบรุ่นฝึกอบรมไม่สำเร็จ: ${classErr.message}` };
+  if (classCount) {
+    return { error: `ลบปีงบ ${fiscalYear} ไม่ได้ เพราะมี ${classCount} ชั้นเรียนผูกกับปีงบนี้อยู่ แก้ปีงบได้ที่ปุ่มแก้ไขชั้นเรียนของแต่ละชั้นเรียน` };
+  }
+
+  const { removed, error: delErr } = await removeUnitParticipation(admin, unitId, fiscalYear, wm.id, "admin_delete_participation");
+  if (delErr) return { error: `ลบการเข้าร่วมไม่สำเร็จ: ${delErr}` };
+  if (!removed) return { error: "ไม่พบรายการเข้าร่วมของปีงบนี้" };
+
+  revalidatePath(`/admin/units/${unitId}`, "layout");
+  revalidatePath("/admin/participation");
+  return { success: `ลบการเข้าร่วมปีงบประมาณ ${fiscalYear} แล้ว` };
 }

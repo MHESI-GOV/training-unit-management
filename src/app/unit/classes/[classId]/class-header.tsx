@@ -7,11 +7,13 @@ import { ClassForm, type ClassEdit } from "../class-form";
 
 export function ClassHeaderClient({
   unitId,
+  canEditFiscalYear,
   courses,
   library,
   edit,
 }: {
   unitId: string;
+  canEditFiscalYear: boolean;
   courses: { course_id: string; name: string }[];
   library: { instructor_id: string; name: string }[];
   edit: ClassEdit;
@@ -27,6 +29,7 @@ export function ClassHeaderClient({
       <Popup open={open} onClose={() => setOpen(false)} title="แก้ไขข้อมูลชั้นเรียน" maxWidth={560}>
         <ClassForm
           unitId={unitId}
+          canEditFiscalYear={canEditFiscalYear}
           courses={courses}
           instructors={library}
           edit={edit}

@@ -13,7 +13,8 @@ export type UnitCard = {
   region: string;
   classCount: number;
   learnerCount: number;
-  tags: { type: string; label: string }[];
+  isTestingCenter: boolean;
+  participationYears: number[];
   coverUrl: string | null;
 };
 
@@ -26,15 +27,22 @@ function TypeIcon({ type }: { type: string }) {
 export function UnitsList({ units }: { units: UnitCard[] }) {
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState<string>("all");
+  const [year, setYear] = useState<string>("all");
+
+  const yearOptions = useMemo(
+    () => [...new Set(units.flatMap((u) => u.participationYears))].sort((a, b) => b - a),
+    [units],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return units.filter(
       (u) =>
         (region === "all" || u.region === region) &&
+        (year === "all" || u.participationYears.includes(Number(year))) &&
         (q === "" || u.name.toLowerCase().includes(q) || (u.code ?? "").toLowerCase().includes(q)),
     );
-  }, [units, query, region]);
+  }, [units, query, region, year]);
 
   return (
     <>
@@ -49,6 +57,18 @@ export function UnitsList({ units }: { units: UnitCard[] }) {
             aria-label="ค้นหาชื่อหน่วยฝึกอบรม"
           />
         </div>
+        <select
+          className="field"
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          aria-label="กรองตามปีงบประมาณที่เข้าร่วม"
+          style={{ width: "auto", marginRight: "auto" }}
+        >
+          <option value="all">เข้าร่วมทุกปีงบ</option>
+          {yearOptions.map((y) => (
+            <option key={y} value={y}>เข้าร่วมปีงบ {y}</option>
+          ))}
+        </select>
         <div className="unit-region-filter" role="group" aria-label="กรองตามภูมิภาค">
           <button
             type="button"
@@ -106,12 +126,8 @@ export function UnitsList({ units }: { units: UnitCard[] }) {
                     {UNIT_TYPE_LABEL[u.type] ?? u.type} · {REGION_LABEL[u.region] ?? u.region}
                   </div>
                   <div className="unit-row-tags">
-                    {u.tags.length > 0 ? (
-                      u.tags.map((t) => (
-                        <span key={t.type} className="pill done">
-                          {t.label}
-                        </span>
-                      ))
+                    {u.isTestingCenter ? (
+                      <span className="pill done">ศูนย์ทดสอบฯ สาขาอาหาร</span>
                     ) : (
                       <span className="pill muted">ยังไม่เป็นศูนย์ทดสอบ</span>
                     )}

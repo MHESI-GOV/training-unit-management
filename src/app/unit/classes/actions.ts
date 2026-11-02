@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getUnitConfirmedRounds, ensureUnitParticipation, type ConfirmedRound } from "@/lib/participation";
+import {
+  getUnitConfirmedRounds,
+  ensureUnitParticipation,
+  removeUnitParticipation,
+  type ConfirmedRound,
+} from "@/lib/participation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const STAFF_ROLES = new Set(["web_master", "central_staff"]);
@@ -162,8 +167,79 @@ export async function createClass(_prev: ClassFormState, formData: FormData): Pr
   return { error: "สร้างรหัสรุ่นไม่สำเร็จ กรุณาลองอีกครั้ง" };
 }
 
+// WM-only correction for a class bound to the wrong fiscal year. Records the unit's participation in
+// the target year if needed. If the move leaves the old year with no classes, its participation row
+// is removed too, but only when staff recorded it: a coordinator's own confirmation is their answer
+// to the round, and it is what lets them open classes, so it is never removed automatically.
+async function moveClassFiscalYear(
+  classId: string,
+  unitId: string,
+  fromYear: number | null,
+  targetYear: number,
+  actorId: string,
+): Promise<{ error?: string; removedYear?: number }> {
+  const admin = createAdminClient();
+
+  const { data: confirmedRow } = await admin
+    .from("unit_participation")
+    .select("round_id")
+    .eq("unit_id", unitId)
+    .eq("fiscal_year", targetYear)
+    .eq("status", "confirmed")
+    .maybeSingle();
+  let roundId = confirmedRow?.round_id;
+  if (!roundId) {
+    const target = await ensureUnitParticipation(admin, unitId, targetYear, actorId);
+    if (!target) return { error: `บันทึกการเข้าร่วมปีงบ ${targetYear} ไม่สำเร็จ` };
+    roundId = target.round_id;
+    await admin.from("audit_log").insert({
+      actor_user_id: actorId,
+      action: "admin_confirm_participation",
+      entity_type: "unit_participation",
+      record_id: `${roundId}:${unitId}`,
+      changed_fields: [String(targetYear)],
+    });
+  }
+
+  const { error } = await admin
+    .from("classes")
+    .update({ fiscal_year: targetYear, round_id: roundId })
+    .eq("class_id", classId)
+    .eq("unit_id", unitId);
+  if (error) return { error: `ย้ายปีงบไม่สำเร็จ: ${error.message}` };
+
+  await admin.from("audit_log").insert({
+    actor_user_id: actorId,
+    action: "admin_move_class_fiscal_year",
+    entity_type: "class",
+    record_id: classId,
+    changed_fields: [String(fromYear ?? ""), String(targetYear)],
+  });
+
+  if (fromYear == null) return {};
+  const { count: classesLeft } = await admin
+    .from("classes")
+    .select("class_id", { count: "exact", head: true })
+    .eq("unit_id", unitId)
+    .eq("fiscal_year", fromYear);
+  if (classesLeft !== 0) return {};
+
+  const { data: oldRow } = await admin
+    .from("unit_participation")
+    .select("status, responded_by")
+    .eq("unit_id", unitId)
+    .eq("fiscal_year", fromYear)
+    .maybeSingle();
+  if (oldRow?.status !== "confirmed" || !oldRow.responded_by) return {};
+  const { data: responder } = await admin.from("profiles").select("role").eq("id", oldRow.responded_by).maybeSingle();
+  if (!responder || !STAFF_ROLES.has(responder.role)) return {};
+
+  const { removed } = await removeUnitParticipation(admin, unitId, fromYear, actorId, "auto_delete_empty_participation");
+  return removed ? { removedYear: fromYear } : {};
+}
+
 export async function updateClass(_prev: ClassFormState, formData: FormData): Promise<ClassFormState> {
-  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const { profile, unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const classId = String(formData.get("class_id") ?? "");
   const f = readClassFields(formData);
   const err = validateClass(f);
@@ -173,11 +249,21 @@ export async function updateClass(_prev: ClassFormState, formData: FormData): Pr
 
   const { data: cls } = await supabase
     .from("classes")
-    .select("class_id")
+    .select("class_id, fiscal_year")
     .eq("class_id", classId)
     .eq("unit_id", unitId)
     .maybeSingle();
   if (!cls) return { error: "ไม่พบชั้นเรียนนี้ในหน่วยของคุณ" };
+
+  const fiscalYearRaw = String(formData.get("fiscal_year") ?? "").trim();
+  const targetYear = fiscalYearRaw ? Number(fiscalYearRaw) : cls.fiscal_year;
+  const yearChanged = targetYear !== cls.fiscal_year;
+  if (yearChanged) {
+    if (profile.role !== "web_master") return { error: "เฉพาะ Web Master เท่านั้นที่แก้ปีงบประมาณของชั้นเรียนได้" };
+    if (!Number.isInteger(targetYear) || targetYear! < 2500 || targetYear! > 2700) {
+      return { error: "กรุณาระบุปีงบประมาณ (พ.ศ.) ให้ถูกต้อง" };
+    }
+  }
 
   if (f.leadInstructorId) {
     const { data: ins } = await supabase
@@ -212,6 +298,14 @@ export async function updateClass(_prev: ClassFormState, formData: FormData): Pr
       { class_id: classId, instructor_id: f.leadInstructorId, role_in_class: "หัวหน้าผู้สอน" },
       { onConflict: "class_id,instructor_id" },
     );
+  }
+
+  if (yearChanged) {
+    const move = await moveClassFiscalYear(classId, unitId, cls.fiscal_year, targetYear!, profile.id);
+    if (move.error) return { error: `บันทึกข้อมูลอื่นแล้ว แต่${move.error}` };
+    revalidatePath(`/admin/units/${unitId}`, "layout");
+    revalidatePath("/admin/units");
+    revalidatePath("/admin/participation");
   }
 
   revalidatePath("/unit/classes");

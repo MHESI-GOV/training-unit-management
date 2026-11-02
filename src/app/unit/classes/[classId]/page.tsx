@@ -31,7 +31,7 @@ export default async function ClassDetailPage({
   const { data: cls } = await supabase
     .from("classes")
     .select(
-      "class_id, batch_code, name, course_id, status, start_date, end_date, schedule_time, seat_count, mode, location, note, lead_instructor_id, courses(name), lead:instructors!classes_lead_instructor_id_fkey(name)",
+      "class_id, batch_code, name, course_id, status, start_date, end_date, fiscal_year, schedule_time, seat_count, mode, location, note, lead_instructor_id, courses(name), lead:instructors!classes_lead_instructor_id_fkey(name)",
     )
     .eq("class_id", classId)
     .eq("unit_id", unitId)
@@ -109,6 +109,7 @@ export default async function ClassDetailPage({
     name: cls.name,
     start_date: cls.start_date,
     end_date: cls.end_date,
+    fiscal_year: cls.fiscal_year,
     seat_count: cls.seat_count,
     schedule_time: cls.schedule_time,
     lead_instructor_id: cls.lead_instructor_id,
@@ -142,10 +143,11 @@ export default async function ClassDetailPage({
               return <span className={`pill ${s.pill}`}>{s.label}</span>;
             })()}
           </div>
-          <ClassHeaderClient unitId={unitId} courses={courses ?? []} library={libraryForForm} edit={editData} />
+          <ClassHeaderClient unitId={unitId} canEditFiscalYear={profile.role === "web_master"} courses={courses ?? []} library={libraryForForm} edit={editData} />
         </div>
         <dl className="detail-grid">
           <div><dt>รหัสชั้นเรียน</dt><dd style={{ fontVariantNumeric: "tabular-nums" }}>{classCode(unitCodeInfo.code, cls.batch_code) ?? cls.batch_code ?? "—"}</dd></div>
+          <div><dt>ปีงบประมาณ</dt><dd>{cls.fiscal_year ?? "—"}</dd></div>
           <div><dt>ช่วงวันที่</dt><dd>{formatThaiDate(cls.start_date)} – {formatThaiDate(cls.end_date)}</dd></div>
           <div><dt>เวลาเรียน</dt><dd>{cls.schedule_time ?? "—"}</dd></div>
           <div><dt>รูปแบบการเรียน</dt><dd>{cls.mode ? CLASS_MODE_LABEL[cls.mode] ?? cls.mode : "—"}</dd></div>

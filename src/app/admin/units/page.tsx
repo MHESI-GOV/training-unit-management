@@ -5,13 +5,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { UnitsList, type UnitCard } from "./units-list";
 import { CreateUnitToolbar } from "./create-unit-dialog";
 
-// The three standards shown as testing-center tags (max 3), with short labels for the card.
-const TESTING_TAGS: { type: string; label: string }[] = [
-  { type: "dsd_l1", label: "ฝีมือแรงงาน" },
-  { type: "professional_qualification", label: "คุณวุฒิวิชาชีพ" },
-  { type: "anamai_food_contact", label: "ผู้สัมผัสอาหาร" },
-];
-
 export default async function AdminUnitsPage() {
   const profile = await requireStaffProfile();
 
@@ -26,17 +19,17 @@ export default async function AdminUnitsPage() {
     unit_seq: number | null;
     classes: { count: number }[] | null;
     learners: { count: number }[] | null;
-    testing_center_statuses: { standard_type: string; status: string }[] | null;
     training_unit_images: { storage_key: string; display_order: number | null; status: string }[] | null;
-    training_unit_profiles: { province_name: string | null } | null;
+    training_unit_profiles: { province_name: string | null; is_food_testing_center: boolean | null } | null;
+    unit_participation: { fiscal_year: number; status: string }[] | null;
   };
   const { data: unitsRaw } = await supabase
     .from("training_units")
     .select(
       "unit_id, name, type, region, unit_seq, classes(count), learners(count), " +
-        "testing_center_statuses(standard_type, status), " +
         "training_unit_images(storage_key, display_order, status), " +
-        "training_unit_profiles(province_name)",
+        "training_unit_profiles(province_name, is_food_testing_center), " +
+        "unit_participation(fiscal_year, status)",
     )
     .order("unit_seq");
   const units = (unitsRaw ?? []) as unknown as UnitRow[];
@@ -45,13 +38,6 @@ export default async function AdminUnitsPage() {
     units.map(async (u) => {
       const classCount = (u.classes as { count: number }[] | null)?.[0]?.count ?? 0;
       const learnerCount = (u.learners as { count: number }[] | null)?.[0]?.count ?? 0;
-
-      const registered = new Set(
-        (u.testing_center_statuses ?? [])
-          .filter((s) => s.status === "registered")
-          .map((s) => s.standard_type),
-      );
-      const tags = TESTING_TAGS.filter((t) => registered.has(t.type));
 
       const cover = (u.training_unit_images ?? [])
         .filter((i) => i.status === "active")
@@ -70,7 +56,10 @@ export default async function AdminUnitsPage() {
         region: u.region,
         classCount,
         learnerCount,
-        tags,
+        isTestingCenter: u.training_unit_profiles?.is_food_testing_center === true,
+        participationYears: (u.unit_participation ?? [])
+          .filter((p) => p.status === "confirmed")
+          .map((p) => p.fiscal_year),
         coverUrl,
       };
     }),
