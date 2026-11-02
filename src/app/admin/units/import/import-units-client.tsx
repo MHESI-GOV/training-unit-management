@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { previewUnitImport, commitUnitImport, type PreviewState, type CommitState } from "./actions";
 import { StepIndicator } from "@/components/ui/StepIndicator";
@@ -12,12 +12,16 @@ const commitInitial: CommitState = {};
 
 export function ImportUnitsClient() {
   const [previewState, previewAction, previewPending] = useActionState(previewUnitImport, previewInitial);
-  const [commitState, commitAction, commitPending] = useActionState(commitUnitImport, commitInitial);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [commitState, commitAction, commitPending] = useActionState(
+    async (prev: CommitState, formData: FormData) => {
+      const result = await commitUnitImport(prev, formData);
+      if (result.error) setConfirmOpen(false);
+      return result;
+    },
+    commitInitial,
+  );
   const formRef = useRef<HTMLFormElement>(null);
-  useEffect(() => {
-    if (commitState.error) setConfirmOpen(false);
-  }, [commitState.error]);
 
   const steps = ["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"];
   const step = commitState.created !== undefined ? 2 : previewState.rows ? 1 : 0;

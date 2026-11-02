@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   previewAssessmentImport,
@@ -19,15 +19,16 @@ export function ImportClient({ unitId }: { unitId: string }) {
     previewAssessmentImport,
     previewInitial,
   );
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitState, commitAction, commitPending] = useActionState(
-    commitAssessmentImport,
+    async (prev: CommitState, formData: FormData) => {
+      const result = await commitAssessmentImport(prev, formData);
+      if (result.error) setConfirmOpen(false);
+      return result;
+    },
     commitInitial,
   );
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  useEffect(() => {
-    if (commitState.error) setConfirmOpen(false);
-  }, [commitState.error]);
 
   const steps = ["อัปโหลดไฟล์", "ตรวจสอบข้อมูล", "ยืนยันการนำเข้า"];
   const step = commitState.created !== undefined ? 2 : previewState.rows ? 1 : 0;
