@@ -22,7 +22,8 @@ export async function UnitProfilePanel({ unitId }: { unitId: string }) {
       .select("image_id, storage_key, original_filename")
       .eq("unit_id", unitId)
       .eq("status", "active")
-      .order("display_order"),
+      .order("display_order")
+      .order("created_at"),
   ]);
 
   const imagesWithUrls = await Promise.all(
@@ -43,7 +44,7 @@ export async function UnitProfilePanel({ unitId }: { unitId: string }) {
       </section>
 
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: "24px 0 14px" }}>ภาพถ่ายหน่วย</h2>
-      <ImageUploader unitId={unitId} images={imagesWithUrls} count={imagesWithUrls.length} />
+      <ImageUploader unitId={unitId} images={imagesWithUrls} />
     </>
   );
 }

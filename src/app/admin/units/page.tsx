@@ -19,7 +19,7 @@ export default async function AdminUnitsPage() {
     unit_seq: number | null;
     classes: { count: number }[] | null;
     learners: { count: number }[] | null;
-    training_unit_images: { storage_key: string; display_order: number | null; status: string }[] | null;
+    training_unit_images: { storage_key: string; display_order: number | null; status: string; created_at: string }[] | null;
     training_unit_profiles: { province_name: string | null; is_food_testing_center: boolean | null } | null;
     unit_participation: { fiscal_year: number; status: string }[] | null;
   };
@@ -27,7 +27,7 @@ export default async function AdminUnitsPage() {
     .from("training_units")
     .select(
       "unit_id, name, type, region, unit_seq, classes(count), learners(count), " +
-        "training_unit_images(storage_key, display_order, status), " +
+        "training_unit_images(storage_key, display_order, status, created_at), " +
         "training_unit_profiles(province_name, is_food_testing_center), " +
         "unit_participation(fiscal_year, status)",
     )
@@ -41,7 +41,7 @@ export default async function AdminUnitsPage() {
 
       const cover = (u.training_unit_images ?? [])
         .filter((i) => i.status === "active")
-        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))[0];
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || a.created_at.localeCompare(b.created_at))[0];
       let coverUrl: string | null = null;
       if (cover) {
         const { data } = await supabase.storage.from("unit-photos").createSignedUrl(cover.storage_key, 3600);

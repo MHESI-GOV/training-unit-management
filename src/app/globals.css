@@ -1378,6 +1378,62 @@ main.page {
   justify-content: center;
 }
 .unit-card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.unit-card-track {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+.unit-card-track::-webkit-scrollbar { display: none; }
+.unit-card-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.unit-card-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.unit-card-nav.prev { left: 6px; }
+.unit-card-nav.next { right: 6px; }
+.unit-card-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.unit-card-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+.unit-card-dots button.active { background: #ffffff; }
 .unit-card-photo-badge {
   position: absolute;
   top: 8px;

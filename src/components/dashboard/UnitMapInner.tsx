@@ -1,15 +1,15 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
-import { Building2, User, Phone, MapPin } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, User, Phone, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { REGION_COLOR, REGION_LABEL, UNIT_TYPE_LABEL } from "@/lib/labels";
 
 export type Pin = { unit_id: string; name: string; region: string; type: string; province: string | null; lat: number; lng: number };
 
-type UnitCard = { coordinator_name: string | null; phone: string | null; has_image: boolean };
+type UnitCard = { coordinator_name: string | null; phone: string | null; has_image: boolean; image_ids?: string[] };
 
 // The Leaflet map itself. Loaded only on the client (via next/dynamic ssr:false in MapSection),
 // because Leaflet touches window/document at import time. CircleMarker is used instead of the
@@ -89,15 +89,19 @@ function CloseOnMapLeave() {
 }
 
 function UnitCardView({ pin, card }: { pin: Pin; card?: UnitCard }) {
-  const [imgOk, setImgOk] = useState(true);
   const color = REGION_COLOR[pin.region] ?? "#5d7087";
-  const showImg = card?.has_image && imgOk;
+  const base = `/api/unit-photo/${pin.unit_id}`;
+  const photos = card?.image_ids?.length
+    ? card.image_ids.map((id) => `${base}?image=${id}`)
+    : card?.has_image
+      ? [base]
+      : [];
 
   return (
     <div className="unit-card">
       <div className="unit-card-photo" style={{ background: `linear-gradient(135deg, ${color}, ${color}bb)` }}>
-        {showImg ? (
-          <img src={`/api/unit-photo/${pin.unit_id}`} alt={pin.name} onError={() => setImgOk(false)} />
+        {photos.length > 0 ? (
+          <PhotoSlider photos={photos} alt={pin.name} />
         ) : (
           <Building2 size={34} color="#ffffff" strokeWidth={1.5} />
         )}
@@ -130,5 +134,67 @@ function UnitCardView({ pin, card }: { pin: Pin; card?: UnitCard }) {
         </span>
       </div>
     </div>
+  );
+}
+
+// Native scroll-snap, so swiping works on touch screens; the arrows and dots drive the same scroll
+// position. Only the first photo loads up front, since most pins are hovered past without sliding.
+function PhotoSlider({ photos, alt }: { photos: string[]; alt: string }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+
+  function goTo(target: number) {
+    const track = trackRef.current;
+    if (!track) return;
+    const wrapped = (target + photos.length) % photos.length;
+    track.scrollTo({ left: wrapped * track.clientWidth, behavior: "smooth" });
+  }
+
+  return (
+    <>
+      <div
+        ref={trackRef}
+        className="unit-card-track"
+        onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+      >
+        {photos.map((src, i) => (
+          <div key={src} className="unit-card-slide">
+            {failed.has(src) ? (
+              <Building2 size={34} color="#ffffff" strokeWidth={1.5} />
+            ) : (
+              <img
+                src={src}
+                alt={`${alt} ภาพที่ ${i + 1}`}
+                loading={i === 0 ? "eager" : "lazy"}
+                onError={() => setFailed((prev) => new Set(prev).add(src))}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      {photos.length > 1 && (
+        <>
+          <button type="button" className="unit-card-nav prev" aria-label="ภาพก่อนหน้า" onClick={() => goTo(index - 1)}>
+            <ChevronLeft size={16} />
+          </button>
+          <button type="button" className="unit-card-nav next" aria-label="ภาพถัดไป" onClick={() => goTo(index + 1)}>
+            <ChevronRight size={16} />
+          </button>
+          <div className="unit-card-dots">
+            {photos.map((src, i) => (
+              <button
+                key={src}
+                type="button"
+                className={i === index ? "active" : ""}
+                aria-label={`ไปยังภาพที่ ${i + 1}`}
+                aria-current={i === index}
+                onClick={() => goTo(i)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </>
   );
 }

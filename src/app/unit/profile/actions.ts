@@ -6,7 +6,7 @@ import { requireProfile } from "@/lib/auth/require-profile";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_BYTES = 3 * 1024 * 1024;
 
 // Real file-signature check (magic bytes), not just trusting the extension/MIME header
 // the browser reports — per docs/planning/10-image-storage-options.md §3.
@@ -84,10 +84,16 @@ export async function upsertUnitProfile(
 
 export type UploadState = { error?: string; success?: boolean };
 
-export async function uploadUnitImage(
-  _prev: UploadState,
-  formData: FormData,
-): Promise<UploadState> {
+// A unit's photos appear on the staff unit list and the public Home/dashboard map too.
+function revalidateUnitPhotos() {
+  revalidatePath("/unit/profile");
+  revalidatePath("/account");
+  revalidatePath("/admin/units");
+  revalidatePath("/dashboard");
+  revalidatePath("/");
+}
+
+export async function uploadUnitImage(formData: FormData): Promise<UploadState> {
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const file = formData.get("file");
 
@@ -95,7 +101,7 @@ export async function uploadUnitImage(
     return { error: "กรุณาเลือกไฟล์ภาพ" };
   }
   if (file.size > MAX_FILE_BYTES) {
-    return { error: "ไฟล์ใหญ่เกิน 10MB" };
+    return { error: "ไฟล์ใหญ่เกิน 3MB" };
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -113,6 +119,16 @@ export async function uploadUnitImage(
 
   if (uploadErr) return { error: `อัปโหลดไม่สำเร็จ: ${uploadErr.message}` };
 
+  // New photos go last, so the first one uploaded stays the cover until someone reorders.
+  const { data: last } = await supabase
+    .from("training_unit_images")
+    .select("display_order")
+    .eq("unit_id", unitId)
+    .eq("status", "active")
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   const profile = await requireProfile();
   const { error: insertErr } = await supabase.from("training_unit_images").insert({
     unit_id: unitId,
@@ -120,6 +136,7 @@ export async function uploadUnitImage(
     original_filename: file.name,
     mime_type: signature.mime,
     file_size: file.size,
+    display_order: last ? last.display_order + 1 : 0,
     uploaded_by: profile.id,
   });
 
@@ -129,8 +146,42 @@ export async function uploadUnitImage(
     return { error: tooMany ? "หน่วยนี้มีภาพครบ 6 ภาพแล้ว" : `บันทึกไม่สำเร็จ: ${insertErr.message}` };
   }
 
-  revalidatePath("/unit/profile");
-  revalidatePath("/account");
+  revalidateUnitPhotos();
+  return { success: true };
+}
+
+export async function reorderUnitImages(unitIdArg: string, imageIds: string[]): Promise<UploadState> {
+  const { unitId } = await resolveActionUnit(unitIdArg);
+  const supabase = await createClient();
+
+  const { data: current, error: readErr } = await supabase
+    .from("training_unit_images")
+    .select("image_id")
+    .eq("unit_id", unitId)
+    .eq("status", "active");
+  if (readErr) return { error: `บันทึกลำดับภาพไม่สำเร็จ: ${readErr.message}` };
+
+  const currentIds = new Set((current ?? []).map((row) => row.image_id));
+  if (imageIds.length !== currentIds.size || !imageIds.every((id) => currentIds.has(id))) {
+    return { error: "รายการภาพมีการเปลี่ยนแปลง กรุณารีเฟรชหน้านี้แล้วลองใหม่" };
+  }
+
+  const results = await Promise.all(
+    imageIds.map((imageId, index) =>
+      supabase
+        .from("training_unit_images")
+        .update({ display_order: index })
+        .eq("image_id", imageId)
+        .eq("unit_id", unitId)
+        .select("image_id"),
+    ),
+  );
+  // A missing RLS policy doesn't error, it updates 0 rows, so check the rows came back too.
+  if (results.some((r) => r.error || r.data?.length !== 1)) {
+    return { error: "บันทึกลำดับภาพไม่สำเร็จ กรุณาลองใหม่" };
+  }
+
+  revalidateUnitPhotos();
   return { success: true };
 }
 
@@ -148,6 +199,5 @@ export async function deleteUnitImage(unitIdArg: string, imageId: string) {
     .eq("unit_id", unitId);
 
   if (error) throw new Error(error.message);
-  revalidatePath("/unit/profile");
-  revalidatePath("/account");
+  revalidateUnitPhotos();
 }
