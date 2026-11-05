@@ -445,6 +445,31 @@ main.page {
   background: #f8fbfe;
 }
 
+/* Each column is as wide as its data on one line; .table-wrap scrolls sideways when they don't fit. */
+.table-wrap table.fit-columns td,
+.table-wrap table.fit-columns th {
+  white-space: nowrap;
+}
+
+/* Keeps a row's action button on screen when a wide table scrolls sideways. */
+.table-wrap .sticky-action {
+  position: sticky;
+  right: -1px; /* not 0: a fractional-pixel gap at the edge lets scrolled text show through */
+  z-index: 1;
+  background: #fff;
+  border-left: 1px solid #e5ebf2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.table-wrap th.sticky-action {
+  background: #f1f5f9;
+}
+
+.table-wrap tbody tr:hover .sticky-action {
+  background: #f8fbfe;
+}
+
 .step {
   border-radius: 999px;
   padding: 7px 12px;

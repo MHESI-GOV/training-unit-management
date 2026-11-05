@@ -87,6 +87,7 @@ export default async function ClassDetailPage({
       masked_id: maskNationalId(nid),
       birth_date: l.birth_date,
       age: computeAge(l.birth_date),
+      phone: l.phone,
       email: l.email,
       address: l.address,
       occupation: l.occupation,

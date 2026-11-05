@@ -28,6 +28,7 @@ export type ClassLearnerRow = {
   masked_id: string;
   birth_date: string | null;
   age: number | null;
+  phone: string | null;
   email: string | null;
   address: string | null;
   occupation: string | null;
@@ -108,7 +109,7 @@ export function ClassLearnersClient({
       {/* ── Tab 1: general info ── */}
       {learners.length > 0 && tab === "info" && (
         <div className="table-wrap">
-          <table>
+          <table className="fit-columns">
             <thead>
               <tr>
                 <th>รหัสผู้เรียน</th>
@@ -120,28 +121,31 @@ export function ClassLearnersClient({
                 <th>อีเมล</th>
                 <th>ที่อยู่</th>
                 <th>อาชีพ</th>
-                <th></th>
+                <th className="sticky-action">แก้ไข</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((l) => (
                 <tr key={l.enrollment_id}>
-                  <td style={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{l.student_code ?? "—"}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{l.student_code ?? "—"}</td>
                   <td><strong>{l.first_name} {l.last_name}</strong></td>
                   <td>{l.gender ? GENDER_LABEL[l.gender] ?? "—" : "—"}</td>
                   <td>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>
-                      <span style={{ fontVariantNumeric: "tabular-nums" }}>{l.masked_id}</span>
-                      <RevealIdButton unitId={unitId} learnerId={l.learner_id} />
-                    </div>
+                    <RevealIdButton unitId={unitId} learnerId={l.learner_id} iconOnly />
                   </td>
-                  <td style={{ whiteSpace: "nowrap" }}>{formatThaiDate(l.birth_date)}</td>
+                  <td>{formatThaiDate(l.birth_date)}</td>
                   <td>{l.age === null ? "—" : `${l.age} ปี`}</td>
                   <td>{l.email ?? "—"}</td>
-                  <td style={{ maxWidth: 220 }}>{l.address ?? "—"}</td>
+                  <td>{l.address ?? "—"}</td>
                   <td>{l.occupation ?? "—"}</td>
-                  <td>
-                    <button className="icon-btn" data-tip="แก้ไขข้อมูลผู้เรียน" aria-label="แก้ไขข้อมูลผู้เรียน" onClick={() => setEditTarget(l)}>
+                  <td className="sticky-action">
+                    <button
+                      className="icon-btn"
+                      title="แก้ไขข้อมูลผู้เรียน"
+                      aria-label={`แก้ไขข้อมูลผู้เรียน ${l.first_name} ${l.last_name}`}
+                      style={{ color: "var(--blue)" }}
+                      onClick={() => setEditTarget(l)}
+                    >
                       <Pencil size={16} />
                     </button>
                   </td>
@@ -261,7 +265,7 @@ export function ClassLearnersClient({
               last_name: editTarget.last_name,
               gender: editTarget.gender,
               birth_date: editTarget.birth_date,
-              phone: null,
+              phone: editTarget.phone,
               email: editTarget.email,
               address: editTarget.address,
               occupation: editTarget.occupation,
