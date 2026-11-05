@@ -5,6 +5,7 @@ import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readUploadedRows } from "@/lib/import-file";
+import { parseImportDate } from "@/lib/date-format";
 import { getUnitConfirmedRounds, ensureUnitParticipation, getOpenedRounds, type ConfirmedRound } from "@/lib/participation";
 
 const STAFF_ROLES = new Set(["web_master", "central_staff"]);
@@ -36,7 +37,6 @@ export type PreviewState = {
   failCount?: number;
 };
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function previewClassImport(
   _prev: PreviewState,
@@ -63,8 +63,13 @@ export async function previewClassImport(
     const rowNumber = i + 2;
     const courseName = (r.course_name ?? "").trim();
     const name = (r.name ?? "").trim();
-    const startDate = (r.start_date ?? "").trim();
-    const endDate = (r.end_date ?? "").trim();
+    const rawStartDate = (r.start_date ?? "").trim();
+    const rawEndDate = (r.end_date ?? "").trim();
+    const parsedStart = parseImportDate(rawStartDate);
+    const parsedEnd = parseImportDate(rawEndDate);
+    // The commit step stores these values, so parsed dates must be Gregorian ISO from here on.
+    const startDate = parsedStart.iso ?? rawStartDate;
+    const endDate = parsedEnd.iso ?? rawEndDate;
     const scheduleTime = (r.schedule_time ?? "").trim();
     const seatCountRaw = (r.seat_count ?? "").trim();
     const mode = (r.mode ?? "").trim().toLowerCase();
@@ -80,9 +85,12 @@ export async function previewClassImport(
     if (!courseByName.has(courseName)) {
       status = "fail";
       reason = "ไม่พบหลักสูตรนี้ — สร้างที่หน้าหลักสูตรก่อน";
-    } else if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
+    } else if (parsedStart.error) {
       status = "fail";
-      reason = "รูปแบบวันที่ต้องเป็น YYYY-MM-DD (ค.ศ.)";
+      reason = `วันเริ่ม: ${parsedStart.error}`;
+    } else if (parsedEnd.error) {
+      status = "fail";
+      reason = `วันสิ้นสุด: ${parsedEnd.error}`;
     } else if (startDate > endDate) {
       status = "fail";
       reason = "วันเริ่มต้องไม่มากกว่าวันสิ้นสุด";

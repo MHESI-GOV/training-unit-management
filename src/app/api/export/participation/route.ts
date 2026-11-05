@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
+import { formatThaiDateTime } from "@/lib/date-format";
 import { REGION_LABEL, UNIT_TYPE_LABEL, REGION_ORDER } from "@/lib/labels";
 import { formatFiscalYear } from "@/lib/fiscal-year";
 
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
       u ? UNIT_TYPE_LABEL[u.type] ?? u.type : "",
       fyLabel,
       "ยืนยันเข้าร่วม",
-      row.responded_at ? new Date(row.responded_at).toLocaleString("th-TH") : "",
+      formatThaiDateTime(row.responded_at, ""),
     ]);
   });
 

@@ -98,7 +98,7 @@ export function ImportClient({
                   {r.first_name} {r.last_name}
                 </td>
                 <td>{r.national_id}</td>
-                <td>{formatThaiDate(r.birth_date)}</td>
+                <td>{formatThaiDate(r.birth_date, r.birth_date || "—")}</td>
                 <td>{r.gender || "—"}</td>
                 <td>{r.occupation || "—"}</td>
                 <td>

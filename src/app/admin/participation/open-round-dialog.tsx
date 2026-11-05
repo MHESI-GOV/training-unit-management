@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { openRound, type OpenRoundState } from "./actions";
+import { ThaiDateInput } from "@/components/ui/ThaiDateInput";
 
 const init: OpenRoundState = {};
 
@@ -63,8 +64,8 @@ export function OpenRoundDialog({ defaultFiscalYear }: { defaultFiscalYear: numb
                 />
               </label>
               <label>
-                <span className="field-label">กำหนดยืนยันภายใน (ไม่บังคับ)</span>
-                <input name="deadline" type="date" className="field" />
+                <span className="field-label">กำหนดยืนยันภายใน (พ.ศ.) (ไม่บังคับ)</span>
+                <ThaiDateInput name="deadline" />
               </label>
               <label>
                 <span className="field-label">ข้อความแจ้ง (ไม่บังคับ)</span>

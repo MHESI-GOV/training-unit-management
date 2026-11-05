@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { readUploadedRows } from "@/lib/import-file";
+import { isoDateInThailand, parseImportDate } from "@/lib/date-format";
 import { encryptNationalId, hashNationalId, bufferToByteaHex } from "@/lib/crypto/national-id";
 
 export type PreviewRow = {
@@ -37,7 +38,6 @@ export type PreviewState = {
 };
 
 const NATIONAL_ID_RE = /^\d{13}$/;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function previewImport(
   _prev: PreviewState,
@@ -63,7 +63,10 @@ export async function previewImport(
     const first_name = (r.first_name ?? "").trim();
     const last_name = (r.last_name ?? "").trim();
     const national_id = (r.national_id ?? "").trim();
-    const birth_date = (r.birth_date ?? "").trim();
+    const rawBirthDate = (r.birth_date ?? "").trim();
+    const parsedBirthDate = rawBirthDate ? parseImportDate(rawBirthDate) : null;
+    // The commit step stores this value, so a parsed date must be Gregorian ISO from here on.
+    const birth_date = parsedBirthDate?.iso ?? rawBirthDate;
     const gender = (r.gender ?? "").trim();
     const occupation = (r.occupation ?? "").trim();
     const phone = (r.phone ?? "").trim();
@@ -79,9 +82,12 @@ export async function previewImport(
     } else if (!NATIONAL_ID_RE.test(national_id)) {
       status = "fail";
       reason = "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก";
-    } else if (birth_date && !DATE_RE.test(birth_date)) {
+    } else if (parsedBirthDate?.error) {
       status = "fail";
-      reason = "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว (ค.ศ.)";
+      reason = `วันเกิด: ${parsedBirthDate.error}`;
+    } else if (parsedBirthDate?.iso && parsedBirthDate.iso > isoDateInThailand()) {
+      status = "fail";
+      reason = "วันเกิดต้องไม่เกินวันนี้";
     } else if (gender && !parseGender(gender)) {
       status = "fail";
       reason = "เพศต้องเป็น male/female หรือ ชาย/หญิง";

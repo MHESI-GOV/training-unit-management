@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { recordAssessmentResult, type AssessmentFormState } from "./actions";
 import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
+import { ThaiDateInput } from "@/components/ui/ThaiDateInput";
 
 const initialState: AssessmentFormState = {};
 
@@ -29,7 +30,7 @@ export function AssessmentForm({ unitId, learnerId }: { unitId: string; learnerI
           </option>
         ))}
       </select>
-      <input name="tested_at" type="date" className="field" style={{ width: "auto" }} />
+      <ThaiDateInput name="tested_at" ariaLabel="วันที่ทดสอบ (พ.ศ.)" style={{ width: 160 }} />
       <input name="evidence_ref" placeholder="หลักฐานอ้างอิง" className="field" style={{ width: "auto" }} />
       <button type="submit" className="btn secondary" disabled={pending}>
         {pending ? "กำลังบันทึก..." : "บันทึกผล"}

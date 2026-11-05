@@ -3,6 +3,8 @@
 // class has ended — เรียนเสร็จแล้ว once past the last day, อยู่ระหว่างเรียน before that (this folds the
 // class's "รับสมัคร" state into "อยู่ระหว่างเรียน", since a learner has no separate "สมัคร" state).
 // Pass/fail of the course is a separate RESULT (the ผ่านเกณฑ์ checkbox / certificate), not a status.
+import { isoDateInThailand } from "./date-format";
+
 export type LearnerStatusCode = "in_progress" | "finished" | "withdrawn";
 
 export const LEARNER_STATUS_DISPLAY: Record<LearnerStatusCode, { label: string; pill: string }> = {
@@ -11,17 +13,13 @@ export const LEARNER_STATUS_DISPLAY: Record<LearnerStatusCode, { label: string; 
   withdrawn: { label: "ถอนตัว", pill: "muted" },
 };
 
-function localIsoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export function computeLearnerStatus(
   enrollmentStatus: string | null,
   classEndDate: string | null,
   today = new Date(),
 ): LearnerStatusCode {
   if (enrollmentStatus === "withdrawn") return "withdrawn";
-  if (classEndDate && localIsoDate(today) > classEndDate) return "finished";
+  if (classEndDate && isoDateInThailand(today) > classEndDate) return "finished";
   return "in_progress";
 }
 

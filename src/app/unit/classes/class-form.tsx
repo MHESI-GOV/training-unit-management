@@ -5,6 +5,7 @@ import { createClass, updateClass, type ClassFormState } from "./actions";
 import { CLASS_MODE_LABEL } from "@/lib/labels";
 import type { ConfirmedRound } from "@/lib/participation";
 import { OpenedRoundSelect } from "./opened-round-select";
+import { ThaiDateInput } from "@/components/ui/ThaiDateInput";
 
 const initialState: ClassFormState = {};
 
@@ -115,12 +116,12 @@ export function ClassForm({
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <label>
-          <span className="field-label">วันเริ่มต้น *</span>
-          <input name="start_date" type="date" required defaultValue={edit?.start_date ?? ""} className="field" />
+          <span className="field-label">วันเริ่มต้น (พ.ศ.) *</span>
+          <ThaiDateInput name="start_date" required defaultValue={edit?.start_date} />
         </label>
         <label>
-          <span className="field-label">วันสิ้นสุด *</span>
-          <input name="end_date" type="date" required defaultValue={edit?.end_date ?? ""} className="field" />
+          <span className="field-label">วันสิ้นสุด (พ.ศ.) *</span>
+          <ThaiDateInput name="end_date" required defaultValue={edit?.end_date} />
         </label>
       </div>
 

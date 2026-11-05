@@ -10,6 +10,9 @@ export type TemplateColumn = {
   header: string; // machine column name the importer reads (e.g. "gender")
   example?: string; // one sample value shown on row 2
   options?: string[]; // allowed values → dropdown; ascii codes only (no commas inside a value)
+  // Text format, so Excel keeps a typed 05/06/2533 as written. Left as General, a non-Thai Excel
+  // turns it into a date in the Gregorian year 2533, and a US one also swaps day and month.
+  text?: boolean;
 };
 
 const VALIDATION_LAST_ROW = 500;
@@ -29,6 +32,7 @@ export async function buildXlsxTemplate(
   columns.forEach((c, i) => {
     const col = ws.getColumn(i + 1);
     col.width = Math.max(14, c.header.length + 4, (c.example?.length ?? 0) + 2);
+    if (c.text) col.numFmt = "@";
     if (c.options && c.options.length > 0) {
       const letter = col.letter;
       for (let r = 2; r <= VALIDATION_LAST_ROW; r++) {

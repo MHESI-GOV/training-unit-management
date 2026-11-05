@@ -1,5 +1,6 @@
 "use client";
 
+import { formatThaiDate } from "@/lib/date-format";
 import { useActionState, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
@@ -79,6 +80,7 @@ export function ImportClient({ unitId }: { unitId: string }) {
               <th>ผู้เรียน</th>
               <th>มาตรฐาน</th>
               <th>ผล</th>
+              <th>วันที่ทดสอบ</th>
               <th>สถานะ</th>
               <th>สาเหตุ</th>
             </tr>
@@ -90,6 +92,7 @@ export function ImportClient({ unitId }: { unitId: string }) {
                 <td>{r.learner_name ?? r.national_id}</td>
                 <td>{ASSESSMENT_STANDARD_LABEL[r.standard_type] ?? r.standard_type}</td>
                 <td>{ASSESSMENT_RESULT_LABEL[r.result] ?? r.result}</td>
+                <td>{formatThaiDate(r.tested_at, r.tested_at || "—")}</td>
                 <td>
                   <span className={`pill ${r.status === "pass" ? "done" : "fail"}`}>
                     {r.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}

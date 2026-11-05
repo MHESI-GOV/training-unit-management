@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { readUploadedRows } from "@/lib/import-file";
+import { parseImportDate } from "@/lib/date-format";
 import { hashNationalId } from "@/lib/crypto/national-id";
 import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
 import type { Database } from "@/lib/supabase/database.types";
@@ -59,7 +60,10 @@ export async function previewAssessmentImport(
     const nationalId = (r.national_id ?? "").trim();
     const standardType = (r.standard_type ?? "").trim();
     const result = (r.result ?? "").trim();
-    const testedAt = (r.tested_at ?? "").trim();
+    const rawTestedAt = (r.tested_at ?? "").trim();
+    const parsedTestedAt = rawTestedAt ? parseImportDate(rawTestedAt) : null;
+    // The commit step stores this value, so a parsed date must be Gregorian ISO from here on.
+    const testedAt = parsedTestedAt?.iso ?? rawTestedAt;
     const evidenceRef = (r.evidence_ref ?? "").trim();
 
     let status: "pass" | "fail" = "pass";
@@ -76,6 +80,9 @@ export async function previewAssessmentImport(
     } else if (!VALID_RESULTS.has(result)) {
       status = "fail";
       reason = "ผลการทดสอบไม่ถูกต้อง (ต้องเป็น passed/failed/pending)";
+    } else if (parsedTestedAt?.error) {
+      status = "fail";
+      reason = `วันที่ทดสอบ: ${parsedTestedAt.error}`;
     } else {
       const { data: learner } = await supabase
         .from("learners")

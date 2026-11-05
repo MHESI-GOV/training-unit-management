@@ -5,7 +5,7 @@ export async function GET() {
     { header: "first_name", example: "สมชาย" },
     { header: "last_name", example: "ใจดี" },
     { header: "national_id", example: "1234567890123" },
-    { header: "birth_date", example: "1990-05-21" },
+    { header: "birth_date", example: "21/05/2533", text: true },
     { header: "gender", example: "male", options: ["male", "female"] },
     { header: "occupation", example: "พ่อครัว/แม่ครัว" },
     { header: "phone", example: "0812345678" },

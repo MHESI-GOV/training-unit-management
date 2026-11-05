@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isValidIsoDate } from "@/lib/date-format";
 import { requireWebMaster } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -75,6 +76,7 @@ export async function openRound(
   const deadline = String(formData.get("deadline") ?? "").trim() || null;
   const notice = String(formData.get("notice_message") ?? "").trim() || null;
 
+  if (deadline && !isValidIsoDate(deadline)) return { error: "กำหนดยืนยันไม่ถูกต้อง" };
   if (!Number.isInteger(fiscalYear) || fiscalYear < 2500 || fiscalYear > 2700) {
     return { error: "กรุณาระบุปีงบประมาณ (พ.ศ.) ให้ถูกต้อง" };
   }

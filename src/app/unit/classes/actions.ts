@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isValidIsoDate } from "@/lib/date-format";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -77,6 +78,7 @@ function validateClass(f: ReturnType<typeof readClassFields>): string | null {
   if (!f.courseId || !f.startDate || !f.endDate || !Number.isFinite(f.seatCount) || f.seatCount <= 0) {
     return "กรุณากรอกหลักสูตร วันเริ่ม–สิ้นสุด และจำนวนที่รองรับให้ครบถ้วน";
   }
+  if (!isValidIsoDate(f.startDate) || !isValidIsoDate(f.endDate)) return "วันเริ่มหรือวันสิ้นสุดไม่ถูกต้อง";
   if (f.startDate > f.endDate) return "วันเริ่มต้องไม่มากกว่าวันสิ้นสุด";
   if (f.mode && !MODES.has(f.mode)) return "รูปแบบการเรียนไม่ถูกต้อง";
   if (!STATUSES.has(f.status)) return "สถานะรุ่นไม่ถูกต้อง";

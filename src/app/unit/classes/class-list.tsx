@@ -183,8 +183,8 @@ function ClassCsv({ unitId, isStaff, fiscalYear, openedRounds, onImported }: { u
         specs={[
           { field: "course_name", type: "ข้อความ", required: true, note: "ต้องตรงกับชื่อหลักสูตรที่มีอยู่แล้ว" },
           { field: "name", type: "ข้อความ", required: false, note: "ชื่อรุ่น เช่น รุ่นที่ 1/2569" },
-          { field: "start_date", type: "วันที่ YYYY-MM-DD (ค.ศ.)", required: true },
-          { field: "end_date", type: "วันที่ YYYY-MM-DD (ค.ศ.)", required: true, note: "ต้องไม่น้อยกว่าวันเริ่ม" },
+          { field: "start_date", type: "วันที่ วว/ดด/ปปปป (พ.ศ.)", required: true, note: "เช่น 01/11/2569" },
+          { field: "end_date", type: "วันที่ วว/ดด/ปปปป (พ.ศ.)", required: true, note: "ต้องไม่น้อยกว่าวันเริ่ม" },
           { field: "schedule_time", type: "ข้อความ", required: false, note: "เวลาเรียน เช่น 09:00–16:00 จ.–ศ." },
           { field: "seat_count", type: "จำนวนเต็มบวก", required: true },
           { field: "mode", type: "รหัส", required: false, note: "onsite / online / hybrid" },

@@ -96,7 +96,7 @@ export function ImportClient({
                 <td>{r.course_name}</td>
                 <td>{r.name || "—"}</td>
                 <td>
-                  {formatThaiDate(r.start_date)} – {formatThaiDate(r.end_date)}
+                  {formatThaiDate(r.start_date, r.start_date || "—")} – {formatThaiDate(r.end_date, r.end_date || "—")}
                 </td>
                 <td>{r.schedule_time || "—"}</td>
                 <td>{r.seat_count}</td>

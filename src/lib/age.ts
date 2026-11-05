@@ -1,3 +1,5 @@
+import { isoDateInThailand } from "./date-format";
+
 /**
  * Compute full years of age from an ISO date string (YYYY-MM-DD) as of `asOf`
  * (defaults to today). Returns null for a missing/invalid/future birth date so
@@ -5,17 +7,13 @@
  * birth_date is — so this is the single source of truth for displaying อายุ.
  */
 export function computeAge(birthDate: string | null | undefined, asOf: Date = new Date()): number | null {
-  if (!birthDate) return null;
-  const birth = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(birth.getTime())) return null;
-  if (birth > asOf) return null;
+  if (!birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return null;
+  const today = isoDateInThailand(asOf);
+  if (birthDate > today) return null;
 
-  let age = asOf.getFullYear() - birth.getFullYear();
-  const beforeBirthdayThisYear =
-    asOf.getMonth() < birth.getMonth() ||
-    (asOf.getMonth() === birth.getMonth() && asOf.getDate() < birth.getDate());
-  if (beforeBirthdayThisYear) age -= 1;
-  return age;
+  // ISO strings compare correctly as text, so "MM-DD" tells whether this year's birthday has passed.
+  const age = Number(today.slice(0, 4)) - Number(birthDate.slice(0, 4));
+  return today.slice(5) < birthDate.slice(5) ? age - 1 : age;
 }
 
 /** Age formatted for display, e.g. "34 ปี", or "—" when unknown. */

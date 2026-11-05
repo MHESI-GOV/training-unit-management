@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { thaiFiscalYear } from "@/lib/fiscal-year";
 
 export type PendingParticipation = {
   round_id: string;
@@ -39,7 +40,7 @@ export type ConfirmedRound = { round_id: string; fiscal_year: number };
 
 // Current Thai fiscal year (BE): the year runs Oct–Sep, so Oct–Dec rolls into the next BE year.
 export function currentThaiFiscalYear(d: Date = new Date()): number {
-  return d.getFullYear() + 543 + (d.getMonth() + 1 >= 10 ? 1 : 0);
+  return thaiFiscalYear(d);
 }
 
 // Rounds Web Master has opened, most recently opened first. Staff pick one of these for a new class.

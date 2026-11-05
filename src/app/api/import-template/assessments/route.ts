@@ -9,7 +9,7 @@ export async function GET() {
       options: ["dsd_l1", "anamai_food_handler", "anamai_food_contact", "professional_qualification", "other"],
     },
     { header: "result", example: "passed", options: ["passed", "failed", "pending"] },
-    { header: "tested_at", example: "2026-10-01" },
+    { header: "tested_at", example: "01/10/2569", text: true },
     { header: "evidence_ref", example: "ใบรับรองเลขที่ 123" },
   ]);
 

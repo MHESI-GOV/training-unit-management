@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { GENDER_LABEL } from "@/lib/labels";
+import { ThaiDateInput } from "@/components/ui/ThaiDateInput";
 import { createLearner, updateLearner, type LearnerFormState } from "./actions";
 
 const initialState: LearnerFormState = {};
@@ -77,8 +78,8 @@ export function LearnerForm({
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <label>
-          <span className="field-label">วันเกิด (ใช้คำนวณอายุ)</span>
-          <input name="birth_date" type="date" defaultValue={edit?.birth_date ?? ""} className="field" />
+          <span className="field-label">วันเกิด (พ.ศ.) ใช้คำนวณอายุ</span>
+          <ThaiDateInput name="birth_date" noFuture defaultValue={edit?.birth_date} />
         </label>
         <label>
           <span className="field-label">อาชีพ</span>

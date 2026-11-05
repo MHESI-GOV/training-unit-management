@@ -1,5 +1,6 @@
 import "server-only";
 import nodemailer from "nodemailer";
+import { formatThaiDate } from "@/lib/date-format";
 
 // Notice emailed to each unit coordinator when Web Master opens (or re-sends) a fiscal-year
 // participation round, asking them to confirm the unit's participation that year. Same Gmail-SMTP
@@ -28,7 +29,7 @@ export async function sendParticipationNotice(params: {
     ``,
     params.noticeMessage ? params.noticeMessage : null,
     params.noticeMessage ? `` : null,
-    params.deadline ? `กรุณายืนยันภายในวันที่ ${params.deadline}` : null,
+    params.deadline ? `กรุณายืนยันภายในวันที่ ${formatThaiDate(params.deadline)}` : null,
     `โปรดเข้าสู่ระบบเพื่อยืนยันการเข้าร่วม: ${params.loginUrl}/unit/participation`,
   ].filter((l): l is string => l !== null);
 

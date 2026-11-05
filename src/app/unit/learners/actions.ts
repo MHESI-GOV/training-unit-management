@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isValidIsoDate, isoDateInThailand } from "@/lib/date-format";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -19,7 +20,13 @@ type AssessmentResultValue = Database["public"]["Enums"]["assessment_result_enum
 export type LearnerFormState = { error?: string; success?: string };
 
 const NATIONAL_ID_RE = /^\d{13}$/;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// null when fine. Gregorian "YYYY-MM-DD" is what the date field submits.
+function birthDateError(birthDate: string | null): string | null {
+  if (!birthDate) return null;
+  if (!isValidIsoDate(birthDate)) return "วันเกิดไม่ถูกต้อง";
+  if (birthDate > isoDateInThailand()) return "วันเกิดต้องไม่เกินวันนี้";
+  return null;
+}
 
 type Gender = "male" | "female";
 function parseGender(v: string | null): Gender | null {
@@ -49,9 +56,8 @@ export async function createLearner(
   if (!NATIONAL_ID_RE.test(nationalId)) {
     return { error: "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก" };
   }
-  if (birthDate && !DATE_RE.test(birthDate)) {
-    return { error: "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว" };
-  }
+  const birthError = birthDateError(birthDate);
+  if (birthError) return { error: birthError };
 
   const supabase = await createClient();
 
@@ -231,6 +237,7 @@ export async function recordAssessmentResult(
   if (!learnerId || !standardType || !result) {
     return { error: "กรุณากรอกข้อมูลให้ครบถ้วน" };
   }
+  if (testedAt && !isValidIsoDate(testedAt)) return { error: "วันที่ทดสอบไม่ถูกต้อง" };
 
   const supabase = await createClient();
 
@@ -278,7 +285,8 @@ export async function updateLearner(
   const birthDate = String(formData.get("birth_date") ?? "").trim() || null;
 
   if (!learnerId || !firstName || !lastName) return { error: "กรุณากรอกชื่อ-นามสกุล" };
-  if (birthDate && !DATE_RE.test(birthDate)) return { error: "วันเกิดต้องอยู่ในรูปแบบ ปปปป-ดด-วว" };
+  const birthError = birthDateError(birthDate);
+  if (birthError) return { error: birthError };
 
   const supabase = await createClient();
   const { data: own } = await supabase

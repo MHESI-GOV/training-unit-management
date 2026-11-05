@@ -4,8 +4,8 @@ export async function GET() {
   const buf = await buildXlsxTemplate([
     { header: "course_name", example: "หลักสูตรทดสอบ" },
     { header: "name", example: "รุ่นที่ 1/2569" },
-    { header: "start_date", example: "2026-11-01" },
-    { header: "end_date", example: "2026-11-05" },
+    { header: "start_date", example: "01/11/2569", text: true },
+    { header: "end_date", example: "05/11/2569", text: true },
     { header: "schedule_time", example: "09:00–16:00 จ.–ศ." },
     { header: "seat_count", example: "20" },
     { header: "mode", example: "onsite", options: ["onsite", "online", "hybrid"] },
