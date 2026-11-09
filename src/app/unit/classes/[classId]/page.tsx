@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
-import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
 import { computeAge } from "@/lib/age";
 import { fetchUnitCode } from "@/lib/unit-code";
 import { studentCode, classCode } from "@/lib/id-codes";
@@ -50,12 +49,13 @@ export default async function ClassDetailPage({
     supabase
       .from("enrollments")
       .select(
-        "enrollment_id, status, learners!inner(learner_id, first_name, last_name, gender, birth_date, national_id_encrypted, phone, email, address, occupation, learner_seq, assessment_results(result_id, standard_type, result, tested_at))",
+        "enrollment_id, status, learners!inner(learner_id, first_name, last_name, gender, birth_date, phone, email, address, occupation, learner_seq, assessment_results(result_id, standard_type, result, tested_at))",
       )
       .eq("class_id", classId),
   ]);
 
   const unitCodeInfo = await fetchUnitCode(supabase, unitId);
+  const { data: unitRow } = await supabase.from("training_units").select("name").eq("unit_id", unitId).maybeSingle();
 
   const classInstructors: ClassInstructorRow[] = (ciRows ?? [])
     .filter((r) => r.instructors)
@@ -75,7 +75,6 @@ export default async function ClassDetailPage({
 
   const learners: ClassLearnerRow[] = (enrollments ?? []).map((e) => {
     const l = e.learners!;
-    const nid = decryptNationalId(byteaHexToBuffer(l.national_id_encrypted as unknown as string));
     const results = l.assessment_results ?? [];
     const hasPassed = (std: string) => results.some((a) => a.standard_type === std && a.result === "passed");
     return {
@@ -85,7 +84,6 @@ export default async function ClassDetailPage({
       first_name: l.first_name,
       last_name: l.last_name,
       gender: l.gender,
-      masked_id: maskNationalId(nid),
       birth_date: l.birth_date,
       age: computeAge(l.birth_date),
       phone: formatPhone(l.phone) || null,
@@ -126,7 +124,13 @@ export default async function ClassDetailPage({
   const backHref = `/unit/classes${isStaff ? `?unit_id=${unitId}` : ""}`;
 
   return (
-    <AppShell profile={profile} active="classes" eyebrow={`ชั้นเรียน ${cls.batch_code ?? ""}`} title={cls.courses?.name ?? "ชั้นเรียน"}>
+    <AppShell
+      profile={profile}
+      active="classes"
+      eyebrow={`ชั้นเรียน ${cls.batch_code ?? ""}`}
+      title={cls.courses?.name ?? "ชั้นเรียน"}
+      unitName={unitRow?.name ?? null}
+    >
       <p style={{ marginBottom: 16 }}>
         <Link href={backHref}>← กลับไปรายการชั้นเรียน</Link>
       </p>

@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { GENDER_LABEL } from "@/lib/labels";
 import { ThaiDateInput } from "@/components/ui/ThaiDateInput";
 import { createLearner, updateLearner, type LearnerFormState } from "./actions";
+import { RevealIdButton } from "./reveal-id-button";
 
 const initialState: LearnerFormState = {};
 
@@ -18,7 +19,6 @@ export type LearnerEdit = {
   email: string | null;
   address: string | null;
   occupation: string | null;
-  masked_id: string;
 };
 
 export function LearnerForm({
@@ -67,10 +67,10 @@ export function LearnerForm({
         </select>
       </label>
       {edit ? (
-        <label>
+        <div>
           <span className="field-label">เลขบัตรประชาชน (แก้ไขไม่ได้)</span>
-          <input value={edit.masked_id} readOnly disabled className="field" style={{ fontVariantNumeric: "tabular-nums" }} />
-        </label>
+          <RevealIdButton unitId={unitId} learnerId={edit.learner_id} />
+        </div>
       ) : (
         <label>
           <span className="field-label">เลขบัตรประชาชน (13 หลัก)</span>

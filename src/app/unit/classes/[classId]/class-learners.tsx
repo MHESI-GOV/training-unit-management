@@ -25,7 +25,6 @@ export type ClassLearnerRow = {
   first_name: string;
   last_name: string;
   gender: string | null;
-  masked_id: string;
   birth_date: string | null;
   age: number | null;
   phone: string | null;
@@ -131,7 +130,7 @@ export function ClassLearnersClient({
                   <td><strong>{l.first_name} {l.last_name}</strong></td>
                   <td>{l.gender ? GENDER_LABEL[l.gender] ?? "—" : "—"}</td>
                   <td>
-                    <RevealIdButton unitId={unitId} learnerId={l.learner_id} iconOnly />
+                    <RevealIdButton unitId={unitId} learnerId={l.learner_id} />
                   </td>
                   <td>{formatThaiDate(l.birth_date)}</td>
                   <td>{l.age === null ? "—" : `${l.age} ปี`}</td>
@@ -269,7 +268,6 @@ export function ClassLearnersClient({
               email: editTarget.email,
               address: editTarget.address,
               occupation: editTarget.occupation,
-              masked_id: editTarget.masked_id,
             }}
             onDone={() => { setEditTarget(null); router.refresh(); }}
           />

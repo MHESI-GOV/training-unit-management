@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
-import { byteaHexToBuffer, decryptNationalId, maskNationalId } from "@/lib/crypto/national-id";
 import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
 import { formatAge } from "@/lib/age";
 import { formatThaiDate } from "@/lib/date-format";
@@ -27,7 +26,7 @@ export default async function LearnerDetailPage({
   const { data: learner } = await supabase
     .from("learners")
     .select(
-      "learner_id, first_name, last_name, birth_date, national_id_encrypted, phone, email, address, enrollments(enrollment_id, status, classes(batch_code, start_date, end_date, courses(name))), assessment_results(result_id, standard_type, result, tested_at)",
+      "learner_id, first_name, last_name, birth_date, phone, email, address, enrollments(enrollment_id, status, classes(batch_code, start_date, end_date, courses(name))), assessment_results(result_id, standard_type, result, tested_at)",
     )
     .eq("learner_id", learnerId)
     .eq("unit_id", unitId)
@@ -35,7 +34,6 @@ export default async function LearnerDetailPage({
 
   if (!learner) notFound();
 
-  const nationalId = decryptNationalId(byteaHexToBuffer(learner.national_id_encrypted as unknown as string));
   const backHref = `/unit/learners${isStaff ? `?unit_id=${unitId}` : ""}`;
 
   return (
@@ -59,7 +57,7 @@ export default async function LearnerDetailPage({
           <div style={{ gridColumn: "1 / -1" }}><dt>ที่อยู่</dt><dd>{learner.address ?? "—"}</dd></div>
         </dl>
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
-          <span className="footnote">เลขบัตรประชาชน: {maskNationalId(nationalId)}</span>
+          <span className="footnote">เลขบัตรประชาชน</span>
           <RevealIdButton unitId={unitId} learnerId={learner.learner_id} />
         </div>
       </section>

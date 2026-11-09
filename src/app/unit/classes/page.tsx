@@ -15,7 +15,7 @@ export default async function UnitClassesPage({
 
   const supabase = await createClient();
 
-  const [{ data: courses }, { data: instructors }, { data: classes }, confirmedRounds, openedRounds] = await Promise.all([
+  const [{ data: courses }, { data: instructors }, { data: classes }, confirmedRounds, openedRounds, { data: unit }] = await Promise.all([
     supabase.from("courses").select("course_id, name").order("name"),
     supabase.from("instructors").select("instructor_id, name").eq("unit_id", unitId).order("name"),
     supabase
@@ -27,6 +27,7 @@ export default async function UnitClassesPage({
       .order("batch_code", { ascending: true }),
     getUnitConfirmedRounds(supabase, unitId),
     getOpenedRounds(supabase),
+    supabase.from("training_units").select("name").eq("unit_id", unitId).maybeSingle(),
   ]);
 
   const rows: ClassRow[] = (classes ?? []).map((c) => ({
@@ -46,10 +47,17 @@ export default async function UnitClassesPage({
   }));
 
   return (
-    <AppShell profile={profile} active="classes" eyebrow="จัดการชั้นเรียน" title="จัดการชั้นเรียน (Class)">
+    <AppShell
+      profile={profile}
+      active="classes"
+      eyebrow="จัดการชั้นเรียน"
+      title="จัดการชั้นเรียน (Class)"
+      unitName={unit?.name ?? null}
+    >
       {isStaff && (
         <p style={{ marginBottom: 14 }}>
-          <Link href="/admin/units">← กลับไปหน้าเลือกหน่วย</Link>
+          {/* Staff came here from this unit's sheet, so go back to its profile, not the unit picker. */}
+          <Link href={`/admin/units/${unitId}/profile`}>← กลับไปโปรไฟล์หน่วย{unit?.name ? ` ${unit.name}` : ""}</Link>
         </p>
       )}
       <ClassList
