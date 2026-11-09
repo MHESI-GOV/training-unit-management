@@ -244,7 +244,7 @@ export function ClassLearnersClient({
                 { field: "last_name", type: "ข้อความ", required: true },
                 { field: "national_id", type: "ตัวเลข 13 หลัก", required: true, note: "ไม่ซ้ำทั้งระบบ" },
                 { field: "birth_date", type: "วันที่ วว/ดด/ปปปป (พ.ศ.)", required: false, note: "เช่น 21/05/2533 ใช้คำนวณอายุ" },
-                { field: "phone", type: "ข้อความ", required: false },
+                { field: "phone", type: "ข้อความ", required: false, note: "XX-XXXX-XXXX หรือ XX-XXX-XXXX" },
                 { field: "email", type: "ข้อความ (อีเมล)", required: false },
                 { field: "address", type: "ข้อความ", required: false },
               ]}
@@ -335,7 +335,7 @@ function AssessmentCsv({ unitId, onDone }: { unitId: string; onDone: () => void 
       <FieldSpecTable
         specs={[
           { field: "national_id", type: "ตัวเลข 13 หลัก", required: true, note: "ต้องมีผู้เรียนนี้ในหน่วยแล้ว" },
-          { field: "standard_type", type: "รหัส", required: true, note: "dsd_l1 / anamai_food_handler / anamai_food_contact / professional_qualification / other" },
+          { field: "standard_type", type: "รหัส", required: true, note: "dsd_l1 / anamai_food_contact / professional_qualification / other" },
           { field: "result", type: "รหัส", required: true, note: "passed / failed / pending" },
           { field: "tested_at", type: "วันที่ วว/ดด/ปปปป (พ.ศ.)", required: false, note: "เช่น 01/10/2569" },
           { field: "evidence_ref", type: "ข้อความ", required: false },

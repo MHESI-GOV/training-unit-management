@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizePhone } from "@/lib/phone";
 import { revalidatePath } from "next/cache";
 import { isValidIsoDate } from "@/lib/date-format";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
@@ -475,7 +476,9 @@ export async function createInstructorInClass(
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const classId = String(formData.get("class_id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const phoneN = normalizePhone(formData.get("phone")?.toString());
+  if (phoneN.error) return { error: phoneN.error };
+  const phone = phoneN.value;
   const email = String(formData.get("email") ?? "").trim() || null;
   const role = String(formData.get("role_in_class") ?? "").trim() || "วิทยากร";
 
@@ -552,7 +555,7 @@ export async function commitClassInstructorImport(
   let created = 0;
   let linked = 0;
   for (const r of rows) {
-    const phone = r.phone || null;
+    const phone = normalizePhone(r.phone).value;
     const email = r.email || null;
     let instructorId: string | null = null;
     if (phone || email) {

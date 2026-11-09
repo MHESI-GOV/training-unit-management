@@ -1,4 +1,5 @@
 "use client";
+import { formatPhone } from "@/lib/phone";
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
@@ -130,7 +131,7 @@ function UnitCardView({ pin, card }: { pin: Pin; card?: UnitCard }) {
         </span>
         <span className="unit-card-chip">
           <Phone size={14} />
-          <span className="unit-card-chip-text">{card?.phone || "—"}</span>
+          <span className="unit-card-chip-text">{formatPhone(card?.phone) || "—"}</span>
         </span>
       </div>
     </div>

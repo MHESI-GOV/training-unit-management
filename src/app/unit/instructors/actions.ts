@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizePhone } from "@/lib/phone";
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
@@ -46,7 +47,9 @@ export async function createInstructor(_prev: InstructorState, formData: FormDat
   const affiliation = String(formData.get("affiliation") ?? "").trim() || null;
   const testerStatus = parseTesterStatus(formData.get("tester_status")?.toString() ?? null);
   const passedTtt = parsePassedTtt(formData.get("passed_ttt")?.toString() ?? null);
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const phoneN = normalizePhone(formData.get("phone")?.toString());
+  if (phoneN.error) return { error: phoneN.error };
+  const phone = phoneN.value;
   const email = String(formData.get("email") ?? "").trim() || null;
 
   if (!firstName) return { error: "กรุณากรอกชื่อวิทยากร" };
@@ -82,7 +85,9 @@ export async function updateInstructor(_prev: InstructorState, formData: FormDat
   const affiliation = String(formData.get("affiliation") ?? "").trim() || null;
   const testerStatus = parseTesterStatus(formData.get("tester_status")?.toString() ?? null);
   const passedTtt = parsePassedTtt(formData.get("passed_ttt")?.toString() ?? null);
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const phoneN = normalizePhone(formData.get("phone")?.toString());
+  if (phoneN.error) return { error: phoneN.error };
+  const phone = phoneN.value;
   const email = String(formData.get("email") ?? "").trim() || null;
 
   if (!instructorId || !firstName) return { error: "กรุณากรอกชื่อวิทยากร" };
@@ -179,7 +184,8 @@ export async function previewInstructorImport(
     const affiliation = (r.affiliation ?? "").trim();
     const testerRaw = (r.tester_status ?? "").trim();
     const passedTttRaw = (r.passed_ttt ?? "").trim();
-    const phone = (r.phone ?? "").trim();
+    const phoneN = normalizePhone(r.phone);
+    const phone = phoneN.value ?? (r.phone ?? "").trim();
     const email = (r.email ?? "").trim();
     let status: "pass" | "fail" = "pass";
     let reason: string | undefined;
@@ -194,6 +200,9 @@ export async function previewInstructorImport(
     } else if (testerRaw && testerRaw !== "none" && !parseTesterStatus(testerRaw)) {
       status = "fail";
       reason = "tester_status ต้องเป็น none / level_1 / level_2";
+    } else if (phoneN.error) {
+      status = "fail";
+      reason = phoneN.error;
     } else if ((phone || email) && seen.has(key)) {
       status = "fail";
       reason = "เบอร์/อีเมลซ้ำภายในไฟล์เดียวกัน";
@@ -245,7 +254,7 @@ export async function commitInstructorImport(
     affiliation: r.affiliation || null,
     tester_status: parseTesterStatus(r.tester_status),
     passed_ttt: parsePassedTtt(r.passed_ttt),
-    phone: r.phone || null,
+    phone: normalizePhone(r.phone).value,
     email: r.email || null,
     unit_id: unitId,
   }));

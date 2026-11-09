@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { readUploadedRows } from "@/lib/import-file";
 import { parseImportDate } from "@/lib/date-format";
 import { hashNationalId } from "@/lib/crypto/national-id";
-import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
+import { ASSESSMENT_STANDARD_OPTIONS, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AssessmentStandard = Database["public"]["Enums"]["assessment_standard"];
@@ -34,7 +34,7 @@ export type PreviewState = {
 };
 
 const NATIONAL_ID_RE = /^\d{13}$/;
-const VALID_STANDARDS = new Set(Object.keys(ASSESSMENT_STANDARD_LABEL));
+const VALID_STANDARDS = new Set<string>(ASSESSMENT_STANDARD_OPTIONS);
 const VALID_RESULTS = new Set(Object.keys(ASSESSMENT_RESULT_LABEL));
 
 export async function previewAssessmentImport(

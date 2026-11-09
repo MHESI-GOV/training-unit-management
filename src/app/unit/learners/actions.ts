@@ -12,6 +12,8 @@ import {
   decryptNationalId,
 } from "@/lib/crypto/national-id";
 import { learnerStatusDisplay } from "@/lib/learner-status";
+import { ASSESSMENT_STANDARD_OPTIONS } from "@/lib/labels";
+import { normalizePhone } from "@/lib/phone";
 import type { Database } from "@/lib/supabase/database.types";
 
 type AssessmentStandard = Database["public"]["Enums"]["assessment_standard"];
@@ -44,7 +46,9 @@ export async function createLearner(
   const nationalId = String(formData.get("national_id") ?? "").trim();
   const gender = parseGender(formData.get("gender")?.toString() ?? null);
   const occupation = String(formData.get("occupation") ?? "").trim() || null;
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const phoneN = normalizePhone(formData.get("phone")?.toString());
+  if (phoneN.error) return { error: phoneN.error };
+  const phone = phoneN.value;
   const email = String(formData.get("email") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
   const birthDate = String(formData.get("birth_date") ?? "").trim() || null;
@@ -237,6 +241,7 @@ export async function recordAssessmentResult(
   if (!learnerId || !standardType || !result) {
     return { error: "กรุณากรอกข้อมูลให้ครบถ้วน" };
   }
+  if (!(ASSESSMENT_STANDARD_OPTIONS as readonly string[]).includes(standardType)) return { error: "มาตรฐานไม่ถูกต้อง" };
   if (testedAt && !isValidIsoDate(testedAt)) return { error: "วันที่ทดสอบไม่ถูกต้อง" };
 
   const supabase = await createClient();
@@ -279,7 +284,9 @@ export async function updateLearner(
   const lastName = String(formData.get("last_name") ?? "").trim();
   const gender = parseGender(formData.get("gender")?.toString() ?? null);
   const occupation = String(formData.get("occupation") ?? "").trim() || null;
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const phoneN = normalizePhone(formData.get("phone")?.toString());
+  if (phoneN.error) return { error: phoneN.error };
+  const phone = phoneN.value;
   const email = String(formData.get("email") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
   const birthDate = String(formData.get("birth_date") ?? "").trim() || null;

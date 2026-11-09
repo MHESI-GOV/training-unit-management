@@ -1,4 +1,5 @@
 "use client";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 import { useActionState, useEffect, useRef } from "react";
 import { GENDER_LABEL } from "@/lib/labels";
@@ -89,7 +90,7 @@ export function LearnerForm({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <label>
           <span className="field-label">เบอร์โทร</span>
-          <input name="phone" defaultValue={edit?.phone ?? ""} className="field" />
+          <PhoneInput defaultValue={edit?.phone} />
         </label>
         <label>
           <span className="field-label">อีเมล</span>

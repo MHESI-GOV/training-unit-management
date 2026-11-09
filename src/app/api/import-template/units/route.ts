@@ -12,7 +12,7 @@ export async function GET() {
     { header: "subdistrict_name", example: "ในเมือง" },
     { header: "house_no", example: "123" },
     { header: "road", example: "มิตรภาพ" },
-    { header: "phone", example: "043000000" },
+    { header: "phone", example: "04-300-0000", text: true },
     { header: "email", example: "unit@example.ac.th" },
     { header: "coordinator_first_name", example: "สมชาย" },
     { header: "coordinator_last_name", example: "ใจดี" },

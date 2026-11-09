@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { upsertTestingCenterStatus, type TestingCenterFormState } from "./actions";
-import { ASSESSMENT_STANDARD_LABEL, TESTING_CENTER_STATUS_LABEL } from "@/lib/labels";
+import { ASSESSMENT_STANDARD_CHOICES, TESTING_CENTER_STATUS_LABEL } from "@/lib/labels";
 
 const initialState: TestingCenterFormState = {};
 
@@ -16,7 +16,7 @@ export function StatusForm({ unitId }: { unitId: string }) {
         <span className="field-label">มาตรฐาน</span>
         <select name="standard_type" required className="field">
           <option value="">-- เลือกมาตรฐาน --</option>
-          {Object.entries(ASSESSMENT_STANDARD_LABEL).map(([value, label]) => (
+          {ASSESSMENT_STANDARD_CHOICES.map(({ value, label }) => (
             <option key={value} value={value}>
               {label}
             </option>

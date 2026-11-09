@@ -5,6 +5,7 @@ import Link from "next/link";
 import { RevealIdButton } from "./reveal-id-button";
 import { NationalIdSearch } from "./national-id-search";
 import { LEARNER_STATUS_DISPLAY } from "@/lib/learner-status";
+import { ExportLearners } from "@/components/dashboard/export-learners";
 
 export type LearnerRow = {
   learner_id: string;
@@ -29,21 +30,6 @@ export type LearnerRow = {
 type ClassOption = { class_id: string; label: string };
 type StandardOption = { value: string; label: string };
 
-// Minimal CSV builder for the client-side report export (name/age/contact/classes/standards — no
-// national ID; full-PII export stays a staff-only server route).
-function downloadCsv(filename: string, rows: string[][]) {
-  const esc = (v: string) => {
-    const s = /^[=+\-@]/.test(v) ? `'${v}` : v;
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const body = "﻿" + rows.map((r) => r.map(esc).join(",")).join("\r\n");
-  const url = URL.createObjectURL(new Blob([body], { type: "text/csv;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 export function LearnersTable({
   unitId,
@@ -74,7 +60,7 @@ export function LearnersTable({
     const max = ageMax ? Number(ageMax) : null;
     const fy = fiscalYear ? Number(fiscalYear) : null;
     return learners.filter((l) => {
-      if (term && !`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${l.email ?? ""}`.toLowerCase().includes(term)) return false;
+      if (term && !`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${(l.phone ?? "").replace(/-/g, "")} ${l.email ?? ""}`.toLowerCase().includes(term)) return false;
       if (classId && !l.enrollments.some((e) => e.class_id === classId)) return false;
       if (fy !== null && !l.enrollments.some((e) => e.fiscalYear === fy)) return false;
       if (status === "none") {
@@ -87,23 +73,10 @@ export function LearnersTable({
     });
   }, [q, classId, status, standard, ageMin, ageMax, fiscalYear, learners]);
 
-  function exportReport() {
-    const header = ["ชื่อ", "นามสกุล", "เพศ", "อาชีพ", "อายุ", "เบอร์โทร", "อีเมล", "รุ่น · ปีงบ · สถานะการเรียน", "มาตรฐานที่ได้รับ"];
-    const body = filtered.map((l) => [
-      l.first_name,
-      l.last_name,
-      l.gender,
-      l.occupation,
-      l.age === null ? "" : String(l.age),
-      l.phone ?? "",
-      l.email ?? "",
-      l.enrollments.map((e) => `${e.courseLabel}${e.fiscalYear ? ` · ปีงบ ${e.fiscalYear}` : ""} [${e.statusLabel}]`).join("; "),
-      l.standards.map((s) => s.label).join("; "),
-    ]);
-    downloadCsv(`learners_report_${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
-  }
 
   const resetBtn = q || classId || status || standard || ageMin || ageMax || fiscalYear;
+  // Filters the export route can't apply itself (year and class it can), so it gets the row ids.
+  const rowFiltered = Boolean(q || status || standard || ageMin || ageMax);
 
   return (
     <div>
@@ -139,9 +112,14 @@ export function LearnersTable({
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, margin: "12px 0" }}>
         <span className="footnote">แสดง {filtered.length} / {learners.length} คน</span>
-        <button className="btn secondary" onClick={exportReport} disabled={filtered.length === 0}>
-          ส่งออกรายงาน (CSV)
-        </button>
+        <ExportLearners
+          unitId={unitId}
+          fiscalYear={fiscalYear}
+          classId={classId}
+          learnerIds={rowFiltered ? filtered.map((l) => l.learner_id) : undefined}
+          fullNationalId={isStaff}
+          disabled={filtered.length === 0}
+        />
       </div>
 
       {learners.length === 0 && (

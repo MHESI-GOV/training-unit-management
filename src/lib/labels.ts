@@ -48,13 +48,22 @@ export const ROLE_LABEL: Record<string, string> = {
   executive: "Executive",
 };
 
+// Label for every value in the assessment_standard enum, so old records still display.
 export const ASSESSMENT_STANDARD_LABEL: Record<string, string> = {
   dsd_l1: "มาตรฐานฝีมือแรงงาน DSD ระดับ 1",
   anamai_food_handler: "กรมอนามัย — ผู้ประกอบอาหาร",
   anamai_food_contact: "กรมอนามัย — ผู้สัมผัสอาหาร",
-  professional_qualification: "คุณวุฒิวิชาชีพ",
+  professional_qualification: "คุณวุฒิวิชาชีพ ผู้ประกอบอาหารไทย ระดับ 4",
   other: "อื่นๆ",
 };
+
+// Standards that can still be picked or imported. anamai_food_handler is retired: it stays in the
+// DB enum (Postgres can't drop an enum value cheaply) and in the label map, but is never offered.
+export const ASSESSMENT_STANDARD_OPTIONS = ["dsd_l1", "anamai_food_contact", "professional_qualification", "other"] as const;
+export const ASSESSMENT_STANDARD_CHOICES = ASSESSMENT_STANDARD_OPTIONS.map((value) => ({
+  value,
+  label: ASSESSMENT_STANDARD_LABEL[value],
+}));
 
 export const ASSESSMENT_RESULT_LABEL: Record<string, string> = {
   passed: "ได้",

@@ -1,4 +1,6 @@
 "use client";
+import { formatPhone } from "@/lib/phone";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -100,7 +102,7 @@ function ProfileView({ unitName, initial }: { unitName: string; initial: Profile
       <SectionTitle>ผู้ประสานงานหน่วยฝึก</SectionTitle>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <Field label="ชื่อ - นามสกุล" value={fullName} />
-        <Field label="เบอร์โทรศัพท์" value={initial?.phone} />
+        <Field label="เบอร์โทรศัพท์" value={formatPhone(initial?.phone)} />
         <Field label="อีเมล" value={initial?.email} />
       </div>
 
@@ -192,7 +194,7 @@ function ProfileEditForm({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <label>
           <span className="field-label">เบอร์โทรศัพท์</span>
-          <input name="phone" defaultValue={initial?.phone ?? ""} className="field" />
+          <PhoneInput defaultValue={initial?.phone} />
         </label>
         <label>
           <span className="field-label">อีเมล</span>

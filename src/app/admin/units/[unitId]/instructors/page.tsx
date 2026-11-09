@@ -1,3 +1,4 @@
+import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUnitCode } from "@/lib/unit-code";
 import { teacherCode } from "@/lib/id-codes";
@@ -29,7 +30,7 @@ export default async function UnitSheetInstructors({
     affiliation: i.affiliation,
     tester_status: i.tester_status,
     passed_ttt: i.passed_ttt,
-    phone: i.phone,
+    phone: formatPhone(i.phone) || null,
     email: i.email,
     teacher_code: teacherCode(unit.code, i.instructor_seq),
     class_count: (i.class_instructors as unknown as { count: number }[] | null)?.[0]?.count ?? 0,

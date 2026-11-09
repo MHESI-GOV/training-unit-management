@@ -1,4 +1,5 @@
 "use client";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { Popup } from "@/components/ui/Popup";
@@ -163,7 +164,7 @@ function InstructorForm({ unitId, edit, onDone }: { unitId: string; edit?: Instr
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <label>
           <span className="field-label">เบอร์โทร</span>
-          <input name="phone" defaultValue={edit?.phone ?? ""} className="field" />
+          <PhoneInput defaultValue={edit?.phone} />
         </label>
         <label>
           <span className="field-label">อีเมล</span>
@@ -251,7 +252,7 @@ function InstructorCsv({ unitId }: { unitId: string }) {
           { field: "affiliation", type: "ข้อความ", required: false, note: "สังกัด" },
           { field: "tester_status", type: "รหัส", required: false, note: "none / level_1 / level_2 (ผู้ทดสอบมาตรฐานฝีมือแรงงาน)" },
           { field: "passed_ttt", type: "รหัส", required: false, note: "ผ่าน Train the Trainer: true/false หรือ ผ่าน/ไม่ผ่าน (ว่าง = ยังไม่ผ่าน)" },
-          { field: "phone", type: "ข้อความ (ตัวเลข)", required: false, note: "เบอร์โทร" },
+          { field: "phone", type: "ข้อความ", required: false, note: "XX-XXXX-XXXX หรือ XX-XXX-XXXX" },
           { field: "email", type: "ข้อความ (อีเมล)", required: false },
         ]}
       />

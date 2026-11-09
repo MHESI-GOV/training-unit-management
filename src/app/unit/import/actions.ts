@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizePhone } from "@/lib/phone";
 import { revalidatePath } from "next/cache";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
@@ -69,7 +70,8 @@ export async function previewImport(
     const birth_date = parsedBirthDate?.iso ?? rawBirthDate;
     const gender = (r.gender ?? "").trim();
     const occupation = (r.occupation ?? "").trim();
-    const phone = (r.phone ?? "").trim();
+    const phoneN = normalizePhone(r.phone);
+    const phone = phoneN.value ?? (r.phone ?? "").trim();
     const email = (r.email ?? "").trim();
     const address = (r.address ?? "").trim();
 
@@ -91,6 +93,9 @@ export async function previewImport(
     } else if (gender && !parseGender(gender)) {
       status = "fail";
       reason = "เพศต้องเป็น male/female หรือ ชาย/หญิง";
+    } else if (phoneN.error) {
+      status = "fail";
+      reason = phoneN.error;
     } else if (seenInFile.has(national_id)) {
       status = "fail";
       reason = "เลขบัตรประชาชนซ้ำภายในไฟล์เดียวกัน";
@@ -173,7 +178,7 @@ export async function commitImport(
         last_name: row.last_name,
         national_id_encrypted: bufferToByteaHex(encryptNationalId(row.national_id)),
         national_id_hash: hashNationalId(row.national_id),
-        phone: row.phone || null,
+        phone: normalizePhone(row.phone).value,
         email: row.email || null,
         address: row.address || null,
         birth_date: row.birth_date || null,

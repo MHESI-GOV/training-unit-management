@@ -1,3 +1,4 @@
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
@@ -61,7 +62,7 @@ export default async function ClassDetailPage({
     .map((r) => ({
       instructor_id: r.instructors!.instructor_id,
       name: r.instructors!.name ?? "",
-      phone: r.instructors!.phone,
+      phone: formatPhone(r.instructors!.phone) || null,
       email: r.instructors!.email,
       role_in_class: r.role_in_class,
       is_lead: r.instructors!.instructor_id === cls.lead_instructor_id,
@@ -69,7 +70,7 @@ export default async function ClassDetailPage({
   const inClassIds = new Set(classInstructors.map((c) => c.instructor_id));
   const availableLibrary: LibraryInstructor[] = (library ?? [])
     .filter((l) => !inClassIds.has(l.instructor_id))
-    .map((l) => ({ instructor_id: l.instructor_id, name: l.name ?? "", phone: l.phone, email: l.email }));
+    .map((l) => ({ instructor_id: l.instructor_id, name: l.name ?? "", phone: formatPhone(l.phone) || null, email: l.email }));
   const libraryForForm = (library ?? []).map((l) => ({ instructor_id: l.instructor_id, name: l.name ?? "" }));
 
   const learners: ClassLearnerRow[] = (enrollments ?? []).map((e) => {
@@ -87,7 +88,7 @@ export default async function ClassDetailPage({
       masked_id: maskNationalId(nid),
       birth_date: l.birth_date,
       age: computeAge(l.birth_date),
-      phone: l.phone,
+      phone: formatPhone(l.phone) || null,
       email: l.email,
       address: l.address,
       occupation: l.occupation,

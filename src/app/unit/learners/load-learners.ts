@@ -1,5 +1,6 @@
+import { formatPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { ASSESSMENT_STANDARD_LABEL, GENDER_LABEL } from "@/lib/labels";
+import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_STANDARD_CHOICES, GENDER_LABEL } from "@/lib/labels";
 import { computeAge } from "@/lib/age";
 import { formatThaiDate } from "@/lib/date-format";
 import { computeLearnerStatus, learnerStatusDisplay } from "@/lib/learner-status";
@@ -41,7 +42,7 @@ export async function loadUnitLearners(unitId: string): Promise<UnitLearnersData
     gender: l.gender ? GENDER_LABEL[l.gender] ?? l.gender : "",
     occupation: l.occupation ?? "",
     age: computeAge(l.birth_date),
-    phone: l.phone,
+    phone: formatPhone(l.phone) || null,
     email: l.email,
     enrollments: (l.enrollments ?? []).map((e) => {
       const endDate = e.classes?.end_date ?? null;
@@ -68,7 +69,7 @@ export async function loadUnitLearners(unitId: string): Promise<UnitLearnersData
     class_id: c.class_id,
     label: `${c.batch_code ? c.batch_code + " · " : ""}${c.courses?.name ?? "—"} (${formatThaiDate(c.start_date)})`,
   }));
-  const standardOptions = Object.entries(ASSESSMENT_STANDARD_LABEL).map(([value, label]) => ({ value, label }));
+  const standardOptions = ASSESSMENT_STANDARD_CHOICES.map((c) => ({ ...c }));
   const fiscalYearOptions = Array.from(
     new Set((classes ?? []).map((c) => c.fiscal_year).filter((y): y is number => y != null)),
   ).sort((a, b) => b - a);
@@ -109,7 +110,7 @@ export async function loadAllLearners(): Promise<AllLearnersData> {
     gender: l.gender ? GENDER_LABEL[l.gender] ?? l.gender : "",
     occupation: l.occupation ?? "",
     age: computeAge(l.birth_date),
-    phone: l.phone,
+    phone: formatPhone(l.phone) || null,
     email: l.email,
     unit_id: l.unit_id,
     unit_name: l.training_units?.name ?? "—",
@@ -134,7 +135,7 @@ export async function loadAllLearners(): Promise<AllLearnersData> {
       })),
   }));
 
-  const standardOptions = Object.entries(ASSESSMENT_STANDARD_LABEL).map(([value, label]) => ({ value, label }));
+  const standardOptions = ASSESSMENT_STANDARD_CHOICES.map((c) => ({ ...c }));
   const fiscalYearOptions = Array.from(
     new Set((fyRows ?? []).map((c) => c.fiscal_year).filter((y): y is number => y != null)),
   ).sort((a, b) => b - a);

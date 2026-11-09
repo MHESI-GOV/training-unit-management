@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizePhone } from "@/lib/phone";
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth/require-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -28,6 +29,9 @@ export async function submitTrainingUnit(
   if (profile.role !== "unit_coordinator" || profile.unit_scope) {
     return { error: "บัญชีนี้ไม่สามารถสร้างหน่วยฝึกอบรมได้" };
   }
+
+  const phoneN = normalizePhone(formData.get("phone")?.toString());
+  if (phoneN.error) return { error: phoneN.error };
 
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "");
@@ -78,7 +82,7 @@ export async function submitTrainingUnit(
       coordinator_first_name: first,
       coordinator_last_name: last,
       coordinator_name: combined,
-      phone: clean(formData, "phone"),
+      phone: phoneN.value,
       email: clean(formData, "email"),
       is_food_testing_center: tc === "true" ? true : tc === "false" ? false : null,
       latitude: hasCoords ? latitude : null,

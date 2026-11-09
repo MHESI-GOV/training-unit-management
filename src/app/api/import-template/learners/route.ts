@@ -8,7 +8,7 @@ export async function GET() {
     { header: "birth_date", example: "21/05/2533", text: true },
     { header: "gender", example: "male", options: ["male", "female"] },
     { header: "occupation", example: "พ่อครัว/แม่ครัว" },
-    { header: "phone", example: "0812345678" },
+    { header: "phone", example: "08-1234-5678", text: true },
     { header: "email", example: "somchai@example.com" },
     { header: "address", example: "123 ถ.ตัวอย่าง" },
   ]);

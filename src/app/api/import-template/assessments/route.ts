@@ -1,4 +1,5 @@
 import { buildXlsxTemplate } from "@/lib/xlsx-template";
+import { ASSESSMENT_STANDARD_OPTIONS } from "@/lib/labels";
 
 export async function GET() {
   const buf = await buildXlsxTemplate([
@@ -6,7 +7,7 @@ export async function GET() {
     {
       header: "standard_type",
       example: "dsd_l1",
-      options: ["dsd_l1", "anamai_food_handler", "anamai_food_contact", "professional_qualification", "other"],
+      options: [...ASSESSMENT_STANDARD_OPTIONS],
     },
     { header: "result", example: "passed", options: ["passed", "failed", "pending"] },
     { header: "tested_at", example: "01/10/2569", text: true },

@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizePhone } from "@/lib/phone";
 import { revalidatePath } from "next/cache";
 import { requireStaffProfile } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
@@ -71,6 +72,7 @@ export async function previewUnitImport(
     const tc = g(r, "is_food_testing_center").toLowerCase();
     const latRaw = g(r, "latitude");
     const lngRaw = g(r, "longitude");
+    const phoneN = normalizePhone(g(r, "phone"));
 
     let status: "pass" | "fail" = "pass";
     let reason: string | undefined;
@@ -91,6 +93,9 @@ export async function previewUnitImport(
     } else if (seenInFile.has(key)) {
       status = "fail";
       reason = "ชื่อซ้ำกับอีกแถวในไฟล์";
+    } else if (phoneN.error) {
+      status = "fail";
+      reason = phoneN.error;
     } else if (tc && tc !== "true" && tc !== "false") {
       status = "fail";
       reason = "is_food_testing_center ต้องเป็น true / false";
@@ -113,7 +118,7 @@ export async function previewUnitImport(
       subdistrict_name: g(r, "subdistrict_name"),
       house_no: g(r, "house_no"),
       road: g(r, "road"),
-      phone: g(r, "phone"),
+      phone: phoneN.value ?? g(r, "phone"),
       email: g(r, "email"),
       coordinator_first_name: g(r, "coordinator_first_name"),
       coordinator_last_name: g(r, "coordinator_last_name"),
@@ -203,7 +208,7 @@ export async function commitUnitImport(
       coordinator_first_name: first,
       coordinator_last_name: last,
       coordinator_name: combined,
-      phone: row.phone || null,
+      phone: normalizePhone(row.phone).value,
       email: row.email || null,
       is_food_testing_center:
         row.is_food_testing_center === "true" ? true : row.is_food_testing_center === "false" ? false : null,

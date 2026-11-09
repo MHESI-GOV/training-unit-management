@@ -1,3 +1,4 @@
+import { formatPhone } from "@/lib/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolvePageUnit } from "@/lib/auth/resolve-unit";
@@ -53,7 +54,7 @@ export default async function LearnerDetailPage({
         <dl className="detail-grid">
           <div><dt>อายุ</dt><dd>{formatAge(learner.birth_date)}</dd></div>
           <div><dt>วันเกิด</dt><dd>{formatThaiDate(learner.birth_date)}</dd></div>
-          <div><dt>เบอร์โทร</dt><dd>{learner.phone ?? "—"}</dd></div>
+          <div><dt>เบอร์โทร</dt><dd>{formatPhone(learner.phone) || "—"}</dd></div>
           <div><dt>อีเมล</dt><dd>{learner.email ?? "—"}</dd></div>
           <div style={{ gridColumn: "1 / -1" }}><dt>ที่อยู่</dt><dd>{learner.address ?? "—"}</dd></div>
         </dl>

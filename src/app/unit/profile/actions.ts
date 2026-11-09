@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizePhone } from "@/lib/phone";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireProfile } from "@/lib/auth/require-profile";
@@ -31,6 +32,8 @@ export async function upsertUnitProfile(
   formData: FormData,
 ): Promise<ProfileFormState> {
   const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const phoneN = normalizePhone(formData.get("phone")?.toString());
+  if (phoneN.error) return { error: phoneN.error };
   const supabase = await createClient();
 
   // The institution name lives on training_units (NOT NULL + UNIQUE), not the profile row, so it
@@ -67,7 +70,7 @@ export async function upsertUnitProfile(
     coordinator_first_name: first,
     coordinator_last_name: last,
     coordinator_name: combined,
-    phone: clean(formData, "phone"),
+    phone: phoneN.value,
     email: clean(formData, "email"),
     description: clean(formData, "description"),
     is_food_testing_center: tc === "true" ? true : tc === "false" ? false : null,

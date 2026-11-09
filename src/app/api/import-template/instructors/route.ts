@@ -8,7 +8,7 @@ export async function GET() {
     { header: "affiliation", example: "คณะอุตสาหกรรมเกษตร" },
     { header: "tester_status", example: "level_1", options: ["none", "level_1", "level_2"] },
     { header: "passed_ttt", example: "true", options: ["true", "false"] },
-    { header: "phone", example: "0812345678" },
+    { header: "phone", example: "08-1234-5678", text: true },
     { header: "email", example: "somchai@example.com" },
   ]);
 

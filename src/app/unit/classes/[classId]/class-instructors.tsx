@@ -1,4 +1,5 @@
 "use client";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -138,7 +139,7 @@ function NewInstructor({ unitId, classId, onDone }: { unitId: string; classId: s
       <p className="footnote">วิทยากรที่เพิ่มใหม่จะถูกบันทึกเข้าคลังของหน่วยด้วย</p>
       <label><span className="field-label">ชื่อวิทยากร</span><input name="name" required className="field" /></label>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <label><span className="field-label">เบอร์โทร</span><input name="phone" className="field" /></label>
+        <label><span className="field-label">เบอร์โทร</span><PhoneInput /></label>
         <label><span className="field-label">อีเมล</span><input name="email" type="email" className="field" /></label>
       </div>
       <label><span className="field-label">บทบาทในชั้นเรียน</span><input name="role_in_class" className="field" placeholder="วิทยากร" defaultValue="วิทยากร" /></label>
@@ -165,7 +166,7 @@ function InstructorCsvToClass({ unitId, classId, onDone }: { unitId: string; cla
           { field: "gender", type: "รหัส", required: false, note: "male / female" },
           { field: "affiliation", type: "ข้อความ", required: false, note: "สังกัด" },
           { field: "tester_status", type: "รหัส", required: false, note: "none / level_1 / level_2" },
-          { field: "phone", type: "ข้อความ (ตัวเลข)", required: false },
+          { field: "phone", type: "ข้อความ", required: false, note: "XX-XXXX-XXXX หรือ XX-XXX-XXXX" },
           { field: "email", type: "ข้อความ (อีเมล)", required: false },
         ]}
       />

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { recordAssessmentResult, type AssessmentFormState } from "./actions";
-import { ASSESSMENT_STANDARD_LABEL, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
+import { ASSESSMENT_STANDARD_CHOICES, ASSESSMENT_RESULT_LABEL } from "@/lib/labels";
 import { ThaiDateInput } from "@/components/ui/ThaiDateInput";
 
 const initialState: AssessmentFormState = {};
@@ -16,7 +16,7 @@ export function AssessmentForm({ unitId, learnerId }: { unitId: string; learnerI
       <input type="hidden" name="learner_id" value={learnerId} />
       <select name="standard_type" required className="field" style={{ width: "auto" }}>
         <option value="">-- มาตรฐาน --</option>
-        {Object.entries(ASSESSMENT_STANDARD_LABEL).map(([value, label]) => (
+        {ASSESSMENT_STANDARD_CHOICES.map(({ value, label }) => (
           <option key={value} value={value}>
             {label}
           </option>

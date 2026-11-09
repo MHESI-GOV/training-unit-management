@@ -1,4 +1,5 @@
 "use client";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 
 import { useActionState, useState } from "react";
 import { submitTrainingUnit, type SubmitUnitState } from "./actions";
@@ -121,7 +122,7 @@ export function UnitSetupForm() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <label>
           <span className="field-label">เบอร์โทรศัพท์</span>
-          <input name="phone" className="field" />
+          <PhoneInput />
         </label>
         <label>
           <span className="field-label">อีเมล</span>

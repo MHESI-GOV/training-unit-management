@@ -11,19 +11,6 @@ import type { AllLearnerRow } from "@/app/unit/learners/load-learners";
 type UnitOption = { unit_id: string; name: string };
 type StandardOption = { value: string; label: string };
 
-function downloadCsv(filename: string, rows: string[][]) {
-  const esc = (v: string) => {
-    const s = /^[=+\-@]/.test(v) ? `'${v}` : v;
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const body = "﻿" + rows.map((r) => r.map(esc).join(",")).join("\r\n");
-  const url = URL.createObjectURL(new Blob([body], { type: "text/csv;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 // Cross-unit learner database for Web Master / Central Staff. Same filters as the per-unit table
 // plus a หน่วยฝึกอบรม column + unit filter, so you can answer "this learner — which unit / รุ่น / ปีงบ".
@@ -52,7 +39,7 @@ export function AllLearnersTable({
     const max = ageMax ? Number(ageMax) : null;
     const fy = fiscalYear ? Number(fiscalYear) : null;
     return learners.filter((l) => {
-      if (term && !`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${l.email ?? ""} ${l.unit_name}`.toLowerCase().includes(term)) return false;
+      if (term && !`${l.first_name} ${l.last_name} ${l.phone ?? ""} ${(l.phone ?? "").replace(/-/g, "")} ${l.email ?? ""} ${l.unit_name}`.toLowerCase().includes(term)) return false;
       if (unitId && l.unit_id !== unitId) return false;
       if (fy !== null && !l.enrollments.some((e) => e.fiscalYear === fy)) return false;
       if (status === "none") {
@@ -65,24 +52,10 @@ export function AllLearnersTable({
     });
   }, [q, unitId, status, standard, ageMin, ageMax, fiscalYear, learners]);
 
-  function exportFiltered() {
-    const header = ["ชื่อ", "นามสกุล", "หน่วยฝึกอบรม", "เพศ", "อาชีพ", "อายุ", "เบอร์โทร", "อีเมล", "รุ่น · ปีงบ · สถานะการเรียน", "มาตรฐานที่ได้รับ"];
-    const body = filtered.map((l) => [
-      l.first_name,
-      l.last_name,
-      l.unit_name,
-      l.gender,
-      l.occupation,
-      l.age === null ? "" : String(l.age),
-      l.phone ?? "",
-      l.email ?? "",
-      l.enrollments.map((e) => `${e.courseLabel}${e.fiscalYear ? ` · ปีงบ ${e.fiscalYear}` : ""} [${e.statusLabel}]`).join("; "),
-      l.standards.map((s) => s.label).join("; "),
-    ]);
-    downloadCsv(`learners_all_units_${new Date().toISOString().slice(0, 10)}.csv`, [header, ...body]);
-  }
 
   const resetBtn = q || unitId || status || standard || ageMin || ageMax || fiscalYear;
+  // Filters the export route can't apply itself (unit and year it can), so it gets the row ids.
+  const rowFiltered = Boolean(q || status || standard || ageMin || ageMax);
 
   return (
     <div>
@@ -119,10 +92,13 @@ export function AllLearnersTable({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, margin: "12px 0" }}>
         <span className="footnote">แสดง {filtered.length} / {learners.length} คน · {units.length} หน่วย</span>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button className="btn secondary" onClick={exportFiltered} disabled={filtered.length === 0}>
-            ส่งออกตามตัวกรอง (CSV · ไม่มีเลขบัตร)
-          </button>
-          <ExportLearners unitId={unitId} fiscalYear={fiscalYear} />
+          <ExportLearners
+            unitId={unitId}
+            fiscalYear={fiscalYear}
+            learnerIds={rowFiltered ? filtered.map((l) => l.learner_id) : undefined}
+            fullNationalId
+            disabled={filtered.length === 0}
+          />
         </div>
       </div>
 
