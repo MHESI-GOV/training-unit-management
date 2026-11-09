@@ -231,25 +231,119 @@ async function moveClassFiscalYear(
   });
 
   if (fromYear == null) return {};
+  return (await removeEmptiedStaffParticipation(admin, unitId, fromYear, actorId)) ? { removedYear: fromYear } : {};
+}
+
+// When a year has no classes left for a unit, drop its participation row, but only if staff recorded it.
+async function removeEmptiedStaffParticipation(
+  admin: ReturnType<typeof createAdminClient>,
+  unitId: string,
+  year: number,
+  actorId: string,
+): Promise<boolean> {
   const { count: classesLeft } = await admin
     .from("classes")
     .select("class_id", { count: "exact", head: true })
     .eq("unit_id", unitId)
-    .eq("fiscal_year", fromYear);
-  if (classesLeft !== 0) return {};
+    .eq("fiscal_year", year);
+  if (classesLeft !== 0) return false;
 
   const { data: oldRow } = await admin
     .from("unit_participation")
     .select("status, responded_by")
     .eq("unit_id", unitId)
-    .eq("fiscal_year", fromYear)
+    .eq("fiscal_year", year)
     .maybeSingle();
-  if (oldRow?.status !== "confirmed" || !oldRow.responded_by) return {};
+  if (oldRow?.status !== "confirmed" || !oldRow.responded_by) return false;
   const { data: responder } = await admin.from("profiles").select("role").eq("id", oldRow.responded_by).maybeSingle();
-  if (!responder || !STAFF_ROLES.has(responder.role)) return {};
+  if (!responder || !STAFF_ROLES.has(responder.role)) return false;
 
-  const { removed } = await removeUnitParticipation(admin, unitId, fromYear, actorId, "auto_delete_empty_participation");
-  return removed ? { removedYear: fromYear } : {};
+  const { removed } = await removeUnitParticipation(admin, unitId, year, actorId, "auto_delete_empty_participation");
+  return removed;
+}
+
+// Web Master only. A technical delete, not a withdrawal: nobody should lose eligibility or be locked
+// out of re-entry by it. Removes the class, its enrollments and their certification records. A learner
+// with no other class is removed too, with their national ID and assessment results, so the same person
+// can be imported again. A learner in another class stays. There is no delete RLS policy on classes, so
+// this uses the admin client and the role check here is the only gate.
+export async function deleteClass(unitIdArg: string, classId: string): Promise<{ error?: string }> {
+  const { profile, unitId } = await resolveActionUnit(unitIdArg);
+  if (profile.role !== "web_master") return { error: "เฉพาะ Web Master เท่านั้นที่ลบชั้นเรียนได้" };
+
+  const admin = createAdminClient();
+  const { data: cls } = await admin
+    .from("classes")
+    .select("class_id, batch_code, fiscal_year")
+    .eq("class_id", classId)
+    .eq("unit_id", unitId)
+    .maybeSingle();
+  if (!cls) return { error: "ไม่พบชั้นเรียนนี้ในหน่วยที่เลือก" };
+
+  const { data: enrollments, error: readErr } = await admin
+    .from("enrollments")
+    .select("enrollment_id, learner_id")
+    .eq("class_id", classId);
+  if (readErr) return { error: `ลบชั้นเรียนไม่สำเร็จ: ${readErr.message}` };
+  const enrollmentIds = (enrollments ?? []).map((e) => e.enrollment_id);
+  const learnerIds = (enrollments ?? []).map((e) => e.learner_id);
+
+  // Children first (their foreign keys don't cascade). class_instructors does cascade.
+  if (enrollmentIds.length > 0) {
+    const { error: certErr } = await admin.from("certification_records").delete().in("enrollment_id", enrollmentIds);
+    if (certErr) return { error: `ลบชั้นเรียนไม่สำเร็จ: ${certErr.message}` };
+    const { error: enrollErr } = await admin.from("enrollments").delete().eq("class_id", classId);
+    if (enrollErr) return { error: `ลบชั้นเรียนไม่สำเร็จ: ${enrollErr.message}` };
+  }
+  const { error: classErr } = await admin.from("classes").delete().eq("class_id", classId);
+  if (classErr) return { error: `ลบชั้นเรียนไม่สำเร็จ: ${classErr.message}` };
+
+  const learners = await removeLearnersWithNoClass(admin, learnerIds);
+
+  await admin.from("audit_log").insert({
+    actor_user_id: profile.id,
+    action: "admin_delete_class",
+    entity_type: "class",
+    record_id: classId,
+    changed_fields: [
+      cls.batch_code ?? "",
+      String(cls.fiscal_year ?? ""),
+      `enrollments:${enrollmentIds.length}`,
+      `learners_removed:${learners.removed}`,
+    ],
+  });
+
+  if (cls.fiscal_year != null) await removeEmptiedStaffParticipation(admin, unitId, cls.fiscal_year, profile.id);
+
+  revalidatePath("/unit/classes");
+  revalidatePath("/unit/learners");
+  revalidatePath(`/admin/units/${unitId}`, "layout");
+  revalidatePath("/admin/units");
+  revalidatePath("/admin/participation");
+  revalidatePath("/admin/learners");
+  if (learners.error) return { error: `ลบชั้นเรียนแล้ว แต่ลบข้อมูลผู้เรียนไม่สำเร็จ: ${learners.error}` };
+  return {};
+}
+
+async function removeLearnersWithNoClass(
+  admin: ReturnType<typeof createAdminClient>,
+  learnerIds: string[],
+): Promise<{ removed: number; error?: string }> {
+  if (learnerIds.length === 0) return { removed: 0 };
+  const { data: stillEnrolled, error: readErr } = await admin
+    .from("enrollments")
+    .select("learner_id")
+    .in("learner_id", learnerIds);
+  if (readErr) return { removed: 0, error: readErr.message };
+  const keep = new Set((stillEnrolled ?? []).map((e) => e.learner_id));
+  const toRemove = learnerIds.filter((id) => !keep.has(id));
+  if (toRemove.length === 0) return { removed: 0 };
+
+  const { error: resultsErr } = await admin.from("assessment_results").delete().in("learner_id", toRemove);
+  if (resultsErr) return { removed: 0, error: resultsErr.message };
+  const { error: learnersErr } = await admin.from("learners").delete().in("learner_id", toRemove);
+  if (learnersErr) return { removed: 0, error: learnersErr.message };
+  return { removed: toRemove.length };
 }
 
 export async function updateClass(_prev: ClassFormState, formData: FormData): Promise<ClassFormState> {

@@ -144,7 +144,17 @@ export default async function ClassDetailPage({
               return <span className={`pill ${s.pill}`}>{s.label}</span>;
             })()}
           </div>
-          <ClassHeaderClient unitId={unitId} canEditFiscalYear={isStaff} courses={courses ?? []} library={libraryForForm} edit={editData} />
+          <ClassHeaderClient
+            unitId={unitId}
+            canEditFiscalYear={isStaff}
+            canDelete={profile.role === "web_master"}
+            classLabel={classLabel}
+            learnerCount={learners.length}
+            backHref={backHref}
+            courses={courses ?? []}
+            library={libraryForForm}
+            edit={editData}
+          />
         </div>
         <dl className="detail-grid">
           <div><dt>รหัสชั้นเรียน</dt><dd style={{ fontVariantNumeric: "tabular-nums" }}>{classCode(unitCodeInfo.code, cls.batch_code) ?? cls.batch_code ?? "—"}</dd></div>
