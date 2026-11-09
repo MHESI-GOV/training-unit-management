@@ -101,7 +101,7 @@ export default async function Home({
 
           {canFilterByUnit && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20 }}>
-              <ExportLearners unitId={unit_id ?? ""} />
+              <ExportLearners unitId={unit_id ?? ""} fiscalYear={selectedYear} readYearFromUrl />
               <ExportClasses unitId={unit_id ?? ""} />
             </div>
           )}

@@ -122,7 +122,7 @@ export function AllLearnersTable({
           <button className="btn secondary" onClick={exportFiltered} disabled={filtered.length === 0}>
             ส่งออกตามตัวกรอง (CSV · ไม่มีเลขบัตร)
           </button>
-          <ExportLearners unitId="" />
+          <ExportLearners unitId={unitId} fiscalYear={fiscalYear} />
         </div>
       </div>
 
