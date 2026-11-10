@@ -9,7 +9,7 @@ const plexThai = IBM_Plex_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "ระบบจัดการหน่วยฝึกอบรม",
+  title: "MHESI Thai Chef",
   description: "โครงการหนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย",
 };
 
