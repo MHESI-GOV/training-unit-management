@@ -7,6 +7,7 @@ import { UnitFilter } from "@/components/dashboard/unit-filter";
 import { ExportLearners } from "@/components/dashboard/export-learners";
 import { ExportClasses } from "@/components/dashboard/export-classes";
 import { OverviewSection } from "@/components/dashboard/OverviewSection";
+import { UnitDashboard } from "@/components/dashboard/UnitDashboard";
 import { type Overview, type Pyramid, resolveFiscalYear } from "@/lib/dashboard";
 
 export default async function Home({
@@ -43,6 +44,18 @@ export default async function Home({
   }
 
   const pendingUnitSetup = profile.role === "unit_coordinator" && !profile.unit_scope;
+
+  // A coordinator bound to a unit gets that unit's own dashboard (same as the unit's "แดชบอร์ด" tab).
+  if (profile.role === "unit_coordinator" && profile.unit_scope) {
+    return (
+      <AppShell profile={profile} active="home" eyebrow="แดชบอร์ดหน่วยฝึกอบรม" title="หนึ่งหมู่บ้าน หนึ่งเชฟอาหารไทย">
+        <p className="footnote" style={{ marginBottom: 16 }}>
+          เข้าสู่ระบบในนาม <strong>{email}</strong>
+        </p>
+        <UnitDashboard supabase={supabase} unitId={profile.unit_scope} />
+      </AppShell>
+    );
+  }
   const canFilterByUnit = profile.role === "web_master" || profile.role === "central_staff";
   const filterUnitId = canFilterByUnit ? unit_id : undefined;
 
