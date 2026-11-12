@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { requireProfile } from "@/lib/auth/require-profile";
 import { resolveActionUnit } from "@/lib/auth/resolve-unit";
 import { createClient } from "@/lib/supabase/server";
+import { REGION_LABEL } from "@/lib/labels";
+import type { Database } from "@/lib/supabase/database.types";
 
 const MAX_FILE_BYTES = 3 * 1024 * 1024;
 
@@ -31,7 +33,7 @@ export async function upsertUnitProfile(
   _prev: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
-  const { unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
+  const { profile, unitId } = await resolveActionUnit(formData.get("unit_id")?.toString());
   const phoneN = normalizePhone(formData.get("phone")?.toString());
   if (phoneN.error) return { error: phoneN.error };
   const supabase = await createClient();
@@ -46,6 +48,18 @@ export async function upsertUnitProfile(
       const dup = nameErr.code === "23505" || /duplicate|unique/i.test(nameErr.message);
       return { error: dup ? "มีหน่วยฝึกชื่อนี้อยู่แล้ว กรุณาใช้ชื่ออื่น" : `บันทึกชื่อไม่สำเร็จ: ${nameErr.message}` };
     }
+  }
+
+  // Region: only Web Master / Central Staff may change it (it drives the unit code and region stats);
+  // a coordinator's form never sends it, and one sent anyway is ignored.
+  const region = clean(formData, "region");
+  if (region && (profile.role === "web_master" || profile.role === "central_staff")) {
+    if (!(region in REGION_LABEL)) return { error: "ภูมิภาคไม่ถูกต้อง" };
+    const { error: regionErr } = await supabase
+      .from("training_units")
+      .update({ region: region as Database["public"]["Enums"]["region_type"] })
+      .eq("unit_id", unitId);
+    if (regionErr) return { error: `บันทึกภูมิภาคไม่สำเร็จ: ${regionErr.message}` };
   }
 
   const first = clean(formData, "coordinator_first_name");
@@ -82,6 +96,7 @@ export async function upsertUnitProfile(
 
   revalidatePath("/unit/profile");
   revalidatePath("/account");
+  revalidatePath("/admin/units");
   return { success: true };
 }
 

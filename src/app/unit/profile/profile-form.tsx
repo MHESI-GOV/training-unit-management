@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { upsertUnitProfile, type ProfileFormState } from "./actions";
 import { LocationPicker, type GeoAddress } from "@/app/unit-setup/LocationPicker";
+import { REGION_LABEL } from "@/lib/labels";
+import { useProvinceRegion, RegionSelect, ProvinceDatalist, PROVINCE_LIST_ID } from "@/components/ui/RegionField";
 
 export type ProfileInitial = {
   house_no: string | null;
@@ -38,10 +40,14 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export function ProfileForm({
   unitId,
   unitName,
+  region,
+  canEditRegion,
   initial,
 }: {
   unitId: string;
   unitName: string;
+  region: string;
+  canEditRegion: boolean;
   initial: ProfileInitial;
 }) {
   const [editing, setEditing] = useState(false);
@@ -67,11 +73,13 @@ export function ProfileForm({
           <ProfileEditForm
             unitId={unitId}
             unitName={unitName}
+            region={region}
+            canEditRegion={canEditRegion}
             initial={initial}
             onDone={() => setEditing(false)}
           />
         ) : (
-          <ProfileView unitName={unitName} initial={initial} />
+          <ProfileView unitName={unitName} region={region} initial={initial} />
         )}
       </div>
     </>
@@ -87,7 +95,7 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   );
 }
 
-function ProfileView({ unitName, initial }: { unitName: string; initial: ProfileInitial }) {
+function ProfileView({ unitName, region, initial }: { unitName: string; region: string; initial: ProfileInitial }) {
   const pos =
     initial?.latitude != null && initial?.longitude != null
       ? { lat: initial.latitude, lng: initial.longitude }
@@ -114,6 +122,7 @@ function ProfileView({ unitName, initial }: { unitName: string; initial: Profile
         <Field label="จังหวัด" value={initial?.province_name} />
         <Field label="อำเภอ / เขต" value={initial?.district_name} />
         <Field label="ตำบล / แขวง" value={initial?.subdistrict_name} />
+        <Field label="ภูมิภาค" value={REGION_LABEL[region] ?? region} />
       </div>
 
       <SectionTitle>สถานะศูนย์ทดสอบ</SectionTitle>
@@ -131,11 +140,15 @@ function ProfileView({ unitName, initial }: { unitName: string; initial: Profile
 function ProfileEditForm({
   unitId,
   unitName,
+  region: initialRegion,
+  canEditRegion,
   initial,
   onDone,
 }: {
   unitId: string;
   unitName: string;
+  region: string;
+  canEditRegion: boolean;
   initial: ProfileInitial;
   onDone: () => void;
 }) {
@@ -144,7 +157,7 @@ function ProfileEditForm({
 
   const [houseNo, setHouseNo] = useState(initial?.house_no ?? "");
   const [road, setRoad] = useState(initial?.road ?? "");
-  const [province, setProvince] = useState(initial?.province_name ?? "");
+  const { province, setProvince, region, setRegion } = useProvinceRegion(initial?.province_name ?? "", initialRegion);
   const [district, setDistrict] = useState(initial?.district_name ?? "");
   const [subdistrict, setSubdistrict] = useState(initial?.subdistrict_name ?? "");
 
@@ -217,7 +230,8 @@ function ProfileEditForm({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         <label>
           <span className="field-label">จังหวัด</span>
-          <input name="province_name" value={province} onChange={(e) => setProvince(e.target.value)} className="field" />
+          <input name="province_name" list={PROVINCE_LIST_ID} value={province} onChange={(e) => setProvince(e.target.value)} className="field" />
+          <ProvinceDatalist />
         </label>
         <label>
           <span className="field-label">อำเภอ / เขต</span>
@@ -233,6 +247,13 @@ function ProfileEditForm({
           />
         </label>
       </div>
+      {canEditRegion ? (
+        <div style={{ maxWidth: 320 }}>
+          <RegionSelect value={region} onChange={setRegion} />
+        </div>
+      ) : (
+        <Field label="ภูมิภาค (แก้ได้โดย Web Master / Central Staff)" value={REGION_LABEL[initialRegion] ?? initialRegion} />
+      )}
 
       <SectionTitle>สถานะศูนย์ทดสอบ</SectionTitle>
       <fieldset style={{ border: "none", padding: 0, margin: 0 }}>

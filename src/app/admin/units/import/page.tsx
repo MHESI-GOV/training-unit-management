@@ -16,6 +16,8 @@ export default async function ImportUnitsPage() {
       </p>
       <p className="footnote" style={{ marginBottom: 20 }}>
         สร้างหลายหน่วยพร้อมกัน — รายละเอียดอื่น (รูป / ผู้ดูแล / ชั้นเรียน / ผู้เรียน) เพิ่มทีหลังได้จากหน้าข้อมูลของแต่ละหน่วย
+        <br />
+        คอลัมน์ region เว้นว่างได้ ระบบจะเติมภูมิภาคให้จาก province_name (ถ้ากรอก region ไว้ ระบบใช้ค่าที่กรอก)
       </p>
       <ImportUnitsClient />
     </AppShell>

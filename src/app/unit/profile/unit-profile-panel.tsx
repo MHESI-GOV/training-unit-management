@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/get-profile";
 import { ProfileForm } from "./profile-form";
 import { ImageUploader } from "./image-uploader";
 
@@ -7,6 +8,9 @@ import { ImageUploader } from "./image-uploader";
 // since one coordinator account maps to exactly one unit, the unit profile IS their profile.
 export async function UnitProfilePanel({ unitId }: { unitId: string }) {
   const supabase = await createClient();
+  const { profile } = await getCurrentProfile();
+  // Region feeds the unit code and every region count, so only Web Master / Central Staff change it.
+  const canEditRegion = profile?.role === "web_master" || profile?.role === "central_staff";
 
   const [{ data: unitProfile }, { data: unit }, { data: images }] = await Promise.all([
     supabase
@@ -16,7 +20,7 @@ export async function UnitProfilePanel({ unitId }: { unitId: string }) {
       )
       .eq("unit_id", unitId)
       .maybeSingle(),
-    supabase.from("training_units").select("name").eq("unit_id", unitId).single(),
+    supabase.from("training_units").select("name, region").eq("unit_id", unitId).single(),
     supabase
       .from("training_unit_images")
       .select("image_id, storage_key, original_filename")
@@ -40,7 +44,13 @@ export async function UnitProfilePanel({ unitId }: { unitId: string }) {
   return (
     <>
       <section className="card" style={{ maxWidth: 680 }}>
-        <ProfileForm unitId={unitId} unitName={unit?.name ?? ""} initial={unitProfile ?? null} />
+        <ProfileForm
+          unitId={unitId}
+          unitName={unit?.name ?? ""}
+          region={unit?.region ?? ""}
+          canEditRegion={canEditRegion}
+          initial={unitProfile ?? null}
+        />
       </section>
 
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: "24px 0 14px" }}>ภาพถ่ายหน่วย</h2>

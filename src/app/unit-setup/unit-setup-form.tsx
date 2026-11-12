@@ -3,7 +3,8 @@ import { PhoneInput } from "@/components/ui/PhoneInput";
 
 import { useActionState, useState } from "react";
 import { submitTrainingUnit, type SubmitUnitState } from "./actions";
-import { UNIT_TYPE_LABEL, REGION_LABEL } from "@/lib/labels";
+import { UNIT_TYPE_LABEL } from "@/lib/labels";
+import { useProvinceRegion, RegionSelect, ProvinceDatalist, PROVINCE_LIST_ID } from "@/components/ui/RegionField";
 import { LocationPicker, type GeoAddress } from "./LocationPicker";
 
 const initialState: SubmitUnitState = {};
@@ -21,7 +22,7 @@ export function UnitSetupForm() {
   // fully editable. Only overwrite a part when geocoding actually returns something for it.
   const [houseNo, setHouseNo] = useState("");
   const [road, setRoad] = useState("");
-  const [province, setProvince] = useState("");
+  const { province, setProvince, region, setRegion } = useProvinceRegion();
   const [district, setDistrict] = useState("");
   const [subdistrict, setSubdistrict] = useState("");
 
@@ -51,16 +52,7 @@ export function UnitSetupForm() {
             ))}
           </select>
         </label>
-        <label>
-          <span className="field-label">ภูมิภาค</span>
-          <select name="region" required className="field">
-            {Object.entries(REGION_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <RegionSelect value={region} onChange={setRegion} />
       </div>
 
       <LocationPicker onGeocode={applyGeocode} />
@@ -78,7 +70,8 @@ export function UnitSetupForm() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         <label>
           <span className="field-label">จังหวัด</span>
-          <input name="province_name" value={province} onChange={(e) => setProvince(e.target.value)} className="field" />
+          <input name="province_name" list={PROVINCE_LIST_ID} value={province} onChange={(e) => setProvince(e.target.value)} className="field" />
+          <ProvinceDatalist />
         </label>
         <label>
           <span className="field-label">อำเภอ / เขต</span>

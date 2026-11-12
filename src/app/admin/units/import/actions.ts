@@ -1,5 +1,6 @@
 "use server";
 
+import { regionFromProvince } from "@/lib/id-codes";
 import { normalizePhone } from "@/lib/phone";
 import { revalidatePath } from "next/cache";
 import { requireStaffProfile } from "@/lib/auth/resolve-unit";
@@ -68,7 +69,9 @@ export async function previewUnitImport(
     const r = data[i];
     const name = g(r, "name");
     const type = g(r, "type").toLowerCase();
-    const region = g(r, "region").toLowerCase();
+    // region is optional: when blank it is filled from province_name (an explicit value wins).
+    const regionRaw = g(r, "region").toLowerCase();
+    const region = regionRaw || regionFromProvince(g(r, "province_name")) || "";
     const tc = g(r, "is_food_testing_center").toLowerCase();
     const latRaw = g(r, "latitude");
     const lngRaw = g(r, "longitude");
@@ -86,7 +89,9 @@ export async function previewUnitImport(
       reason = "ประเภทหน่วยต้องเป็น university / vocational / other";
     } else if (!(region in REGION_LABEL)) {
       status = "fail";
-      reason = "ภูมิภาคไม่ถูกต้อง";
+      reason = regionRaw
+        ? "ภูมิภาคไม่ถูกต้อง"
+        : "ไม่มีภูมิภาค และหาจากจังหวัดไม่ได้ — กรอก region หรือแก้ชื่อจังหวัดให้ถูก";
     } else if (existingNames.has(key)) {
       status = "fail";
       reason = "มีหน่วยชื่อนี้อยู่แล้วในระบบ";

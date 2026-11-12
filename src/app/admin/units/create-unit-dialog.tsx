@@ -4,7 +4,8 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Plus, Upload } from "lucide-react";
 import { Popup } from "@/components/ui/Popup";
-import { UNIT_TYPE_LABEL, REGION_LABEL, REGION_ORDER } from "@/lib/labels";
+import { UNIT_TYPE_LABEL } from "@/lib/labels";
+import { useProvinceRegion, RegionSelect, ProvinceDatalist, PROVINCE_LIST_ID } from "@/components/ui/RegionField";
 import { createTrainingUnitAsStaff, type CreateUnitState } from "./actions";
 
 const initial: CreateUnitState = {};
@@ -13,6 +14,7 @@ const initial: CreateUnitState = {};
 export function CreateUnitToolbar() {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(createTrainingUnitAsStaff, initial);
+  const { province, setProvince, region, setRegion } = useProvinceRegion();
 
   return (
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
@@ -40,15 +42,18 @@ export function CreateUnitToolbar() {
             </select>
           </label>
           <label>
-            <span className="field-label">ภูมิภาค *</span>
-            <select name="region" required defaultValue="central" className="field">
-              {REGION_ORDER.map((r) => (
-                <option key={r} value={r}>
-                  {REGION_LABEL[r]}
-                </option>
-              ))}
-            </select>
+            <span className="field-label">จังหวัด</span>
+            <input
+              name="province_name"
+              list={PROVINCE_LIST_ID}
+              value={province}
+              onChange={(e) => setProvince(e.target.value)}
+              className="field"
+              placeholder="เช่น ขอนแก่น"
+            />
+            <ProvinceDatalist />
           </label>
+          <RegionSelect value={region} onChange={setRegion} />
           <p className="footnote">
             กรอกเฉพาะข้อมูลพื้นฐานก่อน รายละเอียดอื่น (ที่อยู่ / ผู้ประสานงาน / รูป / ชั้นเรียน /
             ผู้เรียน) กรอกต่อในหน้าข้อมูลหน่วยได้ทันทีหลังสร้าง

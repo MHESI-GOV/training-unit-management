@@ -1,5 +1,6 @@
 "use server";
 
+import { regionFromProvince } from "@/lib/id-codes";
 import { normalizePhone } from "@/lib/phone";
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth/require-profile";
@@ -35,7 +36,10 @@ export async function submitTrainingUnit(
 
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "");
-  const region = String(formData.get("region") ?? "");
+  const region =
+    String(formData.get("region") ?? "") ||
+    regionFromProvince(String(formData.get("province_name") ?? "")) ||
+    "";
   const latRaw = String(formData.get("latitude") ?? "").trim();
   const lngRaw = String(formData.get("longitude") ?? "").trim();
 

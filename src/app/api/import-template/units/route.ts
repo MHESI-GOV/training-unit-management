@@ -1,7 +1,7 @@
 import { buildXlsxTemplate } from "@/lib/xlsx-template";
 
 // Bulk unit-import template (round 12) — one row per training unit. type/region/is_food_testing_center
-// get dropdowns; the rest is free text filled in later from the per-unit data-sheet too.
+// get dropdowns; region may be left blank to fill it from province_name; the rest is free text filled in later from the per-unit data-sheet too.
 export async function GET() {
   const buf = await buildXlsxTemplate([
     { header: "name", example: "มหาวิทยาลัยขอนแก่น" },

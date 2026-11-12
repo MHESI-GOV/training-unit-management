@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { removeUnitParticipation } from "@/lib/participation";
 import { UNIT_TYPE_LABEL, REGION_LABEL } from "@/lib/labels";
+import { regionFromProvince } from "@/lib/id-codes";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type CreateUnitState = { error?: string };
@@ -27,7 +28,8 @@ export async function createTrainingUnitAsStaff(
 
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "");
-  const region = String(formData.get("region") ?? "");
+  const provinceName = String(formData.get("province_name") ?? "").trim() || null;
+  const region = String(formData.get("region") ?? "") || regionFromProvince(provinceName) || "";
   const externalRef = String(formData.get("external_ref") ?? "").trim() || null;
 
   if (!name || !(type in UNIT_TYPE_LABEL) || !(region in REGION_LABEL)) {
@@ -47,6 +49,11 @@ export async function createTrainingUnitAsStaff(
       return { error: `มีหน่วยฝึกชื่อ "${name}" อยู่แล้วในระบบ` };
     }
     return { error: `สร้างหน่วยฝึกไม่สำเร็จ: ${error.message}` };
+  }
+
+  // Keep the province the region was filled from, so the unit code and profile match it.
+  if (provinceName) {
+    await supabase.from("training_unit_profiles").upsert({ unit_id: unitId, province_name: provinceName });
   }
 
   // Land on the data-sheet's profile tab so staff can fill address/coordinator/photos next.

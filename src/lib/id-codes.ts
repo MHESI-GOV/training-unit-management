@@ -57,6 +57,28 @@ export function provinceCode(provinceName: string | null | undefined): string {
   return PROVINCE_CODE[key] ?? "00";
 }
 
+/** Every province name we can match, in code order — for province pickers / datalists. */
+export const PROVINCE_NAMES: string[] = Object.keys(PROVINCE_CODE).sort((a, b) =>
+  PROVINCE_CODE[a].localeCompare(PROVINCE_CODE[b]),
+);
+
+// Province -> the app's 6 regions, grouped by the MOI province-code ranges (decided 2026-11-12):
+//   10 กรุงเทพฯ = bangkok · 11–19 + 70–77 = central (incl. ปริมณฑล and the western provinces)
+//   20–27 = east (incl. นครนายก) · 30–49 = northeast · 50–67 = north (incl. lower north + ตาก)
+//   80–96 = south
+// Used only to PRE-FILL the region; the stored region stays editable by staff.
+export function regionFromProvince(provinceName: string | null | undefined): string | null {
+  const code = Number(provinceCode(provinceName));
+  if (!code) return null;
+  if (code === 10) return "bangkok";
+  if ((code >= 11 && code <= 19) || (code >= 70 && code <= 77)) return "central";
+  if (code >= 20 && code <= 27) return "east";
+  if (code >= 30 && code <= 49) return "northeast";
+  if (code >= 50 && code <= 67) return "north";
+  if (code >= 80 && code <= 96) return "south";
+  return null;
+}
+
 /** Inputs needed to compose a unit's code: its region, its (editable) province name, and its serial. */
 export type UnitCodeParts = {
   region: string | null | undefined;
