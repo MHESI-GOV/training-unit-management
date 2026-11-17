@@ -5,7 +5,8 @@ export async function sendCredentialsEmail(params: {
   to: string;
   username: string;
   temporaryPassword: string;
-  loginUrl: string;
+  // Home page, not /login: users open the "เข้าสู่ระบบ" popup there themselves.
+  homeUrl: string;
 }): Promise<{ sent: boolean; reason?: string }> {
   const user = process.env.GMAIL_USER;
   const appPassword = process.env.GMAIL_APP_PASSWORD;
@@ -34,7 +35,9 @@ export async function sendCredentialsEmail(params: {
         `Username: ${params.username}`,
         `รหัสผ่านชั่วคราว: ${params.temporaryPassword}`,
         ``,
-        `เข้าสู่ระบบที่: ${params.loginUrl}`,
+        `เข้าใช้งานระบบที่: ${params.homeUrl}`,
+        `แล้วกดปุ่ม "เข้าสู่ระบบ" มุมขวาบนของหน้าเว็บ`,
+        `(คัดลอกเฉพาะรหัสผ่าน ไม่ต้องมีช่องว่างหน้า/หลัง)`,
         `กรุณาเปลี่ยนรหัสผ่านทันทีหลังเข้าสู่ระบบครั้งแรก`,
       ].join("\n"),
     });

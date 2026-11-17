@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { signInWithPassword } from "@/lib/auth/sign-in-with-password";
 import { AuthCard } from "@/components/layout/AuthCard";
 import { CancelBackButton } from "@/components/layout/CancelBackButton";
 import { PasswordField } from "@/components/ui/PasswordField";
@@ -43,7 +44,7 @@ export function LoginModalFlow() {
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: signInError } = await signInWithPassword(supabase, email, password);
     if (signInError || !data.user) {
       setError(signInError?.message ?? "เข้าสู่ระบบไม่สำเร็จ");
       setPending(false);

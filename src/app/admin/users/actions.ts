@@ -90,7 +90,7 @@ export async function generateUser(
     to: email,
     username: email,
     temporaryPassword,
-    loginUrl: `${loginUrl}/login`,
+    homeUrl: `${loginUrl}/`,
   });
 
   return {
@@ -368,7 +368,7 @@ export async function adminResetPassword(
     to: email,
     username: email,
     temporaryPassword,
-    loginUrl: `${loginUrl}/login`,
+    homeUrl: `${loginUrl}/`,
   });
 
   revalidatePath("/admin/users");
